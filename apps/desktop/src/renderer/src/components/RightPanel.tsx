@@ -1,6 +1,7 @@
 import { useProcessed, useProfile } from '../lib/useProcessed';
-import { applyOverrides, useStore, type Tab } from '../store';
+import { useStore, type Tab } from '../store';
 import { Notice, Row, Section } from './controls';
+import { FillTab } from './FillTab';
 import { PageTab } from './PageTab';
 import { StatsTable } from './StatsTable';
 import styles from './RightPanel.module.css';
@@ -17,10 +18,12 @@ export function RightPanel() {
   const setTab = useStore((s) => s.setTab);
   return (
     <div className={styles.panel}>
-      <nav className={styles.tabs}>
+      <nav className={styles.tabs} role="tablist">
         {TABS.map((t) => (
           <button
             key={t.id}
+            role="tab"
+            aria-selected={t.id === tab}
             className={t.id === tab ? styles.active : undefined}
             onClick={() => setTab(t.id)}
           >
@@ -58,32 +61,6 @@ function PlacementWarnings() {
         </Notice>
       )}
     </>
-  );
-}
-
-function FillTab() {
-  const doc = useStore((s) => s.doc);
-  const overrides = useStore((s) => s.layerOverrides);
-  const selectedId = useStore((s) => s.selectedLayerId);
-  const setLayer = useStore((s) => s.setLayer);
-  const layer = doc && applyOverrides(doc, overrides).layers.find((l) => l.id === selectedId);
-  if (!layer) return <Notice kind="info">Select a layer.</Notice>;
-  return (
-    <Section title={layer.name}>
-      <Row label="Outlines">
-        <label>
-          <input
-            type="checkbox"
-            checked={layer.settings.drawOutline}
-            onChange={(e) => setLayer(layer.id, { settings: { drawOutline: e.target.checked } })}
-          />{' '}
-          Draw outlines of filled shapes
-        </label>
-      </Row>
-      <p className={styles.muted}>
-        {layer.fills.length} filled shapes. Hatch fills are coming next.
-      </p>
-    </Section>
   );
 }
 
