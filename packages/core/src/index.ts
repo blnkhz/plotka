@@ -13,3 +13,6 @@ export * from './pipeline/toolpath';
 export * from './pipeline/process';
 export * from './fills/hatch';
 export * from './fills/apply';
+export * from './optimize/grid';
+export * from './optimize/merge';
+export * from './optimize/order';
