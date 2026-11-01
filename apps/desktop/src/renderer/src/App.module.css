@@ -1,0 +1,26 @@
+.shell {
+  display: grid;
+  grid-template-columns: 260px 1fr 300px;
+  height: 100vh;
+}
+.left,
+.right {
+  background: var(--panel);
+  border-color: var(--border);
+  padding: 12px;
+}
+.left {
+  border-right: 1px solid var(--border);
+}
+.right {
+  border-left: 1px solid var(--border);
+}
+.center {
+  display: grid;
+  place-items: center;
+  background: var(--canvas);
+}
+.empty,
+.muted {
+  color: var(--muted);
+}
