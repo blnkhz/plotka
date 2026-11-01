@@ -46,7 +46,7 @@ test('open a file, change the page, see stats', async () => {
 
   await dropFile(page, 'figma.svg');
   await page.getByLabel('Original').check();
-  await page.getByLabel('Travel').check();
+  await page.getByRole('checkbox', { name: 'Travel', exact: true }).check();
   await page.locator('select').first().selectOption('a4');
   if (shots) await page.screenshot({ path: join(shots, 'figma.png') });
 
@@ -73,5 +73,14 @@ test('crosshatch a layer (MVP fill setup)', async () => {
 
   await page.getByRole('combobox').first().selectOption('zigzag');
   if (shots) await page.screenshot({ path: join(shots, 'zigzag.png') });
+
+  // Optimization: travel drops versus file order, and turning it off restores file order.
+  await page.getByRole('tab', { name: 'Plot' }).click();
+  await page.getByRole('checkbox', { name: 'Travel', exact: true }).check();
+  await expect(page.getByText('File order')).toBeVisible();
+  if (shots) await page.screenshot({ path: join(shots, 'optimize.png') });
+  await page.getByLabel('Reorder to cut travel').uncheck();
+  await page.getByLabel('Join touching paths').uncheck();
+  if (shots) await page.screenshot({ path: join(shots, 'optimize-off.png') });
   await app.close();
 });

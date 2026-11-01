@@ -1,10 +1,12 @@
 import { create } from 'zustand';
 import {
+  defaultOptimizeSettings,
   defaultPageSetup,
   importFile,
   type Layer,
   type LayerMode,
   type LayerSettings,
+  type OptimizeSettings,
   type PageSetup,
   type PlotDocument,
 } from '@plotter-studio/core';
@@ -36,6 +38,7 @@ type State = {
   layerOverrides: Record<string, LayerOverride>;
   selectedLayerId: string | null;
   page: PageSetup;
+  optimize: OptimizeSettings;
   profileId: string;
   view: ViewOptions;
   tab: Tab;
@@ -45,6 +48,7 @@ type State = {
   openFile(source: Source): Promise<void>;
   setLayerMode(mode: LayerMode): Promise<void>;
   setPage(patch: Partial<PageSetup>): void;
+  setOptimize(patch: Partial<OptimizeSettings>): void;
   setLayer(id: string, patch: LayerOverride): void;
   selectLayer(id: string | null): void;
   setView(patch: Partial<ViewOptions>): void;
@@ -61,6 +65,7 @@ export const useStore = create<State>()((set, get) => ({
   layerOverrides: {},
   selectedLayerId: null,
   page: defaultPageSetup(),
+  optimize: defaultOptimizeSettings(),
   profileId: DEFAULT_PROFILE_ID,
   view: { travel: false, original: false, bed: true, margins: true, penWidth: 0.4 },
   tab: 'page',
@@ -90,6 +95,7 @@ export const useStore = create<State>()((set, get) => ({
   },
 
   setPage: (patch) => set((s) => ({ page: { ...s.page, ...patch } })),
+  setOptimize: (patch) => set((s) => ({ optimize: { ...s.optimize, ...patch } })),
 
   setLayer: (id, patch) =>
     set((s) => {

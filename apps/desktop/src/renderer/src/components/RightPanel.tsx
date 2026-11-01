@@ -2,6 +2,7 @@ import { useProcessed, useProfile } from '../lib/useProcessed';
 import { useStore, type Tab } from '../store';
 import { Notice, Row, Section } from './controls';
 import { FillTab } from './FillTab';
+import { OptimizeSection } from './OptimizeSection';
 import { PageTab } from './PageTab';
 import { StatsTable } from './StatsTable';
 import styles from './RightPanel.module.css';
@@ -86,11 +87,14 @@ function MachineTab() {
 function PlotTab() {
   const doc = useStore((s) => s.doc);
   return (
-    <Section title="Stats">
-      {doc ? <StatsTable /> : <p className={styles.muted}>No file open.</p>}
-      {doc && (
-        <p className={styles.muted}>Time is a rough estimate until the motion planner is in.</p>
-      )}
-    </Section>
+    <>
+      <Section title="Stats">
+        {doc ? <StatsTable /> : <p className={styles.muted}>No file open.</p>}
+        {doc && (
+          <p className={styles.muted}>Time is a rough estimate until the motion planner is in.</p>
+        )}
+      </Section>
+      <OptimizeSection />
+    </>
   );
 }

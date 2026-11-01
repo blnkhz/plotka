@@ -1,0 +1,26 @@
+.check {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.compare {
+  width: 100%;
+  margin-top: 8px;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+.compare th {
+  font-weight: 500;
+  color: var(--muted);
+  text-align: right;
+  padding: 2px 4px;
+}
+.compare td {
+  text-align: right;
+  padding: 3px 4px;
+  border-top: 1px solid var(--border);
+}
+.compare td:first-child {
+  text-align: left;
+  color: var(--muted);
+}
