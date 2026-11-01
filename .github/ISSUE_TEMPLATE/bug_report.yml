@@ -1,0 +1,50 @@
+name: Bug report
+description: Something doesn't work as expected
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What did you do, what did you expect, and what happened instead?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open the attached SVG
+        2. Set fill to crosshatch, 0.6 mm
+        3. ...
+  - type: input
+    id: machine
+    attributes:
+      label: Machine model
+      placeholder: AxiDraw V3/A3, NextDraw 8511, ...
+    validations:
+      required: true
+  - type: input
+    id: firmware
+    attributes:
+      label: Firmware version
+      description: Shown in the Machine tab after connecting.
+      placeholder: EBBv13_and_above EB Firmware Version 3.0.2
+  - type: input
+    id: os
+    attributes:
+      label: OS version
+      placeholder: macOS 15.1 (Apple Silicon)
+    validations:
+      required: true
+  - type: input
+    id: app
+    attributes:
+      label: App version
+    validations:
+      required: true
+  - type: textarea
+    id: files
+    attributes:
+      label: Files and screenshots
+      description: Attach the SVG or project file if you can, plus any screenshots.
