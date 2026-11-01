@@ -40,9 +40,13 @@ export default tseslint.config(
       'no-restricted-imports': [
         'error',
         {
+          paths: ['electron', 'fs', 'path', 'os', 'child_process', 'serialport'].map((name) => ({
+            name,
+            message: 'packages/core must stay pure TypeScript (no Electron/Node APIs).',
+          })),
           patterns: [
             {
-              group: ['electron', 'node:*', 'fs', 'path', 'os', 'child_process', 'serialport'],
+              group: ['node:*', 'fs/*'],
               message: 'packages/core must stay pure TypeScript (no Electron/Node APIs).',
             },
           ],

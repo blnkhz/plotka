@@ -11,5 +11,8 @@
   },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "svgpath": "^2.6.0"
   }
 }
