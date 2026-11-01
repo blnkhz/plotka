@@ -146,37 +146,13 @@ exports[`fixtures (IMPORT-1) > Affinity: 100% size, nested matrices, <use> of an
 }
 `;
 
-exports[`fixtures (IMPORT-1) > Figma: px size at 96 dpi, clip-path warning, white background rect 1`] = `
+exports[`fixtures (IMPORT-1) > Figma: px size at 96 dpi, clip-path warning, white background ignored 1`] = `
 {
   "height": 79.375,
   "layers": [
     {
-      "color": "#ffffff",
+      "color": "#1e1e1e",
       "fills": [
-        {
-          "color": "#ffffff",
-          "fillRule": "nonzero",
-          "outer": [
-            [
-              [
-                0,
-                0,
-              ],
-              [
-                105.833,
-                0,
-              ],
-              [
-                105.833,
-                79.375,
-              ],
-              [
-                0,
-                79.375,
-              ],
-            ],
-          ],
-        },
         {
           "color": "#1e1e1e",
           "fillRule": "evenodd",

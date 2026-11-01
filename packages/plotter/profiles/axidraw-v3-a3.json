@@ -1,0 +1,15 @@
+{
+  "id": "axidraw-v3-a3",
+  "name": "AxiDraw V3/A3",
+  "tested": true,
+  "bed": { "width": 430, "height": 297 },
+  "motion": {
+    "maxSpeedPenDown": 250,
+    "maxSpeedPenUp": 380,
+    "acceleration": 1000,
+    "penLiftDelay": 0.15
+  },
+  "servo": { "penPosUp": 60, "penPosDown": 30 },
+  "provisional": ["motion", "servo"],
+  "notes": "Bed size from the vendor spec sheet. Motion and servo values are placeholders until DRIVER-0; see docs/hardware-notes.md."
+}

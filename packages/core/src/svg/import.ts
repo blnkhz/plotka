@@ -74,6 +74,7 @@ export function importSvg(source: string, opts: ImportOptions = {}): PlotDocumen
 
   const warnings = new Set<string>();
   const tolerance = opts.tolerance ?? 0.05;
+  const ignoreWhite = opts.ignoreWhiteFills ?? true;
   const isIllustrator = comments.some((c) => /Adobe Illustrator/i.test(c));
   const pxPerInch = opts.pxPerInch ?? (isIllustrator ? 72 : 96);
 
@@ -184,7 +185,8 @@ export function importSvg(source: string, opts: ImportOptions = {}): PlotDocumen
     const lines = pathToPolylines(d, m, tolerance);
     if (lines.length === 0) return;
 
-    const fillColor = name === 'line' ? null : resolvePaint(style.fill, style.color);
+    let fillColor = name === 'line' ? null : resolvePaint(style.fill, style.color);
+    if (fillColor !== null && ignoreWhite && isNearWhite(fillColor)) fillColor = null;
     const strokeColor = resolvePaint(style.stroke, style.color);
     if (fillColor === null && strokeColor === null) return;
 
@@ -427,6 +429,13 @@ function symbolViewport(symbol: XmlElement, use: XmlElement): Matrix {
   const vw = w !== undefined ? num(w, vb.w) : vb.w;
   const vh = h !== undefined ? num(h, vb.h) : vb.h;
   return viewBoxTransform(vb, vw, vh, symbol.attrs['preserveAspectRatio']);
+}
+
+/** True for white and near-white (#f0f0f0 and lighter), i.e. paper-colored fills. */
+export function isNearWhite(color: string): boolean {
+  const m = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/.exec(color);
+  if (!m) return false;
+  return [m[1]!, m[2]!, m[3]!].every((h) => parseInt(h, 16) >= 0xf0);
 }
 
 function dominantColor(items: Item[]): string {

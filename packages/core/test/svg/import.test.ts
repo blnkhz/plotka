@@ -336,3 +336,17 @@ describe('importSvg: errors', () => {
     expect(() => importSvg('<svg><g></svg>')).toThrow(/Couldn't read SVG/);
   });
 });
+
+describe('importSvg: white fills', () => {
+  const s = svg(
+    '<rect width="10" height="10" fill="#fff"/><rect width="5" height="5" fill="#f5f5f5" stroke="black"/>',
+  );
+  it('skips white and near-white fills by default but keeps their strokes', () => {
+    const doc = importSvg(s);
+    expect(doc.layers[0]!.fills).toHaveLength(0);
+    expect(doc.layers[0]!.strokes).toHaveLength(1);
+  });
+  it('can keep them', () => {
+    expect(importSvg(s, { ignoreWhiteFills: false }).layers[0]!.fills).toHaveLength(2);
+  });
+});

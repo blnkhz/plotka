@@ -17,6 +17,8 @@ export type ImportOptions = {
    * exported by Adobe Illustrator, whose "px" are really points.
    */
   pxPerInch?: number;
+  /** Skip white and near-white fills (paper colored, e.g. background rects). Default true. */
+  ignoreWhiteFills?: boolean;
 };
 
 export interface Importer {
