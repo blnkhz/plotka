@@ -2,6 +2,7 @@ import { intersectRects } from '../geometry/clip';
 import type { PlotDocument, Polyline } from '../model';
 import { paperSize, type PageSetup, type Rect } from '../page/paper';
 import { clipDocument, fitToPage } from './fit';
+import { applyFills } from '../fills/apply';
 import { buildToolpath, type Toolpath } from './toolpath';
 
 export type ProcessInput = {
@@ -24,7 +25,7 @@ export type ProcessResult = {
   paperExceedsBed: boolean;
 };
 
-/** Runs the page-level pipeline: fit to page, clip to printable area, collect toolpath. */
+/** Runs the page-level pipeline: fit to page, fills, clip to printable area, collect toolpath. */
 export function processDocument({ doc, page, bed }: ProcessInput): ProcessResult {
   const placed = fitToPage(doc, page);
   const paper = paperSize(page);
@@ -32,7 +33,7 @@ export function processDocument({ doc, page, bed }: ProcessInput): ProcessResult
     { x: 0, y: 0, width: paper.width, height: paper.height },
     { x: 0, y: 0, width: bed.width, height: bed.height },
   );
-  const { doc: clipped, removed } = clipDocument(placed, printable);
+  const { doc: clipped, removed } = clipDocument(applyFills(placed), printable);
   const EPS = 1e-6;
   return {
     placed,

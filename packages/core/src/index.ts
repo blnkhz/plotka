@@ -11,3 +11,5 @@ export * from './page/paper';
 export * from './pipeline/fit';
 export * from './pipeline/toolpath';
 export * from './pipeline/process';
+export * from './fills/hatch';
+export * from './fills/apply';
