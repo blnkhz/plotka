@@ -4,12 +4,12 @@
   "tested": true,
   "bed": { "width": 430, "height": 297 },
   "motion": {
-    "maxSpeedPenDown": 250,
-    "maxSpeedPenUp": 380,
-    "acceleration": 1000,
-    "penLiftDelay": 0.15
+    "maxSpeedPenDown": 221,
+    "maxSpeedPenUp": 221,
+    "acceleration": 1016,
+    "penLiftDelay": 0.2
   },
   "servo": { "penPosUp": 60, "penPosDown": 30 },
-  "provisional": ["motion", "servo"],
-  "notes": "Bed size from the vendor spec sheet. Motion and servo values are placeholders until DRIVER-0; see docs/hardware-notes.md."
+  "provisional": ["motion"],
+  "notes": "Values from axidraw_conf.py v3.9.0 (16x microstepping limits); see docs/hardware-notes.md. Steps/mm and axis directions are verified by the DRIVER-0 spike."
 }

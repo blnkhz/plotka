@@ -30,6 +30,7 @@ export default tseslint.config(
       'apps/desktop/src/preload/**/*.ts',
       '**/*.config.{js,ts,mts}',
       'scripts/**',
+      'tools/**',
     ],
     languageOptions: { globals: globals.node },
   },

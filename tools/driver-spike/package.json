@@ -1,0 +1,15 @@
+{
+  "name": "@plotter-studio/driver-spike",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "description": "DRIVER-0 spike: talk to an EBB plotter over USB serial and record what happens.",
+  "scripts": {
+    "spike": "node spike.ts",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "serialport": "^13.0.0"
+  }
+}
