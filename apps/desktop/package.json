@@ -11,7 +11,8 @@
     "build": "electron-vite build",
     "preview": "electron-vite preview",
     "build:mac": "electron-vite build && electron-builder --mac --universal",
-    "typecheck": "tsc -p tsconfig.node.json && tsc -p tsconfig.web.json"
+    "typecheck": "tsc -p tsconfig.node.json && tsc -p tsconfig.web.json && tsc -p tsconfig.e2e.json",
+    "test:e2e": "electron-vite build && playwright test"
   },
   "dependencies": {
     "@plotter-studio/core": "workspace:*",
@@ -21,6 +22,7 @@
     "zustand": "^5.0.16"
   },
   "devDependencies": {
+    "@playwright/test": "^1.64.1",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.1.2",

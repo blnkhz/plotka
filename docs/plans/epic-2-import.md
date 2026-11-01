@@ -1,18 +1,23 @@
 # Epic 2 plan: IMPORT-1 to IMPORT-4, IMPORT-6
 
 ## Data model
+
 `packages/core/src/model.ts` implements the types from spec section 2 (`Polyline`, `Layer`,
 `FillRegion`, `LayerSettings`, `FillSettings`, `PlotDocument`). Additions:
+
 - `FillRegion.color` (optional): source fill color, for HATCH-8 later.
 - `PlotDocument.warnings` and `PlotDocument.source` (`hasLayers`, `generator`) so the UI can
   show warnings and offer the "one layer / split by color" choice.
 
 ## IMPORT-6: importer interface
+
 `packages/core/src/importers/`: `Importer` interface exactly as specced, plus a registry
 (`registerImporter`, `supportedExtensions`, `findImporter`, `importFile`).
 
 ## SVG importer (IMPORT-1 to 4)
+
 Core has to stay free of DOM APIs, so instead of DOMParser:
+
 - Hand-written XML parser (`svg/xml.ts`): elements, attributes, CDATA, comments, DOCTYPE
   internal entities (old Illustrator exports use `&ns_svg;`).
 - Hand-written UTF-8 decoder (TextDecoder isn't in the ES lib).
@@ -33,11 +38,13 @@ Core has to stay free of DOM APIs, so instead of DOMParser:
 - Warnings: text, images, clip paths (not applied yet), masks, unresolved `<use>`, missing size.
 
 ## Decisions taken
+
 - **Illustrator px = pt.** Illustrator writes points but labels them px. When the generator
   comment says Adobe Illustrator, px default to 72 per inch, so an A4 artboard imports as
   210 x 297 mm. Override with `ImportOptions.pxPerInch`.
 - Clip paths aren't applied (warned). Can be added with clipper later.
 
 ## Fixtures
+
 `packages/core/test/fixtures/svg/` has one hand-made file per tool reproducing its quirks.
 To do: replace with real exports from each tool.

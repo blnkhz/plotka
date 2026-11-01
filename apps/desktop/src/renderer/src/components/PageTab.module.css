@@ -1,0 +1,26 @@
+.check {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.anchors {
+  display: grid;
+  grid-template-columns: repeat(3, 14px);
+  gap: 3px;
+  padding: 3px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+.anchor,
+.anchorOn {
+  width: 14px;
+  height: 14px;
+  padding: 0;
+  border-radius: 2px;
+  border: 1px solid var(--border);
+  background: transparent;
+}
+.anchorOn {
+  background: var(--accent);
+  border-color: var(--accent);
+}
