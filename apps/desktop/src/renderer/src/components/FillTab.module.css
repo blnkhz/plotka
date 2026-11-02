@@ -20,3 +20,9 @@
   border-radius: 4px;
   background: none;
 }
+
+.buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}

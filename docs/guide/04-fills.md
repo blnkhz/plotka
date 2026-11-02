@@ -33,3 +33,11 @@ layers** copies them (and the layer's speeds) to the others.
   outlined, as in the file. Turn it off to fill every shape completely.
 
 Lines from neighboring shapes line up, because all fills share one grid.
+
+## Your default fill
+
+When the app fills shapes for you (a file with only filled shapes, **Fill them**, a doodle with
+filled shapes, or switching a layer from None to a fill type), it uses your default fill. Set a
+layer up the way you like (say, crosshatch at 0.4 mm) and click **Save as my default fill**
+under **Defaults**. It's remembered between sessions. **Use these settings on all layers** copies
+the current layer's fill, outline, covering and speed settings to every other layer.

@@ -133,7 +133,7 @@ export function mergeDefaults<T extends object>(defaults: T, input: unknown): T 
 
 const LAYER_MODES: LayerMode[] = ['auto', 'single', 'byColor'];
 
-function parseFill(v: unknown): FillSettings | null | undefined {
+export function parseFill(v: unknown): FillSettings | null | undefined {
   if (v === null) return null;
   if (!isObj(v)) return undefined;
   const f = mergeDefaults(defaultFillSettings(), v);

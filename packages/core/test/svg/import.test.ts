@@ -381,3 +381,12 @@ describe('importSvg: fill-only layers', () => {
     expect(doc.layers[0]!.settings.fill).toBeNull();
   });
 });
+
+describe('importSvg: your default fill (HATCH-7)', () => {
+  it('fill-only layers get the default fill you pass', () => {
+    const fill = { type: 'crosshatch' as const, spacing: 0.4, angle: 30, inset: 0, connect: true };
+    const doc = importSvg(svg('<rect width="10" height="10" fill="#333"/>'), { defaultFill: fill });
+    expect(doc.layers[0]!.settings.fill).toEqual(fill);
+    expect(doc.layers[0]!.settings.fill).not.toBe(fill); // a copy
+  });
+});

@@ -1,5 +1,5 @@
 import { useProcessed, useProfile } from '../lib/useProcessed';
-import { defaultFillSettings, undrawnFillCount } from '@plotter-studio/core';
+import { undrawnFillCount } from '@plotter-studio/core';
 import { applyOverrides, useStore, type Tab } from '../store';
 import { Notice, Section } from './controls';
 import { FillTab } from './FillTab';
@@ -92,11 +92,12 @@ function UndrawnFillsNotice() {
       <div className={styles.noticeButtons}>
         <button
           onClick={() => {
-            for (const l of layers) setLayer(l.id, { settings: { fill: defaultFillSettings() } });
+            const fill = useStore.getState().defaultFill;
+            for (const l of layers) setLayer(l.id, { settings: { fill: { ...fill } } });
           }}
-          title="Fill them with parallel lines (change the type in the Fill tab)"
+          title="Fill them with your default fill (change it per layer in the Fill tab)"
         >
-          Fill them with lines
+          Fill them
         </button>
         <button
           onClick={() => {

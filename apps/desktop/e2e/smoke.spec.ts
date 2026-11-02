@@ -789,3 +789,29 @@ test('playback: scrub and play the plot order (PREVIEW-4)', async () => {
   await expect(bar).toHaveCount(0);
   await app.close();
 });
+
+test('your default fill is used for automatic fills and remembered (HATCH-7)', async () => {
+  const data = mkdtempSync(join(tmpdir(), 'plotter-studio-e2e-'));
+  let app = await launch({ PLOTTER_STUDIO_USER_DATA: data });
+  let page = await app.firstWindow();
+  await page.setViewportSize({ width: 1400, height: 900 });
+  await dropFile(page, 'motif.svg');
+  await page.getByRole('tab', { name: 'Fill' }).click();
+  await page.getByLabel('Fill type').selectOption('crosshatch');
+  const spacing = page.getByRole('spinbutton', { name: 'Spacing', exact: true });
+  await spacing.fill('0.4');
+  await spacing.press('Enter');
+  await page.getByRole('button', { name: 'Save as my default fill' }).click();
+  await expect(page.getByText('Your default fill: Crosshatch, 0.4 mm, 45°.')).toBeVisible();
+  await app.close();
+
+  // After a restart, a fill-only file gets it.
+  app = await launch({ PLOTTER_STUDIO_USER_DATA: data });
+  page = await app.firstWindow();
+  await page.setViewportSize({ width: 1400, height: 900 });
+  await dropFile(page, 'fill-only.svg');
+  await page.getByRole('tab', { name: 'Fill' }).click();
+  await expect(page.getByLabel('Fill type')).toHaveValue('crosshatch');
+  await expect(page.getByRole('spinbutton', { name: 'Spacing', exact: true })).toHaveValue('0.4');
+  await app.close();
+});

@@ -15,8 +15,8 @@ can't see the difference.
   fill so it plots straight away. In layers that also have outlines, fills are off until you
   choose a fill type.
 - **Filled shapes that won't be drawn** (no fill type and no outlines) show faintly in the
-  preview with a dashed edge, and a message offers **Fill them with lines** or **Draw their
-  outlines**. **Leave them** hides the message for that file.
+  preview with a dashed edge, and a message offers **Fill them** (with your default fill) or
+  **Draw their outlines**. **Leave them** hides the message for that file.
 - **Text** can't be plotted directly. Convert text to outlines (paths) in your design app first.
   The app warns you when a file contains text.
 - **Images** (photos, bitmaps) are ignored.

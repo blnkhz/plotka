@@ -1,4 +1,4 @@
-import type { PlotDocument } from '../model';
+import type { FillSettings, PlotDocument } from '../model';
 
 export type LayerMode =
   /** Use the file's own layers (Inkscape layers). If there are none, fall back to `single`. */
@@ -19,6 +19,8 @@ export type ImportOptions = {
   pxPerInch?: number;
   /** Skip white and near-white fills (paper colored, e.g. background rects). Default true. */
   ignoreWhiteFills?: boolean;
+  /** Fill given to layers of only filled shapes (HATCH-7 default). Default: lines, 0.6 mm. */
+  defaultFill?: FillSettings;
 };
 
 export interface Importer {

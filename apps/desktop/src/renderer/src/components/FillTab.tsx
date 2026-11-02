@@ -1,4 +1,4 @@
-import { defaultFillSettings, type FillSettings, type FillType } from '@plotter-studio/core';
+import { type FillSettings, type FillType } from '@plotter-studio/core';
 import { applyOverrides, currentLayerSettings, useStore } from '../store';
 import { Notice, NumberField, Row, Section } from './controls';
 import { PassesSection } from './PassesSection';
@@ -29,6 +29,8 @@ export function FillTab() {
   const overrides = useStore((s) => s.layerOverrides);
   const selectedId = useStore((s) => s.selectedLayerId);
   const setLayer = useStore((s) => s.setLayer);
+  const defaultFill = useStore((s) => s.defaultFill);
+  const setDefaultFill = useStore((s) => s.setDefaultFill);
   if (!doc) return <Notice kind="info">No file open.</Notice>;
   const layers = applyOverrides(doc, overrides).layers;
   const layer = layers.find((l) => l.id === selectedId);
@@ -40,7 +42,8 @@ export function FillTab() {
   const type = fill?.type ?? 'none';
   const setFill = (patch: Partial<FillSettings>) => {
     const cur = currentLayerSettings(layer.id)?.fill ?? null;
-    setLayer(layer.id, { settings: { fill: { ...(cur ?? defaultFillSettings()), ...patch } } });
+    const base = cur ?? useStore.getState().defaultFill;
+    setLayer(layer.id, { settings: { fill: { ...base, ...patch } } });
   };
 
   return (
@@ -197,27 +200,48 @@ export function FillTab() {
       </Section>
       <PassesSection layer={layer} />
       <SpeedSection layer={layer} />
-      {layers.length > 1 && (
-        <Section title="All layers">
+      <Section title="Defaults" help="fills#your-default-fill">
+        <p className={styles.muted}>Your default fill: {describeFill(defaultFill)}.</p>
+        <div className={styles.buttons}>
           <button
-            onClick={() => {
-              for (const l of layers)
-                if (l.id !== layer.id)
-                  setLayer(l.id, {
-                    settings: {
-                      fill: fill ? { ...fill } : null,
-                      drawOutline: layer.settings.drawOutline,
-                      speedPenDown: layer.settings.speedPenDown,
-                      speedPenUp: layer.settings.speedPenUp,
-                      hideCovered: layer.settings.hideCovered,
-                    },
-                  });
-            }}
+            disabled={!fill || fill.type === 'none' || sameFill(fill, defaultFill)}
+            onClick={() => fill && setDefaultFill(fill)}
+            title="Use this layer's fill whenever the app fills shapes for you (new files, doodles, Fill them)"
           >
-            Use these settings on all layers
+            Save as my default fill
           </button>
-        </Section>
-      )}
+          {layers.length > 1 && (
+            <button
+              onClick={() => {
+                for (const l of layers)
+                  if (l.id !== layer.id)
+                    setLayer(l.id, {
+                      settings: {
+                        fill: fill ? { ...fill } : null,
+                        drawOutline: layer.settings.drawOutline,
+                        speedPenDown: layer.settings.speedPenDown,
+                        speedPenUp: layer.settings.speedPenUp,
+                        hideCovered: layer.settings.hideCovered,
+                      },
+                    });
+              }}
+            >
+              Use these settings on all layers
+            </button>
+          )}
+        </div>
+      </Section>
     </>
   );
 }
+
+const TYPE_LABEL = new Map<FillType, string>(TYPES.map((t) => [t.value, t.label]));
+
+/** "Crosshatch, 0.4 mm, 45°" */
+function describeFill(f: FillSettings): string {
+  const parts = [TYPE_LABEL.get(f.type) ?? f.type, `${Number(f.spacing.toFixed(2))} mm`];
+  if (f.type !== 'concentric') parts.push(`${Number(f.angle.toFixed(1))}°`);
+  return parts.join(', ');
+}
+
+const sameFill = (a: FillSettings, b: FillSettings) => JSON.stringify(a) === JSON.stringify(b);

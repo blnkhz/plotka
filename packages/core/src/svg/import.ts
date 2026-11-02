@@ -264,7 +264,7 @@ export function importSvg(source: string, opts: ImportOptions = {}): PlotDocumen
       // A layer of only filled shapes (no outlines) would plot nothing until a fill is chosen,
       // which looks like the file didn't load. Start it with the default line fill.
       if (layer.strokes.length === 0 && layer.fills.some((f) => !f.knockout))
-        layer.settings.fill = defaultFillSettings();
+        layer.settings.fill = { ...(opts.defaultFill ?? defaultFillSettings()) };
       return layer;
     });
 

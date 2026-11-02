@@ -8,6 +8,7 @@ import {
   doodleToSvg,
   importFile,
   type DoodleSettings,
+  type FillSettings,
   type DoodleStroke,
   type ParamValues,
   type PipelineStep,
@@ -21,6 +22,7 @@ import {
 import { DEFAULT_PROFILE_ID, getProfile } from '@plotter-studio/plotter';
 import type { PlotterStatus } from '@shared/ipc';
 import type { Processed } from './lib/pipeline';
+import { parseFill } from './lib/project';
 
 export type LayerOverride = Partial<Pick<Layer, 'visible' | 'plot' | 'color'>> & {
   settings?: Partial<LayerSettings>;
@@ -93,6 +95,9 @@ type State = {
   processing: boolean;
   /** PLOT-5: where the last plot stopped (layer, path, mm along it), to continue from. */
   checkpoint: { layerId: string; pathIndex: number; offset: number; pathCount: number } | null;
+  /** HATCH-7: the fill used whenever the app fills shapes for you. Saved between sessions. */
+  defaultFill: FillSettings;
+  setDefaultFill(fill: FillSettings): void;
   /** PREVIEW-4: playback of the plot order in the preview (time in ms, speed multiplier). */
   playback: { on: boolean; t: number; playing: boolean; speed: number };
   /** IMPORT-5: reload the artwork when its file changes on disk. */
@@ -136,6 +141,17 @@ type State = {
 };
 
 const PEN_HEIGHTS_KEY = 'penHeights';
+const DEFAULT_FILL_KEY = 'defaultFill';
+
+function loadDefaultFill(): FillSettings {
+  try {
+    const f = parseFill(JSON.parse(localStorage.getItem(DEFAULT_FILL_KEY) ?? 'null'));
+    if (f && f.type !== 'none') return f;
+  } catch {
+    // Ignore unreadable storage.
+  }
+  return defaultFillSettings();
+}
 
 function loadPenHeights(): { up: number; down: number } {
   const servo = getProfile(DEFAULT_PROFILE_ID)!.servo;
@@ -183,6 +199,15 @@ export const useStore = create<State>()((set, get) => ({
   recovery: null,
   autoReload: true,
   playback: { on: false, t: 0, playing: false, speed: 20 },
+  defaultFill: loadDefaultFill(),
+  setDefaultFill: (fill) => {
+    set({ defaultFill: { ...fill } });
+    try {
+      localStorage.setItem(DEFAULT_FILL_KEY, JSON.stringify(fill));
+    } catch {
+      // Storage unavailable: the default lasts for this session only.
+    }
+  },
   checkpoint: null,
   reloadedAt: null,
   undrawnNoticeHidden: false,
@@ -198,7 +223,10 @@ export const useStore = create<State>()((set, get) => ({
   async openFile(source) {
     set({ loading: true, error: null });
     try {
-      const doc = await importFile(source.bytes, source.name, { layerMode: get().layerMode });
+      const doc = await importFile(source.bytes, source.name, {
+        layerMode: get().layerMode,
+        defaultFill: get().defaultFill,
+      });
       set((s) => ({
         source,
         doc,
@@ -217,7 +245,10 @@ export const useStore = create<State>()((set, get) => ({
     const { source, layerMode } = get();
     if (!source) return;
     try {
-      const doc = await importFile(bytes, source.name, { layerMode });
+      const doc = await importFile(bytes, source.name, {
+        layerMode,
+        defaultFill: get().defaultFill,
+      });
       set((s) => ({
         source: { ...source, bytes },
         doc,
@@ -338,7 +369,7 @@ export const useStore = create<State>()((set, get) => ({
     if (doodle.settings.fillClosed && doc)
       for (const l of doc.layers)
         if (!l.settings.fill && l.fills.length > 0)
-          get().setLayer(l.id, { settings: { fill: defaultFillSettings() } });
+          get().setLayer(l.id, { settings: { fill: { ...get().defaultFill } } });
   },
 }));
 
