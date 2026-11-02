@@ -15,6 +15,9 @@ A4 paper taped down, and a fineliner (about 0.3 mm).
 - [ ] Jog 10 mm right and down, then **Home**: the pen returns to the same spot (check with a pen
       dot before and after: the dots should overlap).
 
+- [ ] **Dry run** (Plot tab) traces the drawing's outline with the pen up, staying on the paper,
+      and returns home.
+
 ## 1. Calibration plot (`calibration.svg`)
 
 Open it, set **Page → Fit** to **Original** (100%) and **Align** to top left, no fill.

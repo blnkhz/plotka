@@ -14,7 +14,7 @@ export type OpenFileResult = {
   bytes: Uint8Array;
 } | null;
 
-import type { Toolpath } from '@plotter-studio/core';
+import type { Bounds, Toolpath } from '@plotter-studio/core';
 import type { LayerMotionSettings, MachineState, RunProgress } from '@plotter-studio/plotter';
 
 export type PortInfo = { path: string; label: string; isPlotter: boolean };
@@ -33,6 +33,8 @@ export type PlotterStatus = {
   };
   machine: MachineState | null;
   plot: RunProgress | null;
+  /** What the runner is doing: a real plot or a pen-up dry run. */
+  plotKind: 'plot' | 'dryRun' | null;
 };
 
 export type ManualCommand =
@@ -82,6 +84,8 @@ export interface InvokeChannels {
   'plotter:status': { args: []; result: PlotterStatus };
   'plotter:command': { args: [command: ManualCommand]; result: ActionResult };
   'plot:start': { args: [request: PlotRequest]; result: ActionResult };
+  /** PLOT-6: trace the drawing's bounds with the pen up. */
+  'plot:dryRun': { args: [profileId: string, bounds: Bounds]; result: ActionResult };
   'plot:control': {
     args: [action: 'pause' | 'resume' | 'stop' | 'toggle'];
     result: ActionResult;
@@ -113,6 +117,7 @@ export const INVOKE_CHANNELS = [
   'plotter:status',
   'plotter:command',
   'plot:start',
+  'plot:dryRun',
   'plot:control',
 ] as const satisfies readonly InvokeChannel[];
 export const EVENT_CHANNELS = [

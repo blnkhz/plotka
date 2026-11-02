@@ -9,3 +9,4 @@ export * from './driver/sim';
 export * from './driver/ebb-driver';
 export * from './plot/machine';
 export * from './plot/runner';
+export * from './motion/dryrun';

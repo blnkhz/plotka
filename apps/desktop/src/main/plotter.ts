@@ -4,6 +4,7 @@ import {
   getProfile,
   DEFAULT_PROFILE_ID,
   Machine,
+  planDryRun,
   planToolpath,
   PlotRunner,
   SimulatedDriver,
@@ -11,6 +12,7 @@ import {
   type MachineProfile,
   type PlotterDriver,
 } from '@plotter-studio/plotter';
+import type { Bounds } from '@plotter-studio/core';
 import {
   SIMULATED_PORT,
   type ActionResult,
@@ -42,6 +44,7 @@ export class PlotterService {
   private simulated = false;
   private lost = false;
   private blocker: number | null = null;
+  private plotKind: 'plot' | 'dryRun' | null = null;
   private profile: MachineProfile = getProfile(DEFAULT_PROFILE_ID)!;
   private pushQueued = false;
 
@@ -56,6 +59,7 @@ export class PlotterService {
       },
       machine: this.machine?.state ?? null,
       plot: this.runner?.progress ?? null,
+      plotKind: this.runner ? this.plotKind : null,
     };
   }
 
@@ -180,7 +184,27 @@ export class PlotterService {
       );
       if (plan.totalMs === 0) throw new Error('Nothing to plot.');
       this.runner = new PlotRunner(m, plan, { onProgress: () => this.onProgress() });
+      this.plotKind = 'plot';
       this.keepAwake(true);
+      void this.runner.start().finally(() => this.onProgress());
+    });
+  }
+
+  dryRun(profileId: string, bounds: Bounds): Promise<ActionResult> {
+    return this.act(async () => {
+      const m = this.machine;
+      if (!m || !this.driver?.connected) throw new Error('Connect the plotter first.');
+      if (this.isPlotting()) throw new Error('A plot is in progress. Stop it first.');
+      if (getProfile(profileId) !== this.profile)
+        throw new Error('The plotter was connected with a different machine profile. Reconnect.');
+      if (![bounds.minX, bounds.minY, bounds.maxX, bounds.maxY].every(Number.isFinite))
+        throw new Error('Nothing to trace.');
+      // The trace never lowers the pen, so make sure it starts up.
+      if (m.state.penUp !== true) await m.penUp();
+      await m.ensureMotors();
+      const plan = planDryRun(this.profile, bounds, m.steps ?? { x: 0, y: 0 });
+      this.runner = new PlotRunner(m, plan, { onProgress: () => this.onProgress() });
+      this.plotKind = 'dryRun';
       void this.runner.start().finally(() => this.onProgress());
     });
   }

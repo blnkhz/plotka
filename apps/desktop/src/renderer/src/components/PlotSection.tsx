@@ -1,5 +1,5 @@
 import { fmtDuration } from '../lib/format';
-import { control, plotLayers, startPlot } from '../lib/plotter';
+import { control, dryRun, plotLayers, startPlot } from '../lib/plotter';
 import { useProcessed } from '../lib/useProcessed';
 import { useStore } from '../store';
 import { Notice, Section } from './controls';
@@ -28,6 +28,7 @@ export function PlotSection() {
   const connected = status?.connection.connected ?? false;
   const plot = status?.plot ?? null;
   const state = plot?.state;
+  const isDryRun = status?.plotKind === 'dryRun';
   const active =
     state === 'running' ||
     state === 'pausing' ||
@@ -81,7 +82,13 @@ export function PlotSection() {
       {plot && state !== 'ready' && (
         <div className={styles.progress} aria-label="Plot progress">
           <div className={styles.status}>
-            <strong>{STATE_LABEL[state ?? ''] ?? state}</strong>
+            <strong>
+              {isDryRun && (state === 'running' || state === 'pausing')
+                ? 'Dry run: tracing the outline…'
+                : isDryRun && state === 'done'
+                  ? 'Dry run done'
+                  : (STATE_LABEL[state ?? ''] ?? state)}
+            </strong>
             {plot.layerId && state !== 'done' && state !== 'stopped' && (
               <span className={styles.muted}>{names.get(plot.layerId)?.name ?? plot.layerId}</span>
             )}
@@ -121,6 +128,15 @@ export function PlotSection() {
             }
           >
             Start plot
+          </button>
+        )}
+        {!active && (
+          <button
+            disabled={!connected || blocked}
+            onClick={() => processed && void dryRun(processed)}
+            title="Trace the outline of the drawing with the pen up, to check the paper is in the right place"
+          >
+            Dry run
           </button>
         )}
         {state === 'running' && (

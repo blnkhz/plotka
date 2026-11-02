@@ -24,6 +24,7 @@ export function registerIpcHandlers(plotter: PlotterService): void {
   handle('plotter:status', () => plotter.status());
   handle('plotter:command', (_e, cmd) => plotter.command(cmd));
   handle('plot:start', (_e, req) => plotter.start(req));
+  handle('plot:dryRun', (_e, profileId, bounds) => plotter.dryRun(profileId, bounds));
   handle('plot:control', (_e, action) => plotter.control(action));
 
   handle('app:getInfo', () => ({

@@ -36,6 +36,21 @@ export function plotLayers(processed: Processed, skip: Record<string, true>) {
   return processed.toolpath.layers.filter((l) => l.paths.length > 0 && !skip[l.layerId]);
 }
 
+/** PLOT-6: trace the bounds of the layers that would be plotted, with the pen up. */
+export function dryRun(processed: Processed) {
+  const { plotSkip, profileId } = useStore.getState();
+  const b = { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity };
+  for (const l of plotLayers(processed, plotSkip))
+    for (const p of l.paths)
+      for (const q of p.points) {
+        b.minX = Math.min(b.minX, q.x);
+        b.minY = Math.min(b.minY, q.y);
+        b.maxX = Math.max(b.maxX, q.x);
+        b.maxY = Math.max(b.maxY, q.y);
+      }
+  return run(window.api.invoke('plot:dryRun', profileId, b));
+}
+
 export function startPlot(processed: Processed) {
   const { plotSkip, penHeights, profileId } = useStore.getState();
   const layers = plotLayers(processed, plotSkip);

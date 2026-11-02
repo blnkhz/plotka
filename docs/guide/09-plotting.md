@@ -8,6 +8,8 @@ The **Plot** tab starts and controls plots.
 - Set home: the pen over the top-left corner of the paper.
 - Choose the layers to plot: the checkboxes under **Layers, in order**. They plot top to bottom,
   with the same pen.
+- **Dry run** traces a rectangle around the drawing with the pen up, then goes home. Watch the
+  pen: if it would leave the paper, fix the paper or the page setup before plotting.
 
 ## Start, pause, resume, stop
 

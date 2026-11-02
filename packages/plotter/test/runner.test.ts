@@ -4,6 +4,7 @@ import {
   DEFAULT_PROFILE_ID,
   getProfile,
   Machine,
+  planDryRun,
   planToolpath,
   PlotRunner,
   servoPosition,
@@ -308,5 +309,41 @@ describe('Machine', () => {
     );
     expect(sim.penIsUp).toBe(false);
     expect(m.state.penPosUp).toBe(70);
+  });
+});
+
+describe('planDryRun (PLOT-6)', () => {
+  it('traces the bounds with the pen up and ends at home', async () => {
+    const sim = new SimulatedDriver(profile);
+    await sim.connect('sim');
+    const machine = new Machine(sim, profile);
+    const plan = planDryRun(profile, { minX: 20, minY: 30, maxX: 120, maxY: 90 }, { x: 0, y: 0 });
+    expect(plan.items.every((i) => i.kind === 'move' && !i.penDown)).toBe(true);
+    const corners = plan.items.map((i) => (i.kind === 'move' ? i.to : null));
+    expect(corners.slice(0, 4)).toEqual([
+      { x: 20 * spm, y: 30 * spm },
+      { x: 120 * spm, y: 30 * spm },
+      { x: 120 * spm, y: 90 * spm },
+      { x: 20 * spm, y: 90 * spm },
+    ]);
+    const r = new PlotRunner(machine, plan, { buttonPollMs: 1e9, sleep: async () => undefined });
+    await r.start();
+    expect(r.state).toBe('done');
+    expect(sim.log.some((l) => l.cmd.startsWith('SP,0'))).toBe(false); // never lowered
+    expect(machine.state.position).toEqual({ x: 0, y: 0 });
+  });
+
+  it('stays inside the machine travel', () => {
+    const plan = planDryRun(
+      profile,
+      { minX: -10, minY: -5, maxX: 1000, maxY: 1000 },
+      { x: 0, y: 0 },
+    );
+    for (const i of plan.items)
+      if (i.kind === 'move') {
+        expect(i.to.x).toBeLessThanOrEqual(profile.bed.width * spm);
+        expect(i.to.y).toBeLessThanOrEqual(profile.bed.height * spm);
+        expect(Math.min(i.to.x, i.to.y)).toBeGreaterThanOrEqual(0);
+      }
   });
 });
