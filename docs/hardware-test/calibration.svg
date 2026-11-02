@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Plotter Studio hardware test: see docs/hardware-test.md. Plot at 100% size (Page: Fit = Original). -->
+<svg xmlns="http://www.w3.org/2000/svg" width="170mm" height="120mm" viewBox="0 0 170 120">
+  <rect x="10" y="10" width="100" height="100" fill="none" stroke="#000"/>
+  <circle cx="60" cy="60" r="40" fill="none" stroke="#000"/>
+  <path d="M130 10 L150 10 L150 11 L130 11 L130 12 L150 12 L150 13 L130 13 L130 14 L150 14 L150 15 L130 15 L130 16 L150 16 L150 17 L130 17 L130 18 L150 18 L150 19 L130 19 L130 20 L150 20 L150 21 L130 21 L130 22 L150 22 L150 23 L130 23 L130 24 L150 24 L150 25 L130 25 L130 26 L150 26 L150 27 L130 27 L130 28 L150 28 L150 29 L130 29 L130 30 L150 30" fill="none" stroke="#000"/>
+  <path d="M130 40 L130 60 L131 60 L131 40 L132 40 L132 60 L133 60 L133 40 L134 40 L134 60 L135 60 L135 40 L136 40 L136 60 L137 60 L137 40 L138 40 L138 60 L139 60 L139 40 L140 40 L140 60 L141 60 L141 40 L142 40 L142 60 L143 60 L143 40 L144 40 L144 60 L145 60 L145 40 L146 40 L146 60 L147 60 L147 40 L148 40 L148 60 L149 60 L149 40 L150 40 L150 60" fill="none" stroke="#000"/>
+  <polyline points="130.0,80 132.5,100 135.0,80 137.5,100 140.0,80 142.5,100 145.0,80 147.5,100 150.0,80" fill="none" stroke="#000"/>
+  <rect x="130" y="105" width="1" height="1" fill="none" stroke="#000"/>
+</svg>
