@@ -290,7 +290,7 @@ test('save a project and open it again with all its settings (PROJ-1)', async ()
   await expect(page.getByText(/paths · draw .* · travel .* · ≈/)).toBeVisible();
   await expect.poll(title).toContain('motif (edited)');
 
-  await page.getByRole('button', { name: 'Save' }).click();
+  await page.getByRole('button', { name: 'Save', exact: true }).click();
   await expect.poll(title).toBe('My pattern — Plotter Studio');
   const saved = JSON.parse(readFileSync(file, 'utf8'));
   expect(saved.format).toBe('plotter-studio-project');
@@ -621,7 +621,7 @@ test('recent files: File → Open Recent reopens projects (PROJ-4)', async () =>
   await page.setViewportSize({ width: 1400, height: 900 });
   await dropFile(page, 'motif.svg');
   await page.getByRole('button', { name: 'Landscape' }).click();
-  await page.getByRole('button', { name: 'Save' }).click();
+  await page.getByRole('button', { name: 'Save', exact: true }).click();
   const recentLabel = () =>
     app.evaluate(
       ({ Menu }) => Menu.getApplicationMenu()!.getMenuItemById('recent-0')?.label ?? null,
