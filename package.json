@@ -23,7 +23,8 @@
     "spike": "pnpm --filter @plotter-studio/driver-spike spike",
     "build:mac:commit": "sh scripts/build-dmg-from-head.sh",
     "hooks:on": "git config core.hooksPath .githooks",
-    "hooks:off": "git config --unset core.hooksPath"
+    "hooks:off": "git config --unset core.hooksPath",
+    "release": "sh scripts/release.sh"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

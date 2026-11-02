@@ -1,0 +1,68 @@
+name: Release
+
+# Builds the macOS app and attaches it to a DRAFT GitHub release. Nothing is published until
+# someone reviews the draft and clicks "Publish release". See docs/releasing.md.
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Existing tag to build, e.g. v0.2.0'
+        required: true
+
+permissions:
+  contents: write # create the draft release and upload the .dmg
+
+concurrency:
+  group: release-${{ github.event.inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  mac:
+    runs-on: macos-latest
+    env:
+      TAG: ${{ github.event.inputs.tag || github.ref_name }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      - run: corepack enable pnpm
+      - run: pnpm install --frozen-lockfile
+
+      - name: Check the tag matches the app version
+        run: |
+          version=$(node -p "require('./apps/desktop/package.json').version")
+          if [ "$TAG" != "v$version" ]; then
+            echo "::error::Tag $TAG doesn't match the app version $version (apps/desktop/package.json). Bump the version, then tag v$version."
+            exit 1
+          fi
+
+      - name: Checks
+        run: |
+          pnpm lint
+          pnpm typecheck
+          pnpm test
+
+      - name: Build the universal .dmg
+        run: pnpm build:mac
+
+      - name: Create or update the draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          shopt -s nullglob
+          files=(apps/desktop/release/*.dmg apps/desktop/release/*.dmg.blockmap)
+          if [ ${#files[@]} -eq 0 ]; then
+            echo "::error::No .dmg was built."
+            exit 1
+          fi
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" "${files[@]}" --clobber
+          else
+            gh release create "$TAG" "${files[@]}" --draft --title "Plotter Studio $TAG" --generate-notes
+          fi

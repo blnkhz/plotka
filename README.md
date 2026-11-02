@@ -66,6 +66,7 @@ pnpm lint         # ESLint
 pnpm typecheck    # TypeScript
 pnpm build:mac    # universal (Apple Silicon + Intel) .dmg in apps/desktop/release
 pnpm hooks:on     # optional (macOS): rebuild the .dmg in the background after each commit
+pnpm release 0.2.0  # bump, commit and tag a release; see docs/releasing.md
 ```
 
 ### Repo layout
