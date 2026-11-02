@@ -64,15 +64,36 @@ function fakeLink(): Link {
   let cb: (s: string) => void = () => {};
   let a = 0;
   let b = 0;
+  // Scheduled queued commands, to mimic the one-slot FIFO of firmware 2.x.
+  let sched: { start: number; end: number }[] = [];
+  let outbox = Promise.resolve();
+  const enqueue = (ms: number): number => {
+    const now = Date.now();
+    sched = sched.filter((x) => x.end > now);
+    const waiting = sched.filter((x) => x.start > now);
+    const start = Math.max(now, sched.length ? sched[sched.length - 1]!.end : now);
+    sched.push({ start, end: start + ms });
+    // FIFO full: the reply comes when the waiting command starts executing.
+    return waiting.length ? waiting[waiting.length - 1]!.start - now : 0;
+  };
   return {
     onData: (f) => (cb = f),
     write(data) {
       const cmd = data.trim().toUpperCase();
       const [name, ...p] = cmd.split(',');
-      const reply = (s: string) => setTimeout(() => cb(s), 5);
+      const ms = queuedMs(cmd);
+      const delay = ms > 0 ? enqueue(ms) : 0;
+      // Replies go out in order, like the real serial stream.
+      const reply = (s: string) => {
+        outbox = outbox.then(
+          () => new Promise<void>((r) => setTimeout(() => (cb(s), r()), delay + 2)),
+        );
+      };
       if (name === 'V') reply('EBBv13_and_above EB Firmware Version 3.0.2 (SIMULATED)\r\n');
-      else if (name === 'QG') reply('10\r\n');
-      else if (name === 'QS') reply(`${a},${b}\n\rOK\r\n`);
+      else if (name === 'QG') {
+        const busy = sched.some((x) => x.end > Date.now());
+        reply(busy ? '1F\r\n' : '10\r\n');
+      } else if (name === 'QS') reply(`${a},${b}\n\rOK\r\n`);
       else if (name === 'QC') reply('0394,0300\r\nOK\r\n');
       else if (name === 'QB') reply('0\r\nOK\r\n');
       else if (name === 'XM') {
@@ -113,11 +134,29 @@ async function serialLink(path: string): Promise<Link> {
   };
 }
 
+/**
+ * How long a queued command occupies the motion FIFO, in ms (XM/SM duration, SP delay).
+ * The EBB's FIFO is shallow (one slot on firmware 2.x): when it's full, the board doesn't answer
+ * a new queued command until the move ahead of it has started, so the reply can take as long
+ * as the queued motion. Timeouts have to account for that.
+ */
+function queuedMs(cmd: string): number {
+  const [name, ...p] = cmd.toUpperCase().split(',');
+  if (name === 'XM' || name === 'SM') return Number(p[0]) || 0;
+  if (name === 'SP' && (p[0] === '0' || p[0] === '1')) return Number(p[1]) || 0;
+  if (name === 'TP') return Number(p[0]) || 0;
+  return 0;
+}
+
 class Ebb {
   private buffer = '';
   private waiters: ((line: string) => void)[] = [];
   private lines: string[] = [];
   private link: Link;
+  /** Estimated time (Date.now) when everything queued so far has finished. */
+  private busyUntil = 0;
+  /** Replies still owed for commands that timed out; they're discarded when they arrive. */
+  private stale = 0;
 
   constructor(link: Link) {
     this.link = link;
@@ -128,6 +167,11 @@ class Ebb {
       this.buffer = parts.pop() ?? '';
       for (const line of parts) {
         if (line === '') continue;
+        if (this.stale > 0) {
+          this.stale--;
+          record('rx', `${line}   (late reply to a timed-out command, ignored)`);
+          continue;
+        }
         record('rx', line);
         const w = this.waiters.shift();
         if (w) w(line);
@@ -142,6 +186,7 @@ class Ebb {
     return new Promise((resolve, reject) => {
       const timer = setTimeout(() => {
         this.waiters = this.waiters.filter((w) => w !== done);
+        this.stale++;
         reject(new Error(`No reply within ${timeout} ms`));
       }, timeout);
       const done = (line: string) => {
@@ -152,12 +197,28 @@ class Ebb {
     });
   }
 
+  /** ms until the queued motion is expected to finish. */
+  pendingMs(): number {
+    return Math.max(0, this.busyUntil - Date.now());
+  }
+
   /** Command that answers with just OK (legacy syntax). */
   async command(cmd: string): Promise<void> {
     record('tx', cmd);
     this.link.write(cmd + '\r');
-    const line = await this.nextLine();
+    // A queued command may not be answered until the motion ahead of it has started.
+    const line = await this.nextLine(REPLY_TIMEOUT_MS + this.pendingMs());
     if (!line.startsWith('OK')) throw new Error(`Expected OK for ${cmd}, got "${show(line)}"`);
+    const ms = queuedMs(cmd);
+    if (ms > 0) this.busyUntil = Math.max(Date.now(), this.busyUntil) + ms;
+  }
+
+  /** After a timeout: wait for the queued motion and any late replies, then continue. */
+  async resync(): Promise<void> {
+    const deadline = Date.now() + this.pendingMs() + REPLY_TIMEOUT_MS;
+    while (this.stale > 0 && Date.now() < deadline) await sleep(50);
+    this.stale = 0;
+    this.lines = [];
   }
 
   /** Query whose reply is one data line, optionally followed by OK. */
@@ -184,6 +245,7 @@ class Ebb {
 
   /** Waits until the motion queue is empty and motors are idle (QG bits 0-3). */
   async waitIdle(maxMs = 10000, fallbackMs = MOVE_MS * 2 + 500): Promise<void> {
+    maxMs += this.pendingMs();
     const start = Date.now();
     while (Date.now() - start < maxMs) {
       let s: number;
@@ -410,6 +472,7 @@ async function main() {
 
 async function shutdown() {
   if (ebb) {
+    await ebb.resync();
     for (const cmd of ['SP,1,100', 'EM,0,0']) {
       try {
         await ebb.command(cmd);
