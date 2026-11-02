@@ -3,13 +3,25 @@
   "name": "AxiDraw V3/A3",
   "tested": true,
   "bed": { "width": 430, "height": 297 },
+  "stepsPerMm": 80,
+  "maxStepRate": 25000,
   "motion": {
     "maxSpeedPenDown": 221,
     "maxSpeedPenUp": 221,
-    "acceleration": 1016,
-    "penLiftDelay": 0.2
+    "accelPenDown": 1016,
+    "accelPenUp": 1524
   },
-  "servo": { "penPosUp": 60, "penPosDown": 30 },
-  "provisional": ["motion"],
-  "notes": "Values from axidraw_conf.py v3.9.0 (16x microstepping limits); see docs/hardware-notes.md. Steps/mm and axis directions are verified by the DRIVER-0 spike."
+  "servo": {
+    "min": 9855,
+    "max": 27831,
+    "sweepMs": 200,
+    "moveMinMs": 45,
+    "moveSlopeMs": 2.69,
+    "rateRaise": 75,
+    "rateLower": 50,
+    "penPosUp": 60,
+    "penPosDown": 30
+  },
+  "provisional": ["stepsPerMm", "motion"],
+  "notes": "Values from axidraw_conf.py v3.9.0 (16x microstepping limits); see docs/hardware-notes.md. Axis directions and the pen were verified by the DRIVER-0 spike; steps/mm awaits a 100 mm measurement."
 }

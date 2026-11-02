@@ -90,9 +90,6 @@ function PlotTab() {
     <>
       <Section title="Stats">
         {doc ? <StatsTable /> : <p className={styles.muted}>No file open.</p>}
-        {doc && (
-          <p className={styles.muted}>Time is a rough estimate until the motion planner is in.</p>
-        )}
       </Section>
       <OptimizeSection />
     </>

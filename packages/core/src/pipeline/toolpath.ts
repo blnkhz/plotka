@@ -42,7 +42,7 @@ export type PathStats = {
   travelDistance: number;
   penLifts: number;
   pathCount: number;
-  /** Seconds. Rough until the motion planner (MOTION-2) replaces it. */
+  /** Seconds. The app fills this from the motion planner; see toolpathStats. */
   estimatedTime: number;
 };
 
@@ -74,13 +74,17 @@ const emptyStats = (): PathStats => ({
 });
 
 /**
- * Distances and a rough time estimate. Travel starts and ends at home (0, 0).
- * `speeds` gives per-layer pen-down / pen-up speed in % of max.
+ * Distances, plus a rough time estimate when `limits` are given (one accelerated move per path,
+ * no corner slowdowns). The app uses the motion planner in packages/plotter for real estimates.
+ * Travel starts and ends at home (0, 0). `speeds` gives per-layer speed in % of max.
  */
 export function toolpathStats(
   tp: Toolpath,
-  limits: MotionLimits,
-  speeds: (layerId: string) => { penDown: number; penUp: number },
+  limits?: MotionLimits,
+  speeds: (layerId: string) => { penDown: number; penUp: number } = () => ({
+    penDown: 25,
+    penUp: 75,
+  }),
 ): ToolpathStats {
   const total = emptyStats();
   const layers = new Map<string, PathStats>();
@@ -88,17 +92,18 @@ export function toolpathStats(
   for (const layer of tp.layers) {
     const s = emptyStats();
     const sp = speeds(layer.layerId);
-    const vDown = (limits.maxSpeedPenDown * sp.penDown) / 100;
-    const vUp = (limits.maxSpeedPenUp * sp.penUp) / 100;
+    const vDown = ((limits?.maxSpeedPenDown ?? 0) * sp.penDown) / 100;
+    const vUp = ((limits?.maxSpeedPenUp ?? 0) * sp.penUp) / 100;
     for (const path of layer.paths) {
       const start = path.points[0]!;
       const travel = Math.hypot(start.x - pos.x, start.y - pos.y);
       s.travelDistance += travel;
-      s.estimatedTime += moveTime(travel, vUp, limits.acceleration);
+      if (limits) s.estimatedTime += moveTime(travel, vUp, limits.acceleration);
       const len = polylineLength(path);
       s.penDownDistance += len;
       // Rough: each polyline is one accelerated move. MOTION-2 adds corner slowdowns.
-      s.estimatedTime += moveTime(len, vDown, limits.acceleration) + 2 * limits.penLiftDelay;
+      if (limits)
+        s.estimatedTime += moveTime(len, vDown, limits.acceleration) + 2 * limits.penLiftDelay;
       s.penLifts++;
       s.pathCount++;
       pos = path.closed ? start : path.points[path.points.length - 1]!;
@@ -108,7 +113,7 @@ export function toolpathStats(
   }
   const home = Math.hypot(pos.x, pos.y);
   total.travelDistance += home;
-  total.estimatedTime += moveTime(home, limits.maxSpeedPenUp, limits.acceleration);
+  if (limits) total.estimatedTime += moveTime(home, limits.maxSpeedPenUp, limits.acceleration);
   return { total, layers };
 }
 

@@ -1,2 +1,6 @@
-// Driver interface, EBB protocol, motion planner and simulator will live here (Epics 5 and 6).
+// Machine profiles, EBB protocol encoders, motion planner and the simulated driver.
+// Pure TypeScript: the serial transport lives in a separate entry point (DRIVER-1).
 export * from './profile';
+export * from './servo';
+export * from './ebb';
+export * from './motion/plan';

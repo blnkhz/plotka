@@ -41,20 +41,22 @@ Every machine value used by the app is recorded here with its source. Values mar
 
 ## AxiDraw V3/A3 (primary machine)
 
-| Value               | Used                                                  | Status             | Source                                                                                                       |
-| ------------------- | ----------------------------------------------------- | ------------------ | ------------------------------------------------------------------------------------------------------------ |
-| Usable pen travel   | 430 × 297 mm                                          | Confirmed (vendor) | Product page; `axidraw_conf.py` 16.93 × 11.69 in                                                             |
-| Vertical pen travel | 17 mm                                                 | Vendor spec        | Product page                                                                                                 |
-| Home position       | Top left                                              | Decided            | Paper top-left at home. No "set origin here" for now.                                                        |
-| Steps per mm        | 80 (16x)                                              | **To verify**      | `axidraw_conf.py`: native_res_factor 1016 steps/in, ×2 at 16x = 2032 steps/in. Spike measures a 100 mm line. |
-| Mixed-axis mapping  | motor1 = x+y, motor2 = x−y (XM A = x, B = y)          | **To verify**      | EBB XM docs. Spike checks which way +X / +Y go.                                                              |
-| Servo range         | 9855 – 27831 (0–100%)                                 | Vendor default     | `axidraw_conf.py` servo_min / servo_max (standard servo)                                                     |
-| Pen up / down       | 60% / 30%                                             | Vendor default     | `axidraw_conf.py` pen_pos_up / pen_pos_down                                                                  |
-| Servo full sweep    | 200 ms at 100% rate                                   | Vendor default     | `axidraw_conf.py` servo_sweep_time; raise 75%, lower 50%                                                     |
-| Pen move time       | 45 ms + 2.69 ms per %                                 | Vendor default     | `axidraw_conf.py` servo_move_min / servo_move_slope                                                          |
-| Max XY speed        | 8.70 in/s (221 mm/s) at 16x; 15 in/s (381 mm/s) at 8x | Vendor             | `axidraw_conf.py` speed_lim_xy_hr / _lr                                                                      |
-| Acceleration        | 40 in/s² (1016 mm/s²) pen down, 60 in/s² pen up       | Vendor             | `axidraw_conf.py` accel_rate / accel_rate_pu                                                                 |
-| Default speeds      | 25% pen down, 75% pen up                              | Vendor default     | `axidraw_conf.py`                                                                                            |
+| Value               | Used                                                   | Status             | Source                                                                                                       |
+| ------------------- | ------------------------------------------------------ | ------------------ | ------------------------------------------------------------------------------------------------------------ |
+| Usable pen travel   | 430 × 297 mm                                           | Confirmed (vendor) | Product page; `axidraw_conf.py` 16.93 × 11.69 in                                                             |
+| Vertical pen travel | 17 mm                                                  | Vendor spec        | Product page                                                                                                 |
+| Home position       | Top left                                               | Decided            | Paper top-left at home. No "set origin here" for now.                                                        |
+| Steps per mm        | 80 (16x)                                               | **To verify**      | `axidraw_conf.py`: native_res_factor 1016 steps/in, ×2 at 16x = 2032 steps/in. Spike measures a 100 mm line. |
+| Mixed-axis mapping  | motor1 = x+y, motor2 = x−y (XM A = x, B = y)           | **To verify**      | EBB XM docs. Spike checks which way +X / +Y go.                                                              |
+| Servo range         | 9855 – 27831 (0–100%)                                  | Vendor default     | `axidraw_conf.py` servo_min / servo_max (standard servo)                                                     |
+| Pen up / down       | 60% / 30%                                              | Vendor default     | `axidraw_conf.py` pen_pos_up / pen_pos_down                                                                  |
+| Servo full sweep    | 200 ms at 100% rate                                    | Vendor default     | `axidraw_conf.py` servo_sweep_time; raise 75%, lower 50%                                                     |
+| Pen move time       | 45 ms + 2.69 ms per %                                  | Vendor default     | `axidraw_conf.py` servo_move_min / servo_move_slope                                                          |
+| Pen wait (model)    | slower of servo travel and sweep·dist/rate, blended    | Vendor behavior    | AxiDraw `pen_handling.py` (GPL, read only). 60→30%: raise ≈ 131 ms, lower ≈ 146 ms. Sent as `SP,x,ms`.       |
+| Max XY speed        | 8.70 in/s (221 mm/s) at 16x; 15 in/s (381 mm/s) at 8x  | Vendor             | `axidraw_conf.py` speed_lim_xy_hr / _lr                                                                      |
+| Acceleration        | 40 in/s² (1016 mm/s²) pen down, 60 in/s² (1524) pen up | Vendor             | `axidraw_conf.py` accel_rate / accel_rate_pu                                                                 |
+| Max step rate       | 25 000 steps/s per motor                               | EBB docs           | XM / SM docs. The planner stretches any command that would exceed it.                                        |
+| Default speeds      | 25% pen down, 75% pen up                               | Vendor default     | `axidraw_conf.py`                                                                                            |
 
 Narrow-band (brushless upgrade) servo values exist (`nb_servo_*`), for DRIVER-6 later.
 
@@ -88,3 +90,15 @@ Narrow-band (brushless upgrade) servo values exist (`nb_servo_*`), for DRIVER-6 
 | Button      | Not reached yet.                                                                                                                                                                                                                                                                                                                                                                             |
 
 NextDraw differences: not tested (no hardware).
+
+## Planner settings (software, not hardware)
+
+These are tuning choices in `packages/plotter/src/motion/plan.ts`, not machine values. Adjust
+them after the hardware test if plots skip steps or corners look rounded.
+
+| Setting            | Value   | Why                                                                      |
+| ------------------ | ------- | ------------------------------------------------------------------------ |
+| Junction deviation | 0.05 mm | Corner speed model; smaller = slower, sharper corners.                   |
+| Slice              | 25 ms   | Sampling while accelerating (each slice is one constant-speed `XM`).     |
+| Max chunk          | 200 ms  | Longest constant-speed command, so pause reacts within about 0.2 s.      |
+| Min command        | 5 ms    | Tiny samples are merged so the one-command FIFO never runs dry over USB. |
