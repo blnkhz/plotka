@@ -2,6 +2,8 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { basename } from 'node:path';
 import { app, BrowserWindow, dialog, ipcMain } from 'electron';
 import type { InvokeChannel, InvokeChannels } from '@shared/ipc';
+import type { PlotterService } from './plotter';
+import { listPorts } from './serial';
 
 type Handler<C extends InvokeChannel> = (
   event: Electron.IpcMainInvokeEvent,
@@ -14,7 +16,15 @@ function handle<C extends InvokeChannel>(channel: C, handler: Handler<C>): void 
   );
 }
 
-export function registerIpcHandlers(): void {
+export function registerIpcHandlers(plotter: PlotterService): void {
+  handle('plotter:listPorts', () => listPorts());
+  handle('plotter:connect', (_e, port, profileId) => plotter.connect(port, profileId));
+  handle('plotter:disconnect', () => plotter.disconnect());
+  handle('plotter:status', () => plotter.status());
+  handle('plotter:command', (_e, cmd) => plotter.command(cmd));
+  handle('plot:start', (_e, req) => plotter.start(req));
+  handle('plot:control', (_e, action) => plotter.control(action));
+
   handle('app:getInfo', () => ({
     version: app.getVersion(),
     platform: process.platform,

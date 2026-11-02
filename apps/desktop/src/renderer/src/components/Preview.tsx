@@ -23,9 +23,18 @@ export function Preview() {
   const hasDoc = useStore((s) => s.doc !== null);
 
   // Latest draw inputs, read by the rAF callback.
-  const inputs = useRef({ processed, page, options, bed: profile.bed });
+  const machine = useStore((s) => s.plotter?.machine);
+  const plotPenDown = useStore((s) => s.plotter?.plot?.penDown);
+  const pen = machine?.position
+    ? {
+        x: machine.position.x,
+        y: machine.position.y,
+        down: plotPenDown ?? machine.penUp === false,
+      }
+    : null;
+  const inputs = useRef({ processed, page, options, bed: profile.bed, pen });
   useEffect(() => {
-    inputs.current = { processed, page, options, bed: profile.bed };
+    inputs.current = { processed, page, options, bed: profile.bed, pen };
   });
 
   const draw = useCallback(() => {
@@ -33,8 +42,7 @@ export function Preview() {
     frame.current = requestAnimationFrame(() => {
       const canvas = canvasRef.current;
       if (!canvas) return;
-      const { processed, page, options, bed } = inputs.current;
-      render(canvas, view.current, { processed, page, options, bed });
+      render(canvas, view.current, inputs.current);
     });
   }, []);
 
@@ -56,7 +64,7 @@ export function Preview() {
   }, [draw]);
 
   // Redraw when inputs change.
-  useEffect(draw, [draw, processed, page, options, profile]);
+  useEffect(draw, [draw, processed, page, options, profile, pen?.x, pen?.y, pen?.down]);
   // Fit on request (file opened, F key, button) and when paper size changes.
   useEffect(fit, [
     fit,
@@ -223,6 +231,8 @@ type RenderInput = {
   page: ReturnType<typeof useStore.getState>['page'];
   options: ViewOptions;
   bed: { width: number; height: number };
+  /** Live pen position from the plotter, mm from home, and whether it's down. */
+  pen: { x: number; y: number; down: boolean } | null;
 };
 
 function cssVar(name: string): string {
@@ -232,7 +242,7 @@ function cssVar(name: string): string {
 function render(
   canvas: HTMLCanvasElement,
   v: ViewTransform,
-  { processed, page, options, bed }: RenderInput,
+  { processed, page, options, bed, pen }: RenderInput,
 ) {
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
@@ -279,7 +289,10 @@ function render(
     ctx.setLineDash([]);
   }
 
-  if (!processed) return;
+  if (!processed) {
+    drawPen(ctx, pen, px);
+    return;
+  }
 
   // Original artwork (placed, before clipping): fills tinted, outlines faint.
   if (options.original) {
@@ -348,6 +361,37 @@ function render(
     ctx.lineTo(0, 0);
     ctx.stroke();
   }
+
+  drawPen(ctx, pen, px);
+}
+
+/** The live pen: a ring with a crosshair, filled while the pen is down. */
+function drawPen(ctx: CanvasRenderingContext2D, pen: RenderInput['pen'], px: number) {
+  if (!pen) return;
+  const r = 6 * px;
+  ctx.save();
+  ctx.strokeStyle = cssVar('--accent');
+  ctx.fillStyle = cssVar('--accent');
+  ctx.lineWidth = 1.5 * px;
+  ctx.beginPath();
+  ctx.arc(pen.x, pen.y, r, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(pen.x - 2 * r, pen.y);
+  ctx.lineTo(pen.x - r, pen.y);
+  ctx.moveTo(pen.x + r, pen.y);
+  ctx.lineTo(pen.x + 2 * r, pen.y);
+  ctx.moveTo(pen.x, pen.y - 2 * r);
+  ctx.lineTo(pen.x, pen.y - r);
+  ctx.moveTo(pen.x, pen.y + r);
+  ctx.lineTo(pen.x, pen.y + 2 * r);
+  ctx.stroke();
+  if (pen.down) {
+    ctx.beginPath();
+    ctx.arc(pen.x, pen.y, r * 0.45, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.restore();
 }
 
 const endOf = (p: Polyline) => (p.closed ? p.points[0]! : p.points[p.points.length - 1]!);

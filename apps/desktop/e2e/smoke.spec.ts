@@ -130,7 +130,7 @@ test('passes: repeat a layer with slight shifts in several pen colors', async ()
   if (shots) await page.screenshot({ path: join(shots, 'passes.png') });
 
   await page.getByRole('tab', { name: 'Plot' }).click();
-  await expect(page.getByText('Layer 1 · pass 3')).toBeVisible();
+  await expect(page.getByLabel('Layer 1 · pass 3')).toBeChecked();
   for (let i = 0; i < 4; i++) await page.getByRole('button', { name: '+' }).click();
   if (shots) await page.screenshot({ path: join(shots, 'passes-zoom.png') });
   await app.close();
@@ -218,5 +218,39 @@ test('tessellate with wallpaper patterns', async () => {
   await size.fill('160');
   await size.press('Enter');
   if (shots) await page.screenshot({ path: join(shots, 'tess-p4-overlap.png') });
+  await app.close();
+});
+
+test('connect the simulated plotter, jog, plot, pause, resume, finish', async () => {
+  const app = await electron.launch({
+    args: [join(__dirname, '..')],
+    env: { ...process.env, PLOTTER_SIM_SPEED: '40' },
+  });
+  const page = await app.firstWindow();
+  await page.setViewportSize({ width: 1400, height: 900 });
+  await dropFile(page, 'motif.svg');
+  await page.getByRole('tab', { name: 'Machine' }).click();
+  await page.getByLabel('Port').selectOption('simulated');
+  await page.getByRole('button', { name: 'Connect' }).click();
+  await expect(page.getByText('Simulated plotter', { exact: true })).toBeVisible();
+  await expect(page.getByText('Not set (motors off)')).toBeVisible();
+
+  // Jog sets home where the motors switch on, then moves.
+  await page.getByRole('button', { name: 'Jog right 10 mm' }).click();
+  await expect(page.getByText('X 10.0 · Y 0.0 mm')).toBeVisible();
+  await page.getByRole('button', { name: 'Home' }).click();
+  await expect(page.getByText('X 0.0 · Y 0.0 mm')).toBeVisible();
+  await page.getByLabel('Pen down height').fill('25');
+  if (shots) await page.screenshot({ path: join(shots, 'machine-tab.png') });
+
+  await page.getByRole('tab', { name: 'Plot' }).click();
+  await page.getByRole('button', { name: 'Start plot' }).click();
+  await expect(page.getByText('Plotting')).toBeVisible();
+  await page.getByRole('button', { name: 'Pause' }).click();
+  await expect(page.getByText('Paused', { exact: true })).toBeVisible({ timeout: 10000 });
+  if (shots) await page.screenshot({ path: join(shots, 'plot-paused.png') });
+  await page.getByRole('button', { name: 'Resume' }).click();
+  await expect(page.getByText('Done', { exact: true })).toBeVisible({ timeout: 60000 });
+  if (shots) await page.screenshot({ path: join(shots, 'plot-done.png') });
   await app.close();
 });

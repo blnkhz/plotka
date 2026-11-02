@@ -47,6 +47,7 @@ export function useProcessed(): Processed | null {
   const page = useStore((s) => s.page);
   const optimize = useStore((s) => s.optimize);
   const transforms = useStore((s) => s.pipeline);
+  const penHeights = useStore((s) => s.penHeights);
   const profile = useProfile();
 
   return useMemo(() => {
@@ -66,12 +67,13 @@ export function useProcessed(): Processed | null {
       return {
         speedPenDown: s?.speedPenDown ?? 25,
         speedPenUp: s?.speedPenUp ?? 75,
-        penPosUp: s?.penPosUp ?? profile.servo.penPosUp,
-        penPosDown: s?.penPosDown ?? profile.servo.penPosDown,
+        // The plot uses the machine's pen heights for every layer, so the estimate does too.
+        penPosUp: penHeights.up,
+        penPosDown: penHeights.down,
       };
     };
     const stats = statsWithPlan(result.toolpath, profile, settings);
     const statsBefore = statsWithPlan(result.unoptimized, profile, settings);
     return { ...result, stats, statsBefore };
-  }, [doc, overrides, page, optimize, profile, transforms]);
+  }, [doc, overrides, page, optimize, profile, transforms, penHeights]);
 }

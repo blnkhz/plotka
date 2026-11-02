@@ -1,0 +1,42 @@
+.muted {
+  color: var(--muted);
+  margin: 6px 0;
+  line-height: 1.4;
+}
+.warn {
+  color: var(--warn);
+  margin: 6px 0;
+}
+.value {
+  font-variant-numeric: tabular-nums;
+}
+.buttons,
+.group {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.buttons {
+  margin-top: 8px;
+}
+.primary {
+  background: var(--accent);
+  color: var(--on-accent);
+  border-color: var(--accent);
+}
+.primary:disabled {
+  opacity: 0.5;
+}
+.port {
+  max-width: 100%;
+  min-width: 0;
+}
+.jog {
+  display: grid;
+  grid-template-columns: repeat(3, 56px);
+  gap: 4px;
+  margin: 6px 0 0 92px;
+}
+.jog button {
+  height: 30px;
+}

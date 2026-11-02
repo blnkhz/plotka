@@ -6,3 +6,6 @@ export * from './ebb';
 export * from './motion/plan';
 export * from './driver/types';
 export * from './driver/sim';
+export * from './driver/ebb-driver';
+export * from './plot/machine';
+export * from './plot/runner';

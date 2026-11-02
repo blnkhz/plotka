@@ -1,0 +1,79 @@
+.muted {
+  color: var(--muted);
+  margin: 4px 0;
+  line-height: 1.4;
+}
+.note {
+  margin: 8px 0;
+  line-height: 1.4;
+}
+.link {
+  border: 0;
+  background: none;
+  padding: 0;
+  color: var(--accent);
+  text-decoration: underline;
+  cursor: pointer;
+}
+.layers {
+  border: 0;
+  margin: 0 0 6px;
+  padding: 0;
+}
+.layers legend {
+  color: var(--muted);
+  padding: 0;
+  margin-bottom: 4px;
+}
+.layer {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 0;
+}
+.swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  border: 1px solid var(--border);
+}
+.progress {
+  margin: 8px 0;
+}
+.status {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+.bar {
+  height: 8px;
+  border-radius: 4px;
+  background: var(--canvas);
+  overflow: hidden;
+}
+.bar > div {
+  height: 100%;
+  background: var(--accent);
+  transition: width 0.2s linear;
+}
+.times {
+  display: flex;
+  justify-content: space-between;
+  color: var(--muted);
+  margin-top: 4px;
+  font-variant-numeric: tabular-nums;
+}
+.buttons {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+}
+.primary {
+  background: var(--accent);
+  color: var(--on-accent);
+  border-color: var(--accent);
+}
+.primary:disabled {
+  opacity: 0.5;
+}

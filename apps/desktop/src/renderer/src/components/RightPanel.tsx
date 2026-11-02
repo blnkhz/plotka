@@ -1,7 +1,9 @@
 import { useProcessed, useProfile } from '../lib/useProcessed';
 import { useStore, type Tab } from '../store';
-import { Notice, Row, Section } from './controls';
+import { Notice, Section } from './controls';
 import { FillTab } from './FillTab';
+import { MachineTab } from './MachineTab';
+import { PlotSection } from './PlotSection';
 import { OptimizeSection } from './OptimizeSection';
 import { PageTab } from './PageTab';
 import { StatsTable } from './StatsTable';
@@ -65,29 +67,11 @@ function PlacementWarnings() {
   );
 }
 
-function MachineTab() {
-  const profile = useProfile();
-  return (
-    <Section title="Machine">
-      <Row label="Profile">{profile.name}</Row>
-      <Row label="Travel">
-        {profile.bed.width} × {profile.bed.height} mm
-      </Row>
-      <Row label="Home">Top left of the paper</Row>
-      {profile.provisional?.length ? (
-        <p className={styles.muted}>
-          Speed and pen values are estimates until the plotter has been tested.
-        </p>
-      ) : null}
-      <p className={styles.muted}>Connecting to the plotter comes in a later step.</p>
-    </Section>
-  );
-}
-
 function PlotTab() {
   const doc = useStore((s) => s.doc);
   return (
     <>
+      <PlotSection />
       <Section title="Stats">
         {doc ? <StatsTable /> : <p className={styles.muted}>No file open.</p>}
       </Section>

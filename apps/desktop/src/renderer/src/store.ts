@@ -17,7 +17,8 @@ import {
   type PageSetup,
   type PlotDocument,
 } from '@plotter-studio/core';
-import { DEFAULT_PROFILE_ID } from '@plotter-studio/plotter';
+import { DEFAULT_PROFILE_ID, getProfile } from '@plotter-studio/plotter';
+import type { PlotterStatus } from '@shared/ipc';
 
 export type LayerOverride = Partial<Pick<Layer, 'visible' | 'plot' | 'color'>> & {
   settings?: Partial<LayerSettings>;
@@ -64,6 +65,14 @@ type State = {
   /** Transform steps (tile, ...), applied in order before the page setup. */
   pipeline: PipelineStep[];
   doodle: DoodleState;
+  /** Live plotter status from the main process. */
+  plotter: PlotterStatus | null;
+  /** Last plotter error, shown in the Machine / Plot tabs. */
+  plotterError: string | null;
+  /** Pen heights in %, used for every layer. Saved between sessions. */
+  penHeights: { up: number; down: number };
+  /** Layers left out of the next plot (PLOT-3). */
+  plotSkip: Record<string, true>;
 
   openFile(source: Source): Promise<void>;
   setLayerMode(mode: LayerMode): Promise<void>;
@@ -79,9 +88,28 @@ type State = {
   removeStep(id: string): void;
   moveStep(id: string, delta: -1 | 1): void;
   setDoodle(patch: Partial<DoodleState>): void;
+  setPenHeights(h: { up: number; down: number }): void;
+  togglePlotLayer(id: string): void;
   /** Turns the doodle into vectors and opens it as the artwork. */
   applyDoodle(): Promise<void>;
 };
+
+const PEN_HEIGHTS_KEY = 'penHeights';
+
+function loadPenHeights(): { up: number; down: number } {
+  const servo = getProfile(DEFAULT_PROFILE_ID)!.servo;
+  const fallback = { up: servo.penPosUp, down: servo.penPosDown };
+  try {
+    const v = JSON.parse(localStorage.getItem(PEN_HEIGHTS_KEY) ?? 'null') as unknown;
+    if (v && typeof v === 'object' && 'up' in v && 'down' in v) {
+      const { up, down } = v as { up: unknown; down: unknown };
+      if (typeof up === 'number' && typeof down === 'number') return { up, down };
+    }
+  } catch {
+    // Ignore unreadable storage.
+  }
+  return fallback;
+}
 
 /** The doodle as an SVG, with the current settings. */
 export const doodleSvg = (d: DoodleState) => doodleToSvg(d.strokes, d.settings, d.size);
@@ -101,6 +129,10 @@ export const useStore = create<State>()((set, get) => ({
   tab: 'page',
   fitRequest: 0,
   pipeline: [],
+  plotter: null,
+  plotterError: null,
+  penHeights: loadPenHeights(),
+  plotSkip: {},
   doodle: {
     open: false,
     strokes: [],
@@ -176,6 +208,21 @@ export const useStore = create<State>()((set, get) => ({
     }),
 
   setDoodle: (patch) => set((s) => ({ doodle: { ...s.doodle, ...patch } })),
+  setPenHeights: (penHeights) => {
+    set({ penHeights });
+    try {
+      localStorage.setItem(PEN_HEIGHTS_KEY, JSON.stringify(penHeights));
+    } catch {
+      // Storage unavailable: heights last for this session only.
+    }
+  },
+  togglePlotLayer: (id) =>
+    set((s) => {
+      const next = { ...s.plotSkip };
+      if (next[id]) delete next[id];
+      else next[id] = true;
+      return { plotSkip: next };
+    }),
   async applyDoodle() {
     const svg = doodleSvg(get().doodle);
     set((s) => ({ doodle: { ...s.doodle, open: false } }));

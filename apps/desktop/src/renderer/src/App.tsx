@@ -5,6 +5,7 @@ import { TransformsPanel } from './components/TransformsPanel';
 import { Preview } from './components/Preview';
 import { RightPanel } from './components/RightPanel';
 import { openDroppedFile, openWithDialog } from './lib/openFile';
+import { command, control, subscribePlotter } from './lib/plotter';
 import { useProcessed } from './lib/useProcessed';
 import { fmtDuration } from './lib/format';
 import { useStore } from './store';
@@ -14,6 +15,7 @@ export function App() {
   const [dragging, setDragging] = useState(false);
   const doodleOpen = useStore((s) => s.doodle.open);
   useShortcuts();
+  useEffect(() => subscribePlotter(), []);
 
   return (
     <div
@@ -97,6 +99,18 @@ function useShortcuts() {
         void openWithDialog();
       } else if (!mod && !typing && e.key.toLowerCase() === 'f') {
         useStore.getState().requestFit();
+      } else if (!mod && !typing && !useStore.getState().doodle.open) {
+        // Plot shortcuts: Space pauses / resumes; U / D raise / lower the pen when not plotting.
+        const plotter = useStore.getState().plotter;
+        const state = plotter?.plot?.state;
+        const plotting = state === 'running' || state === 'paused' || state === 'pausing';
+        if (e.key === ' ' && plotting) {
+          e.preventDefault();
+          void control('toggle');
+        } else if (plotter?.connection.connected && !plotting && state !== 'stopping') {
+          if (e.key.toLowerCase() === 'u') void command({ kind: 'penUp' });
+          if (e.key.toLowerCase() === 'd') void command({ kind: 'penDown' });
+        }
       }
     };
     window.addEventListener('keydown', onKey);

@@ -14,6 +14,46 @@ export type OpenFileResult = {
   bytes: Uint8Array;
 } | null;
 
+import type { Toolpath } from '@plotter-studio/core';
+import type { LayerMotionSettings, MachineState, RunProgress } from '@plotter-studio/plotter';
+
+export type PortInfo = { path: string; label: string; isPlotter: boolean };
+
+/** Value for the simulated plotter in the port list. */
+export const SIMULATED_PORT = 'simulated';
+
+export type PlotterStatus = {
+  connection: {
+    connected: boolean;
+    port: string | null;
+    firmware: string | null;
+    simulated: boolean;
+    /** True if the plotter went away without being disconnected from the app. */
+    lost: boolean;
+  };
+  machine: MachineState | null;
+  plot: RunProgress | null;
+};
+
+export type ManualCommand =
+  | { kind: 'penUp' }
+  | { kind: 'penDown' }
+  | { kind: 'penToggle' }
+  | { kind: 'motorsOff' }
+  | { kind: 'home' }
+  | { kind: 'jog'; dx: number; dy: number }
+  /** Pen heights in %; `show` moves the pen to that height so it can be seen. */
+  | { kind: 'penHeights'; up: number; down: number; show?: 'up' | 'down' };
+
+export type PlotRequest = {
+  profileId: string;
+  toolpath: Toolpath;
+  settings: Record<string, LayerMotionSettings>;
+};
+
+/** Result of a plotter action: errors come back as plain messages for the UI. */
+export type ActionResult = { ok: true } | { ok: false; error: string };
+
 export type AppInfo = {
   version: string;
   platform: string;
@@ -24,6 +64,16 @@ export interface InvokeChannels {
   'app:getInfo': { args: []; result: AppInfo };
   'file:open': { args: [extensions: string[]]; result: OpenFileResult };
   /** Shows a save dialog and writes text. Returns the saved path, or null if cancelled. */
+  'plotter:listPorts': { args: []; result: PortInfo[] };
+  'plotter:connect': { args: [port: string, profileId: string]; result: ActionResult };
+  'plotter:disconnect': { args: []; result: ActionResult };
+  'plotter:status': { args: []; result: PlotterStatus };
+  'plotter:command': { args: [command: ManualCommand]; result: ActionResult };
+  'plot:start': { args: [request: PlotRequest]; result: ActionResult };
+  'plot:control': {
+    args: [action: 'pause' | 'resume' | 'stop' | 'toggle'];
+    result: ActionResult;
+  };
   'file:saveText': {
     args: [defaultName: string, content: string, extensions: string[]];
     result: string | null;
@@ -32,6 +82,7 @@ export interface InvokeChannels {
 
 export interface EventChannels {
   'app:menu': { action: 'open' | 'save' | 'undo' | 'redo' };
+  'plotter:changed': PlotterStatus;
 }
 
 export type InvokeChannel = keyof InvokeChannels;
@@ -41,8 +92,18 @@ export const INVOKE_CHANNELS = [
   'app:getInfo',
   'file:open',
   'file:saveText',
+  'plotter:listPorts',
+  'plotter:connect',
+  'plotter:disconnect',
+  'plotter:status',
+  'plotter:command',
+  'plot:start',
+  'plot:control',
 ] as const satisfies readonly InvokeChannel[];
-export const EVENT_CHANNELS = ['app:menu'] as const satisfies readonly EventChannel[];
+export const EVENT_CHANNELS = [
+  'app:menu',
+  'plotter:changed',
+] as const satisfies readonly EventChannel[];
 
 /** The shape of `window.api` exposed by the preload script. */
 export type Api = {
