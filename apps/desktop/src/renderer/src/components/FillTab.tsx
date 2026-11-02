@@ -1,5 +1,5 @@
 import { defaultFillSettings, type FillSettings, type FillType } from '@plotter-studio/core';
-import { applyOverrides, useStore } from '../store';
+import { applyOverrides, currentLayerSettings, useStore } from '../store';
 import { Notice, NumberField, Row, Section } from './controls';
 import { PassesSection } from './PassesSection';
 import { SpeedSection } from './SpeedSection';
@@ -38,8 +38,10 @@ export function FillTab() {
   const drawable = layer.fills.filter((f) => !f.knockout).length;
   const knockouts = layer.fills.length - drawable;
   const type = fill?.type ?? 'none';
-  const setFill = (patch: Partial<FillSettings>) =>
-    setLayer(layer.id, { settings: { fill: { ...(fill ?? defaultFillSettings()), ...patch } } });
+  const setFill = (patch: Partial<FillSettings>) => {
+    const cur = currentLayerSettings(layer.id)?.fill ?? null;
+    setLayer(layer.id, { settings: { fill: { ...(cur ?? defaultFillSettings()), ...patch } } });
+  };
 
   return (
     <>

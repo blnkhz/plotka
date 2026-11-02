@@ -5,7 +5,7 @@ import {
   type Layer,
   type PassSettings,
 } from '@plotter-studio/core';
-import { useStore } from '../store';
+import { currentLayerSettings, useStore } from '../store';
 import { NumberField, Row, Section } from './controls';
 import styles from './FillTab.module.css';
 
@@ -14,10 +14,10 @@ export function PassesSection({ layer }: { layer: Layer }) {
   const setLayer = useStore((s) => s.setLayer);
   const passes = layer.settings.passes;
   const on = !!passes && passes.count >= 2;
-  const set = (patch: Partial<PassSettings>) =>
-    setLayer(layer.id, {
-      settings: { passes: { ...(passes ?? defaultPassSettings()), ...patch } },
-    });
+  const set = (patch: Partial<PassSettings>) => {
+    const cur = currentLayerSettings(layer.id)?.passes ?? null;
+    setLayer(layer.id, { settings: { passes: { ...(cur ?? defaultPassSettings()), ...patch } } });
+  };
 
   return (
     <Section title="Passes" help="passes">

@@ -101,6 +101,8 @@ type State = {
   removeStep(id: string): void;
   moveStep(id: string, delta: -1 | 1): void;
   setDoodle(patch: Partial<DoodleState>): void;
+  /** Changes some doodle settings, keeping the rest as they are now (not as last rendered). */
+  setDoodleSettings(patch: Partial<DoodleSettings>): void;
   /** Opens help, at a topic (and section) if given. */
   openHelp(topic?: string, anchor?: string): void;
   closeHelp(): void;
@@ -234,6 +236,8 @@ export const useStore = create<State>()((set, get) => ({
     }),
 
   setDoodle: (patch) => set((s) => ({ doodle: { ...s.doodle, ...patch } })),
+  setDoodleSettings: (patch) =>
+    set((s) => ({ doodle: { ...s.doodle, settings: { ...s.doodle.settings, ...patch } } })),
   openHelp: (topic, anchor) =>
     set((s) => ({
       help: {
@@ -288,6 +292,16 @@ export const useStore = create<State>()((set, get) => ({
           get().setLayer(l.id, { settings: { fill: defaultFillSettings() } });
   },
 }));
+
+/**
+ * A layer's settings as they are right now (not as last rendered), for changes that build on
+ * the current value, so two quick changes in a row don't overwrite each other.
+ */
+export function currentLayerSettings(id: string): LayerSettings | undefined {
+  const { doc, layerOverrides } = useStore.getState();
+  if (!doc) return undefined;
+  return applyOverrides(doc, layerOverrides).layers.find((l) => l.id === id)?.settings;
+}
 
 /** Applies UI overrides (visibility, plot toggle, settings) to the imported layers. */
 export function applyOverrides(

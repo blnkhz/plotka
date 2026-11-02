@@ -444,7 +444,7 @@ test('doodle: fill closed shapes without keeping their outlines', async () => {
   await page.mouse.move(cx + 120, cy);
   await page.mouse.down();
   for (let i = 1; i <= 120; i++) {
-    const a = (i / 120) * Math.PI * 2 * 0.99;
+    const a = (i / 120) * Math.PI * 2; // ends exactly where it started
     await page.mouse.move(cx + 120 * Math.cos(a), cy + 120 * Math.sin(a));
   }
   await page.mouse.up();
@@ -513,5 +513,21 @@ test('per-layer speed changes the time estimate (MOTION-3)', async () => {
   await drawing.press('Enter');
   await expect(page.getByText('133 mm/s')).toBeVisible();
   await expect.poll(seconds).toBeLessThan(before);
+  await app.close();
+});
+
+test('dry run traces the outline with the pen up (PLOT-6)', async () => {
+  const app = await launch({ PLOTTER_SIM_SPEED: '40' });
+  const page = await app.firstWindow();
+  await page.setViewportSize({ width: 1400, height: 900 });
+  await dropFile(page, 'motif.svg');
+  await page.getByRole('tab', { name: 'Machine' }).click();
+  await page.getByLabel('Port').selectOption('simulated');
+  await page.getByRole('button', { name: 'Connect' }).click();
+  await page.getByRole('tab', { name: 'Plot' }).click();
+  await page.getByRole('button', { name: 'Dry run' }).click();
+  await expect(page.getByText('Dry run done')).toBeVisible({ timeout: 30000 });
+  // Ready to plot for real afterwards.
+  await expect(page.getByRole('button', { name: 'Start plot' })).toBeEnabled();
   await app.close();
 });

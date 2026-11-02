@@ -14,6 +14,7 @@ const GRID = 10;
 export function DoodlePad() {
   const doodle = useStore((s) => s.doodle);
   const setDoodle = useStore((s) => s.setDoodle);
+  const setDoodleSettings = useStore((s) => s.setDoodleSettings);
   const applyDoodle = useStore((s) => s.applyDoodle);
   const { strokes, undone, settings, size } = doodle;
   const [tool, setTool] = useState<Tool>('draw');
@@ -23,6 +24,8 @@ export function DoodlePad() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
   const live = useRef<Vec2[] | null>(null);
+  /** The pointer drawing or erasing right now (tracked ourselves; capture can be lost). */
+  const activePointer = useRef<number | null>(null);
   const view = useRef({ scale: 1, x: 0, y: 0 });
 
   const processed = useMemo(
@@ -58,13 +61,8 @@ export function DoodlePad() {
       canvas.style.width = `${w}px`;
       canvas.style.height = `${h}px`;
     }
-    const pad = 24;
-    const scale = Math.min((w - 2 * pad) / size.width, (h - 2 * pad) / size.height);
-    view.current = {
-      scale,
-      x: (w - size.width * scale) / 2,
-      y: (h - size.height * scale) / 2,
-    };
+    view.current = artboardView(w, h, size);
+    const { scale } = view.current;
     const ctx = canvas.getContext('2d')!;
     const css = getComputedStyle(document.documentElement);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -143,7 +141,8 @@ export function DoodlePad() {
 
   const toMm = (e: { clientX: number; clientY: number }): Vec2 => {
     const r = canvasRef.current!.getBoundingClientRect();
-    const v = view.current;
+    // From the canvas's current size, not the last redraw: the first press can come before it.
+    const v = artboardView(r.width, r.height, size);
     return {
       x: Math.min(size.width, Math.max(0, (e.clientX - r.left - v.x) / v.scale)),
       y: Math.min(size.height, Math.max(0, (e.clientY - r.top - v.y) / v.scale)),
@@ -198,13 +197,20 @@ export function DoodlePad() {
             className={tool === 'erase' ? styles.erase : styles.draw}
             onPointerDown={(e) => {
               if (e.button !== 0) return;
-              e.currentTarget.setPointerCapture(e.pointerId);
+              activePointer.current = e.pointerId;
+              // Capture keeps the stroke going if the pointer leaves the canvas; it's a bonus,
+              // not what decides whether a move belongs to the stroke.
+              try {
+                e.currentTarget.setPointerCapture(e.pointerId);
+              } catch {
+                // Not available: moves over the canvas still draw.
+              }
               if (tool === 'erase') eraseAt(toMm(e));
               else live.current = [toMm(e)];
               draw();
             }}
             onPointerMove={(e) => {
-              if (!e.currentTarget.hasPointerCapture(e.pointerId)) return;
+              if (activePointer.current !== e.pointerId) return;
               const events = e.nativeEvent.getCoalescedEvents?.() ?? [e.nativeEvent];
               if (tool === 'erase') {
                 for (const ev of events) eraseAt(toMm(ev));
@@ -214,7 +220,9 @@ export function DoodlePad() {
               for (const ev of events) live.current.push(toMm(ev));
               draw();
             }}
-            onPointerUp={() => {
+            onPointerUp={(e) => {
+              if (activePointer.current !== e.pointerId) return;
+              activePointer.current = null;
               const pts = live.current;
               live.current = null;
               if (pts && pts.length > 1)
@@ -222,6 +230,7 @@ export function DoodlePad() {
               else draw();
             }}
             onPointerCancel={() => {
+              activePointer.current = null;
               live.current = null;
               draw();
             }}
@@ -261,7 +270,7 @@ export function DoodlePad() {
                     title: 'Straight segments between points',
                   },
                 ]}
-                onChange={(style) => setDoodle({ settings: { ...settings, style } })}
+                onChange={(style) => setDoodleSettings({ style })}
               />
             </Row>
             <Row label="Smoothing">
@@ -271,9 +280,7 @@ export function DoodlePad() {
                 min={0}
                 max={100}
                 value={settings.smoothing}
-                onChange={(e) =>
-                  setDoodle({ settings: { ...settings, smoothing: Number(e.target.value) } })
-                }
+                onChange={(e) => setDoodleSettings({ smoothing: Number(e.target.value) })}
               />
               <span className={styles.muted}>{settings.smoothing}</span>
             </Row>
@@ -282,9 +289,7 @@ export function DoodlePad() {
                 <input
                   type="checkbox"
                   checked={settings.keepCorners}
-                  onChange={(e) =>
-                    setDoodle({ settings: { ...settings, keepCorners: e.target.checked } })
-                  }
+                  onChange={(e) => setDoodleSettings({ keepCorners: e.target.checked })}
                 />
                 Keep sharp corners
               </label>
@@ -297,9 +302,7 @@ export function DoodlePad() {
                 <input
                   type="checkbox"
                   checked={settings.closeGap > 0}
-                  onChange={(e) =>
-                    setDoodle({ settings: { ...settings, closeGap: e.target.checked ? 3 : 0 } })
-                  }
+                  onChange={(e) => setDoodleSettings({ closeGap: e.target.checked ? 3 : 0 })}
                 />
                 Close shapes when the ends meet
               </label>
@@ -313,9 +316,7 @@ export function DoodlePad() {
                   type="checkbox"
                   checked={settings.fillClosed}
                   disabled={settings.closeGap === 0}
-                  onChange={(e) =>
-                    setDoodle({ settings: { ...settings, fillClosed: e.target.checked } })
-                  }
+                  onChange={(e) => setDoodleSettings({ fillClosed: e.target.checked })}
                 />
                 Fill closed shapes
               </label>
@@ -329,9 +330,7 @@ export function DoodlePad() {
                   type="checkbox"
                   checked={settings.keepOutlines}
                   disabled={settings.closeGap === 0 || !settings.fillClosed}
-                  onChange={(e) =>
-                    setDoodle({ settings: { ...settings, keepOutlines: e.target.checked } })
-                  }
+                  onChange={(e) => setDoodleSettings({ keepOutlines: e.target.checked })}
                 />
                 Keep outlines
               </label>
@@ -379,4 +378,11 @@ function polyline(ctx: CanvasRenderingContext2D, pts: Vec2[]) {
   if (!pts.length) return;
   ctx.moveTo(pts[0]!.x, pts[0]!.y);
   for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i]!.x, pts[i]!.y);
+}
+
+/** Where the artboard sits on a canvas of w × h px: scale (px per mm) and offset. */
+function artboardView(w: number, h: number, size: { width: number; height: number }) {
+  const pad = 24;
+  const scale = Math.max(1e-6, Math.min((w - 2 * pad) / size.width, (h - 2 * pad) / size.height));
+  return { scale, x: (w - size.width * scale) / 2, y: (h - size.height * scale) / 2 };
 }
