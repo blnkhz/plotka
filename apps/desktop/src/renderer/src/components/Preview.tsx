@@ -363,9 +363,7 @@ function render(
     const layer = visible.get(lt.layerId);
     if (!layer?.visible) continue;
     ctx.strokeStyle = layer.color;
-    ctx.beginPath();
-    for (const p of lt.paths) addPath(ctx, p.points, p.closed);
-    ctx.stroke();
+    ctx.stroke(cachedPath(lt.paths));
   }
   ctx.globalCompositeOperation = 'source-over';
 
@@ -434,7 +432,22 @@ function drawPen(ctx: CanvasRenderingContext2D, pen: RenderInput['pen'], px: num
 
 const endOf = (p: Polyline) => (p.closed ? p.points[0]! : p.points[p.points.length - 1]!);
 
-function addPath(ctx: CanvasRenderingContext2D, pts: { x: number; y: number }[], closed: boolean) {
+/**
+ * PREVIEW-5: each layer's paths as one Path2D, built once per processed result and reused for
+ * every redraw (panning and zooming only re-stroke it).
+ */
+const pathCache = new WeakMap<Polyline[], Path2D>();
+function cachedPath(paths: Polyline[]): Path2D {
+  let p = pathCache.get(paths);
+  if (!p) {
+    p = new Path2D();
+    for (const line of paths) addPath(p, line.points, line.closed);
+    pathCache.set(paths, p);
+  }
+  return p;
+}
+
+function addPath(ctx: CanvasPath, pts: { x: number; y: number }[], closed: boolean) {
   if (pts.length === 0) return;
   ctx.moveTo(pts[0]!.x, pts[0]!.y);
   for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i]!.x, pts[i]!.y);

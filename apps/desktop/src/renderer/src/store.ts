@@ -20,6 +20,7 @@ import {
 } from '@plotter-studio/core';
 import { DEFAULT_PROFILE_ID, getProfile } from '@plotter-studio/plotter';
 import type { PlotterStatus } from '@shared/ipc';
+import type { Processed } from './lib/pipeline';
 
 export type LayerOverride = Partial<Pick<Layer, 'visible' | 'plot' | 'color'>> & {
   settings?: Partial<LayerSettings>;
@@ -83,6 +84,9 @@ type State = {
   help: { open: boolean; topic: string; anchor: string };
   /** The "filled shapes won't be drawn" notice was dismissed for this file. */
   undrawnNoticeHidden: boolean;
+  /** The pipeline's latest result (lib/pipelineRunner.ts), and whether a newer one is coming. */
+  processed: Processed | null;
+  processing: boolean;
   /** Whether Undo / Redo have something to do (PROJ-2). */
   canUndo: boolean;
   canRedo: boolean;
@@ -158,6 +162,8 @@ export const useStore = create<State>()((set, get) => ({
   dirty: false,
   canUndo: false,
   canRedo: false,
+  processed: null,
+  processing: false,
   undrawnNoticeHidden: false,
   help: { open: false, topic: 'getting-started', anchor: '' },
   doodle: {

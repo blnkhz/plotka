@@ -8,8 +8,9 @@ import { RightPanel } from './components/RightPanel';
 import { openDroppedFile, openWithDialog } from './lib/openFile';
 import { command, control, subscribePlotter } from './lib/plotter';
 import { redo, saveProject, trackProject, undo } from './lib/projectActions';
+import { startPipeline } from './lib/pipelineRunner';
 import { fmtDistance } from './lib/format';
-import { useProcessed } from './lib/useProcessed';
+import { useProcessed, useProcessing } from './lib/useProcessed';
 import { fmtDuration } from './lib/format';
 import { useStore } from './store';
 import styles from './App.module.css';
@@ -21,6 +22,7 @@ export function App() {
   useShortcuts();
   useEffect(() => subscribePlotter(), []);
   useEffect(() => trackProject(), []);
+  useEffect(() => startPipeline(), []);
   useEffect(() => window.api.on('app:menu', ({ action }) => void menuAction(action)), []);
 
   return (
@@ -63,6 +65,7 @@ function Toolbar() {
   const error = useStore((s) => s.error);
   const loading = useStore((s) => s.loading);
   const processed = useProcessed();
+  const processing = useProcessing();
   const setDoodle = useStore((s) => s.setDoodle);
   const hasDoodle = useStore((s) => s.doodle.strokes.length > 0);
   const canUndo = useStore((s) => s.canUndo);
@@ -103,6 +106,11 @@ function Toolbar() {
         </span>
       ))}
       <span className={styles.spacer} />
+      {processing && (
+        <span className={styles.updating} role="status">
+          Updating…
+        </span>
+      )}
       {processed && (
         <span className={styles.summary}>
           {processed.stats.total.pathCount} paths · draw{' '}

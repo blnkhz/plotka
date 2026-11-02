@@ -75,7 +75,7 @@ test('crosshatch a layer (MVP fill setup)', async () => {
   await page.getByRole('tab', { name: 'Fill' }).click();
   await page.getByLabel('Fill type').selectOption('crosshatch');
   await expect(page.getByText('16.7 /cm')).toBeVisible(); // 0.6 mm default
-  expect(await pathCount()).toBeGreaterThan(before);
+  await expect.poll(pathCount).toBeGreaterThan(before);
   if (shots) await page.screenshot({ path: join(shots, 'crosshatch.png') });
 
   await page.getByLabel('Fill type').selectOption('zigzag');
@@ -483,11 +483,11 @@ test('remove and restore layers; a hidden layer that still plots is flagged', as
   await page.getByRole('button', { name: 'Remove Outlines' }).click();
   await expect(page.getByRole('button', { name: 'Remove Outlines' })).toHaveCount(0);
   await expect(page.getByText('1 removed layer')).toBeVisible();
-  expect(await paths()).toBeLessThan(before);
+  await expect.poll(paths).toBeLessThan(before);
   if (shots) await page.screenshot({ path: join(shots, 'layer-removed.png') });
   await page.getByRole('button', { name: 'Restore' }).click();
   await expect(page.getByRole('button', { name: 'Remove Outlines' })).toBeVisible();
-  expect(await paths()).toBe(before);
+  await expect.poll(paths).toBe(before);
 
   await page.getByRole('button', { name: 'Remove Outlines' }).click();
   await page.getByRole('button', { name: 'Undo' }).click();
@@ -529,5 +529,35 @@ test('dry run traces the outline with the pen up (PLOT-6)', async () => {
   await expect(page.getByText('Dry run done')).toBeVisible({ timeout: 30000 });
   // Ready to plot for real afterwards.
   await expect(page.getByRole('button', { name: 'Start plot' })).toBeEnabled();
+  await app.close();
+});
+
+test('heavy processing runs in the background; the window stays responsive (PREVIEW-5)', async () => {
+  const app = await launch();
+  const page = await app.firstWindow();
+  await page.setViewportSize({ width: 1400, height: 900 });
+  await dropFile(page, 'motif.svg');
+  await expect(page.getByText(/paths · draw/)).toBeVisible();
+  await page.getByRole('tab', { name: 'Fill' }).click();
+  await page.getByLabel('Fill type').selectOption('concentric');
+  await page.getByLabel('Add transform').selectOption('tessellate');
+  for (const [name, value] of [
+    ['Columns', '24'],
+    ['Rows', '24'],
+  ] as const) {
+    const f = page.getByRole('spinbutton', { name, exact: true });
+    await f.fill(value);
+    await f.press('Enter');
+  }
+  await expect(page.getByRole('status')).toHaveText('Updating…');
+  // While it works, the UI still reacts right away.
+  const t0 = Date.now();
+  await page.getByRole('tab', { name: 'Page' }).click();
+  await expect(page.getByRole('tab', { name: 'Page' })).toHaveAttribute('aria-selected', 'true');
+  const tabMs = Date.now() - t0;
+  expect(tabMs).toBeLessThan(500);
+  await expect(page.getByRole('status')).toHaveCount(0, { timeout: 60000 });
+  await expect(page.getByText(/paths · draw/)).toBeVisible();
+  console.log(`tab switch while processing: ${tabMs} ms`);
   await app.close();
 });
