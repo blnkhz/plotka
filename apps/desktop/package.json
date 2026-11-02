@@ -15,22 +15,22 @@
     "test:e2e": "electron-vite build && playwright test"
   },
   "dependencies": {
-    "@plotter-studio/core": "workspace:*",
-    "@plotter-studio/plotter": "workspace:*",
-    "marked": "^18.1.2",
-    "react": "^19.3.1",
-    "react-dom": "^19.3.1",
-    "serialport": "^13.0.0",
-    "zustand": "^5.0.16"
+    "serialport": "^13.0.0"
   },
   "devDependencies": {
     "@playwright/test": "^1.64.1",
+    "@plotter-studio/core": "workspace:*",
+    "@plotter-studio/plotter": "workspace:*",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.1.2",
     "electron": "^45.2.1",
     "electron-builder": "^26.18.0",
     "electron-vite": "^6.0.0",
-    "vite": "^8.3.5"
+    "marked": "^18.1.2",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "vite": "^8.3.5",
+    "zustand": "^5.0.16"
   }
 }

@@ -72,3 +72,8 @@ users see (a label, a setting, a new feature), update the matching page in the s
 Use the exact labels from the UI, and plain words. Links between pages use the file name
 (`[Fills](04-fills.md)`, or `04-fills.md#settings` for a section); the tests check that every link
 and every "?" button points to a page and section that exist.
+
+## App icon
+
+The icon's source is `apps/desktop/build/icon.svg`. After editing it, run
+`apps/desktop/scripts/make-icon.sh` (macOS) to regenerate `build/icon.icns`.

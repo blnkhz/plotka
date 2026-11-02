@@ -30,9 +30,16 @@ export default tseslint.config(
       'apps/desktop/src/preload/**/*.ts',
       '**/*.config.{js,ts,mts}',
       'scripts/**',
+      'apps/desktop/scripts/**',
       'tools/**',
     ],
     languageOptions: { globals: globals.node },
+  },
+  {
+    // CommonJS build scripts (run directly by Electron or Node).
+    files: ['**/*.cjs'],
+    languageOptions: { sourceType: 'commonjs', globals: globals.node },
+    rules: { '@typescript-eslint/no-require-imports': 'off' },
   },
   {
     // packages/core must stay pure: no Electron, Node or DOM.

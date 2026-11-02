@@ -64,7 +64,7 @@ pnpm dev          # run the app with hot reload
 pnpm test         # unit tests (Vitest)
 pnpm lint         # ESLint
 pnpm typecheck    # TypeScript
-pnpm build:mac    # build a .dmg into apps/desktop/release
+pnpm build:mac    # universal (Apple Silicon + Intel) .dmg in apps/desktop/release
 ```
 
 ### Repo layout

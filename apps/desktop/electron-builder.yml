@@ -6,6 +6,8 @@ directories:
 files:
   - out/**
   - package.json
+  # Only the macOS serialport binary is needed in a Mac build.
+  - '!**/node_modules/@serialport/bindings-cpp/prebuilds/{android,linux,win32}-*/**'
 asarUnpack:
   - '**/node_modules/@serialport/bindings-cpp/**'
 mac:
@@ -18,4 +20,7 @@ mac:
   # APPLE_TEAM_ID in CI, remove `identity: null`, and set `notarize: true`.
   identity: null
   notarize: false
-npmRebuild: true
+# serialport ships a universal (x64 + arm64) N-API prebuild, which Electron loads as is, so
+# nothing needs compiling. Everything else is bundled into out/ by electron-vite; only
+# `dependencies` (just serialport) are packaged.
+npmRebuild: false
