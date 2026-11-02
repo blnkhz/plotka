@@ -72,7 +72,7 @@ function PlotTab() {
   return (
     <>
       <PlotSection />
-      <Section title="Stats">
+      <Section title="Stats" help="plotting#time-and-distance">
         {doc ? <StatsTable /> : <p className={styles.muted}>No file open.</p>}
       </Section>
       <OptimizeSection />

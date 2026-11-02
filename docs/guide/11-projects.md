@@ -1,0 +1,33 @@
+# Projects and undo
+
+## Saving and opening
+
+**Save** (⌘S) saves everything as a project file (`.plot.json`). The first time, it asks for a
+name and place; after that it saves to the same file. **Save As…** (⇧⌘S) saves a copy under a new
+name. **Open…** (⌘O) opens projects as well as SVGs, and you can drop a project on the window.
+
+A project keeps:
+
+- a copy of the artwork, so it still opens if the original SVG is moved or changed,
+- the layer settings (fills, passes, outlines, colors, which layers to show and plot),
+- the page setup, optimization settings and the transforms,
+- your doodle strokes.
+
+Pen heights and the plotter connection belong to the machine, not the drawing, so they're not in
+the project. Pen heights are remembered by the app.
+
+The window title shows the project's name, with "(edited)" when there are unsaved changes.
+Closing with unsaved changes asks first. Opening an SVG starts a new project; the transforms stay,
+so you can try the same pattern on other artwork.
+
+## Undo and redo
+
+**Undo** (⌘Z) and **Redo** (⇧⌘Z), also in the toolbar and the Edit menu, step back and forward
+through settings changes: layer settings, layer mode, page setup, optimization, transforms, which
+layers to plot and the pen width. Quick repeated changes to one setting (like clicking a spinner
+arrow) count as one step.
+
+- In a text box, Undo undoes your typing.
+- In the doodle pad, Undo removes the last stroke.
+- Moving the plotter (jog, pen up and down) can't be undone.
+- Opening a file or project starts a fresh history.

@@ -17,6 +17,7 @@
   "dependencies": {
     "@plotter-studio/core": "workspace:*",
     "@plotter-studio/plotter": "workspace:*",
+    "marked": "^18.1.2",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "serialport": "^13.0.0",

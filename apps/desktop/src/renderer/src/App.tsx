@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { DoodlePad } from './components/DoodlePad';
+import { HelpPanel } from './components/HelpPanel';
 import { LayersPanel } from './components/LayersPanel';
 import { TransformsPanel } from './components/TransformsPanel';
 import { Preview } from './components/Preview';
@@ -16,6 +17,7 @@ import styles from './App.module.css';
 export function App() {
   const [dragging, setDragging] = useState(false);
   const doodleOpen = useStore((s) => s.doodle.open);
+  const helpOpen = useStore((s) => s.help.open);
   useShortcuts();
   useEffect(() => subscribePlotter(), []);
   useEffect(() => trackProject(), []);
@@ -50,6 +52,7 @@ export function App() {
       </div>
       {dragging && <div className={styles.dropHint}>Drop to open</div>}
       {doodleOpen && <DoodlePad />}
+      {helpOpen && <HelpPanel />}
     </div>
   );
 }
@@ -89,6 +92,9 @@ function Toolbar() {
       >
         {hasDoodle ? 'Edit doodle…' : 'Doodle…'}
       </button>
+      <button onClick={() => useStore.getState().openHelp()} title="Help (⌘?)">
+        Help
+      </button>
       <span className={styles.file}>{loading ? 'Loading…' : (source?.name ?? 'No file')}</span>
       {error && <span className={styles.error}>{error}</span>}
       {doc?.warnings.map((w) => (
@@ -118,9 +124,11 @@ function editingText(): boolean {
   );
 }
 
-async function menuAction(action: 'open' | 'save' | 'saveAs' | 'undo' | 'redo') {
+async function menuAction(action: 'open' | 'save' | 'saveAs' | 'undo' | 'redo' | 'help') {
   const doodleOpen = useStore.getState().doodle.open;
   switch (action) {
+    case 'help':
+      return useStore.getState().openHelp();
     case 'open':
       return openWithDialog();
     case 'save':
@@ -147,8 +155,13 @@ function useShortcuts() {
       const target = e.target as HTMLElement;
       const typing = target.closest('input, select, textarea') !== null;
       const mod = e.metaKey || e.ctrlKey;
-      // ⌘O, ⌘S, ⌘Z… come through the app menu (menuAction), not here.
-      if (!mod && !typing && e.key.toLowerCase() === 'f') {
+      // ⌘O, ⌘S, ⌘Z, ⌘? come through the app menu (menuAction), not here.
+      if (e.key === 'F1') {
+        e.preventDefault();
+        useStore.getState().openHelp();
+      } else if (useStore.getState().help.open) {
+        // Typing in the help window shouldn't move the plotter.
+      } else if (!mod && !typing && e.key.toLowerCase() === 'f') {
         useStore.getState().requestFit();
       } else if (!mod && !typing && !useStore.getState().doodle.open) {
         // Plot shortcuts: Space pauses / resumes; U / D raise / lower the pen when not plotting.

@@ -61,7 +61,7 @@ function ConnectionSection() {
 
   if (conn?.connected)
     return (
-      <Section title="Plotter">
+      <Section title="Plotter" help="machine#connecting">
         <Row label="Connected">
           <span className={styles.value}>
             {conn.simulated
@@ -83,7 +83,7 @@ function ConnectionSection() {
     );
 
   return (
-    <Section title="Plotter">
+    <Section title="Plotter" help="machine#connecting">
       {conn?.lost && (
         <Notice kind="warn">
           The plotter was disconnected. Check the USB cable, then reconnect.
@@ -135,7 +135,7 @@ function ManualSection() {
   const jog = (dx: number, dy: number) => void command({ kind: 'jog', dx: dx * d, dy: dy * d });
 
   return (
-    <Section title="Move">
+    <Section title="Move" help="machine#home">
       {locked && <p className={styles.muted}>Pause the plot to use these.</p>}
       <Row label="Pen">
         <div className={styles.group}>
@@ -249,7 +249,7 @@ function PenHeightSection() {
   };
 
   return (
-    <Section title="Pen height">
+    <Section title="Pen height" help="machine#pen-height">
       {(['up', 'down'] as const).map((which) => (
         <Row key={which} label={which === 'up' ? 'Up' : 'Down'}>
           <input

@@ -41,7 +41,7 @@ export function PlotSection() {
   const pct = plot && plot.totalMs > 0 ? Math.min(100, (plot.doneMs / plot.totalMs) * 100) : 0;
 
   return (
-    <Section title="Plot">
+    <Section title="Plot" help="plotting">
       {!connected && !active && (
         <p className={styles.muted}>
           Connect the plotter in the{' '}

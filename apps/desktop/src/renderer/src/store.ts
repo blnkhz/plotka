@@ -76,6 +76,8 @@ type State = {
   /** Project name (file name without .plot.json) and whether it has unsaved changes. */
   projectName: string;
   dirty: boolean;
+  /** The help window: open, and which topic / section it shows. */
+  help: { open: boolean; topic: string; anchor: string };
   /** Whether Undo / Redo have something to do (PROJ-2). */
   canUndo: boolean;
   canRedo: boolean;
@@ -94,6 +96,9 @@ type State = {
   removeStep(id: string): void;
   moveStep(id: string, delta: -1 | 1): void;
   setDoodle(patch: Partial<DoodleState>): void;
+  /** Opens help, at a topic (and section) if given. */
+  openHelp(topic?: string, anchor?: string): void;
+  closeHelp(): void;
   /** Undo / redo the last stroke in the doodle pad. */
   doodleUndo(): void;
   doodleRedo(): void;
@@ -146,6 +151,7 @@ export const useStore = create<State>()((set, get) => ({
   dirty: false,
   canUndo: false,
   canRedo: false,
+  help: { open: false, topic: 'getting-started', anchor: '' },
   doodle: {
     open: false,
     strokes: [],
@@ -221,6 +227,15 @@ export const useStore = create<State>()((set, get) => ({
     }),
 
   setDoodle: (patch) => set((s) => ({ doodle: { ...s.doodle, ...patch } })),
+  openHelp: (topic, anchor) =>
+    set((s) => ({
+      help: {
+        open: true,
+        topic: topic ?? s.help.topic,
+        anchor: topic ? (anchor ?? '') : s.help.anchor,
+      },
+    })),
+  closeHelp: () => set((s) => ({ help: { ...s.help, open: false } })),
   doodleUndo: () =>
     set((s) => {
       const { strokes, undone } = s.doodle;

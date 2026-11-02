@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, type ReactNode } from 'react';
+import { useStore } from '../store';
 import styles from './controls.module.css';
 
 /** The label of the enclosing Row, used as the accessible name of the control inside it. */
@@ -78,10 +79,35 @@ export function Row({ label, children }: { label: string; children: ReactNode })
   );
 }
 
-export function Section({ title, children }: { title: string; children: ReactNode }) {
+export function Section({
+  title,
+  help,
+  children,
+}: {
+  title: string;
+  /** Help topic (and optional #section) the "?" button opens, e.g. "fills" or "machine#home". */
+  help?: string;
+  children: ReactNode;
+}) {
+  const openHelp = useStore((s) => s.openHelp);
   return (
     <section className={styles.section}>
-      <h3 className={styles.sectionTitle}>{title}</h3>
+      <h3 className={styles.sectionTitle}>
+        {title}
+        {help && (
+          <button
+            className={styles.help}
+            onClick={() => {
+              const [topic, anchor] = help.split('#');
+              openHelp(topic, anchor);
+            }}
+            title={`Help: ${title}`}
+            aria-label={`Help: ${title}`}
+          >
+            ?
+          </button>
+        )}
+      </h3>
       {children}
     </section>
   );

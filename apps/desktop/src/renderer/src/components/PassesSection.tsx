@@ -20,7 +20,7 @@ export function PassesSection({ layer }: { layer: Layer }) {
     });
 
   return (
-    <Section title="Passes">
+    <Section title="Passes" help="passes">
       <Row label="">
         <label
           className={styles.check}

@@ -8,16 +8,28 @@ extension needed.
 
 ![Screenshot placeholder](docs/screenshot.png)
 
-**Status:** early development. Not ready for use yet.
+**Status:** in development, plotting on an AxiDraw V3/A3. No installable release yet.
 
-## Features (planned for 1.0)
+## Features
 
-- Open SVGs from Illustrator, Inkscape, Figma, Affinity Designer and code
+- Open SVGs from Illustrator, Inkscape, Figma, Affinity Designer and code, or draw a doodle and
+  turn it into clean curves or straight lines
 - Paper presets, margins, fit and alignment
-- Hatch fills: parallel lines, crosshatch, zigzag
+- Fills: lines, crosshatch, zigzag, concentric, spiral and dots, with spacing from the fill color;
+  shapes on top hide the ones underneath, like in the file
+- Passes: plot a layer several times with slight shifts in different colors, for gradients and
+  moiré
+- Transforms: tile on a grid, or tessellate with all 17 wallpaper patterns (square, triangle and
+  hexagon rotations, kaleidoscopes, glides)
 - Path optimization to cut pen-up travel
-- Accurate preview with time estimate
-- Direct USB control: pen height calibration, jog, start/pause/resume/stop
+- Accurate preview with a time estimate from the same motion plan the plotter follows
+- Direct USB control: connect, jog, pen-height sliders, start / pause / resume / stop, the
+  machine's pause button
+- Projects with undo and redo, and a searchable help guide built in
+
+## User guide
+
+The guide is in the app (**Help**, ⌘?) and in [docs/guide](docs/guide/01-getting-started.md).
 
 ## Supported machines
 

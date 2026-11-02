@@ -32,7 +32,7 @@ export function PageTab() {
 
   return (
     <>
-      <Section title="Paper">
+      <Section title="Paper" help="page-setup#paper">
         <Row label="Size">
           <select
             aria-label="Paper"
@@ -145,7 +145,7 @@ export function PageTab() {
         )}
       </Section>
 
-      <Section title="Position">
+      <Section title="Position" help="page-setup#position">
         <Row label="Fit">
           <Segmented<FitMode>
             value={page.fit}

@@ -93,7 +93,7 @@ export interface InvokeChannels {
 }
 
 export interface EventChannels {
-  'app:menu': { action: 'open' | 'save' | 'saveAs' | 'undo' | 'redo' };
+  'app:menu': { action: 'open' | 'save' | 'saveAs' | 'undo' | 'redo' | 'help' };
   'plotter:changed': PlotterStatus;
 }
 

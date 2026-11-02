@@ -10,7 +10,7 @@ export function OptimizeSection() {
   const processed = useProcessed();
 
   return (
-    <Section title="Optimize">
+    <Section title="Optimize" help="optimizing">
       <Row label="">
         <label
           className={styles.check}

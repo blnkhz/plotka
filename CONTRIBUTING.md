@@ -64,3 +64,11 @@ a seed. Full guide: `docs/adding-a-transform.md` (coming with the transforms epi
 
 Use the bug report template and include your machine model, firmware version and macOS
 version.
+
+## Keeping the user guide up to date
+
+The user guide in `docs/guide/` is built into the app's Help window. When you change something
+users see (a label, a setting, a new feature), update the matching page in the same pull request.
+Use the exact labels from the UI, and plain words. Links between pages use the file name
+(`[Fills](04-fills.md)`, or `04-fills.md#settings` for a section); the tests check that every link
+and every "?" button points to a page and section that exist.

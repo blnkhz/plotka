@@ -47,14 +47,14 @@ test('open a file, change the page, see stats', async () => {
 
   // A3 portrait is taller than the V3/A3 travel -> blocking warning
   await page.getByRole('tab', { name: 'Page' }).click();
-  await page.getByLabel('Paper').selectOption('a3');
+  await page.getByLabel('Paper', { exact: true }).selectOption('a3');
   await page.getByRole('button', { name: 'Portrait' }).click();
   await expect(page.getByText(/Plotting is blocked/)).toBeVisible();
 
   await dropFile(page, 'figma.svg');
   await page.getByLabel('Original').check();
   await page.getByRole('checkbox', { name: 'Travel', exact: true }).check();
-  await page.getByLabel('Paper').selectOption('a4');
+  await page.getByLabel('Paper', { exact: true }).selectOption('a4');
   if (shots) await page.screenshot({ path: join(shots, 'figma.png') });
 
   await app.close();
@@ -367,5 +367,42 @@ test('undo and redo settings from the Edit menu and the toolbar (PROJ-2)', async
   await expect(page.getByText(/^0 strokes →/)).toBeVisible();
   await menu('redo');
   await expect(page.getByText(/^1 stroke →/)).toBeVisible();
+  await app.close();
+});
+
+test('help: topics, search, links between pages, and "?" buttons', async () => {
+  const app = await launch();
+  const page = await app.firstWindow();
+  await page.setViewportSize({ width: 1400, height: 900 });
+  await page.locator('#root > div').waitFor();
+
+  await page.getByRole('button', { name: 'Help', exact: true }).click();
+  const dialog = page.getByRole('dialog', { name: 'Help' });
+  await expect(dialog.getByRole('heading', { name: 'Getting started', level: 1 })).toBeVisible();
+  if (shots) await page.screenshot({ path: join(shots, 'help.png') });
+
+  // Search, then open the best result.
+  await dialog.getByLabel('Search help').fill('crosshatch angle');
+  await expect(dialog.getByRole('navigation', { name: 'Search results' })).toBeVisible();
+  if (shots) await page.screenshot({ path: join(shots, 'help-search.png') });
+  await dialog.getByLabel('Search help').press('Enter');
+  await expect(dialog.getByRole('heading', { name: 'Fills', level: 1 })).toBeVisible();
+
+  // A link to another page opens that page.
+  await dialog.getByRole('button', { name: 'Getting started' }).click();
+  await dialog.getByRole('link', { name: 'Projects and undo' }).click();
+  await expect(dialog.getByRole('heading', { name: 'Projects and undo', level: 1 })).toBeVisible();
+
+  // Esc closes; a "?" button opens the matching section.
+  await page.keyboard.press('Escape');
+  await expect(dialog).toHaveCount(0);
+  await page.getByRole('tab', { name: 'Machine' }).click();
+  await page.getByRole('button', { name: 'Help: Plotter' }).click();
+  await expect(dialog.getByRole('heading', { name: 'Connecting', level: 2 })).toBeInViewport();
+
+  // From the Help menu too.
+  await page.keyboard.press('Escape');
+  await app.evaluate(({ Menu }) => Menu.getApplicationMenu()!.getMenuItemById('help')!.click());
+  await expect(dialog).toBeVisible();
   await app.close();
 });

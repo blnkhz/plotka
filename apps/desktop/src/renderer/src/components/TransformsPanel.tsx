@@ -8,7 +8,7 @@ export function TransformsPanel() {
   const pipeline = useStore((s) => s.pipeline);
   const addStep = useStore((s) => s.addStep);
   return (
-    <Section title="Transforms">
+    <Section title="Transforms" help="transforms">
       {pipeline.length === 0 && (
         <p className={styles.muted}>Repeat or rearrange the artwork before it goes on the page.</p>
       )}

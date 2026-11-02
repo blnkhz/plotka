@@ -14,7 +14,7 @@ export function LayersPanel() {
 
   if (!doc) {
     return (
-      <Section title="Layers">
+      <Section title="Layers" help="opening-artwork#layers">
         <p className={styles.muted}>No file open.</p>
       </Section>
     );
@@ -29,7 +29,7 @@ export function LayersPanel() {
   const shownMode = !doc.source?.hasLayers && layerMode === 'single' ? 'auto' : layerMode;
 
   return (
-    <Section title="Layers">
+    <Section title="Layers" help="opening-artwork#layers">
       <div className={styles.mode}>
         <Segmented value={shownMode} options={modeOptions} onChange={(m) => void setLayerMode(m)} />
       </div>

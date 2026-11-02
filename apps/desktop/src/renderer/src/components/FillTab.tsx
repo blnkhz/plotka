@@ -42,7 +42,7 @@ export function FillTab() {
 
   return (
     <>
-      <Section title={`Fill · ${layer.name}`}>
+      <Section title={`Fill · ${layer.name}`} help="fills">
         {drawable === 0 && <p className={styles.muted}>This layer has no filled shapes.</p>}
         <Row label="Type">
           <select

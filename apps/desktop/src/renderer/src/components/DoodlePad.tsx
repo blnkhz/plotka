@@ -247,7 +247,7 @@ export function DoodlePad() {
               </button>
             </div>
           </Section>
-          <Section title="Vectors">
+          <Section title="Vectors" help="doodle#turning-strokes-into-vectors">
             <Row label="Style">
               <Segmented
                 value={settings.style}

@@ -54,6 +54,10 @@ export function installMenu() {
       ],
     },
     { role: 'windowMenu' },
+    {
+      role: 'help',
+      submenu: [item('help', 'Plotter Studio Help', 'CmdOrCtrl+Shift+/')],
+    },
   ];
   Menu.setApplicationMenu(Menu.buildFromTemplate(template));
 }

@@ -62,3 +62,15 @@ Later: PROJ-2 undo/redo, PROJ-4 recent files and autosave.
   Paste, Select All). Menu shortcuts are the only handlers for ⌘O, ⌘S, ⇧⌘S, ⌘Z, ⇧⌘Z, so a
   key press never acts twice. In a text field, Undo undoes typing. With the doodle pad open, it
   undoes strokes. The toolbar has Undo and Redo buttons too.
+
+## In-app help (user request 2026-11-02)
+
+- The user guide lives in `docs/guide/*.md` (one page per topic, numbered for order), readable on
+  GitHub and bundled into the app at build time (`import.meta.glob`, raw).
+- Help window (toolbar **Help**, Help menu ⌘?, F1): topics on the left, the page on the right,
+  rendered with `marked` (MIT, no dependencies). Headings get ids, links between pages open in the
+  app, other links open in the browser.
+- Search: every `##` section is indexed as plain text; a result needs every word of the query;
+  matches in headings rank highest; snippets are escaped with the matches highlighted.
+- "?" buttons on panel sections open the matching topic and section. Tests check that every link
+  and "?" target exists.
