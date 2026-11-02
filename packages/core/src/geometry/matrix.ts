@@ -40,3 +40,11 @@ export const skewY = (deg: number): Matrix => [1, Math.tan((deg * Math.PI) / 180
 export function matrixScale(m: Matrix): number {
   return Math.sqrt(Math.abs(m[0] * m[3] - m[1] * m[2]));
 }
+
+/** Inverse of an affine matrix. Throws for a degenerate (non-invertible) matrix. */
+export function invert(m: Matrix): Matrix {
+  const [a, b, c, d, e, f] = m;
+  const det = a * d - b * c;
+  if (Math.abs(det) < 1e-15) throw new Error('Matrix is not invertible');
+  return [d / det, -b / det, -c / det, a / det, (c * f - d * e) / det, (b * e - a * f) / det];
+}

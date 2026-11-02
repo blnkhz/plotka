@@ -11,3 +11,4 @@ These are hand-made stand-ins; replace them with real exports when available
 | figma.svg       | px size, `clip-path` group with `<defs>`, presentation attributes, `fill-rule`       |
 | affinity.svg    | `width="100%"`, `serif:id`, inline styles, nested `matrix()` transforms, `<use>`     |
 | overlap.svg     | Hand-written: overlapping black, grey and white fills (covering, knockouts, density) |
+| motif.svg       | Hand-written asymmetric motif (curl, dot, filled leaf) for tile and tessellate       |

@@ -1,13 +1,15 @@
 import type { PlotDocument } from '../model';
+import { tessellate } from './tessellate';
 import { tile } from './tile';
 import type { ParamValues, PipelineStep, TransformDef } from './types';
 
 export * from './types';
 export { tile, MAX_TILE_POINTS } from './tile';
+export { tessellate, MAX_TESSELLATE_POINTS } from './tessellate';
 export { seededRandom } from './random';
 
 /** Every transform the app offers, in menu order. Add new ones here. */
-export const TRANSFORMS: readonly TransformDef[] = [tile];
+export const TRANSFORMS: readonly TransformDef[] = [tile, tessellate];
 
 export const getTransform = (type: string): TransformDef | undefined =>
   TRANSFORMS.find((t) => t.type === type);
@@ -45,3 +47,4 @@ export function applyTransforms(doc: PlotDocument, steps: readonly PipelineStep[
   }
   return out;
 }
+export * from './wallpaper';

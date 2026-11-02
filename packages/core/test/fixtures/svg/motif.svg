@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Hand-written asymmetric motif: a curl, a dot and a filled leaf, so turns and mirrors show. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="40mm" height="40mm" viewBox="0 0 40 40">
+  <path d="M4 36 C4 16 16 4 30 6 C38 8 36 20 28 20 C22 20 22 13 27 13" fill="none" stroke="#000" stroke-width="1"/>
+  <path d="M8 34 C14 26 24 26 34 32 C26 38 16 38 8 34 Z" fill="#222" stroke="#000"/>
+  <circle cx="12" cy="10" r="3" fill="none" stroke="#000"/>
+</svg>

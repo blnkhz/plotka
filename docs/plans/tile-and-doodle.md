@@ -46,3 +46,18 @@ disk (new `file:save` IPC). "Edit doodle" reopens the strokes.
 
 Pad tools: draw, erase stroke, undo/redo (⌘Z / ⇧⌘Z), clear, artboard size; the raw stroke is
 shown faintly under the processed result.
+
+## Tessellate (true tessellation, user request 2026-11-02)
+
+A second transform for patterns that turn and mirror the artwork, not just repeat it.
+
+- `transforms/wallpaper.ts`: the 17 wallpaper groups (p1 … p6m) plus a honeycomb (hexagonal
+  lattice, hexagon cells) and alternating triangles. Each is a lattice (rectangular, square or
+  hexagonal), a fundamental region, and the symmetry operations, written in fractional
+  coordinates from the standard settings of the International Tables for Crystallography.
+  A test checks every group: the region's copies cover random points exactly once, region area ×
+  operations = cell area, and every operation is an isometry.
+- `transforms/tessellate.ts`: fits the artwork into the fundamental region (size, turn, offset),
+  optionally clips it to the region (seamless) or lets it spill over (overlapping copies), then
+  places copies over columns × rows cells and optionally trims to a rectangle. Cell height
+  applies to the rectangular groups. Output is capped with a warning, like Tile.

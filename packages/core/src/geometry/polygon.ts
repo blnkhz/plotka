@@ -43,6 +43,11 @@ export function differenceShapes(a: Shape, b: Shape): Shape {
   return fromPaths(Clipper.difference(toPaths(a), toPaths(b), FillRule.NonZero));
 }
 
+export function intersectShapes(a: Shape, b: Shape): Shape {
+  if (!a.length || !b.length) return [];
+  return fromPaths(Clipper.intersect(toPaths(a), toPaths(b), FillRule.NonZero));
+}
+
 /** Grows (positive) or shrinks (negative) a shape by `delta` mm with round corners. */
 export function offsetShape(shape: Shape, delta: number, arcTolerance = 0.01): Shape {
   if (delta === 0 || !shape.length) return shape;

@@ -197,3 +197,26 @@ test('doodle, turn it into vectors, then tile it', async () => {
   if (shots) await page.screenshot({ path: join(shots, 'tile-off.png') });
   await app.close();
 });
+
+test('tessellate with wallpaper patterns', async () => {
+  const app = await electron.launch({ args: [join(__dirname, '..')] });
+  const page = await app.firstWindow();
+  await page.setViewportSize({ width: 1400, height: 900 });
+  await dropFile(page, 'motif.svg');
+  await expect(page.getByText('motif.svg')).toBeVisible();
+  await page.getByLabel('Add transform').selectOption('tessellate');
+  await page.getByRole('tab', { name: 'Fill' }).click();
+  await page.getByLabel('Fill type').selectOption('lines');
+  for (const pattern of ['p6m', 'p6', 'p4', 'p4g', 'p3', 'p31m', 'hex', 'tri', 'pgg', 'cmm']) {
+    await page.getByLabel('Pattern').selectOption(pattern);
+    await expect(page.getByText(/\d+ paths · ≈/)).toBeVisible();
+    if (shots) await page.screenshot({ path: join(shots, `tess-${pattern}.png`) });
+  }
+  await page.getByLabel('Pattern').selectOption('p4');
+  await page.getByLabel('Clip to its piece').uncheck();
+  const size = page.getByRole('spinbutton', { name: 'Artwork size', exact: true });
+  await size.fill('160');
+  await size.press('Enter');
+  if (shots) await page.screenshot({ path: join(shots, 'tess-p4-overlap.png') });
+  await app.close();
+});
