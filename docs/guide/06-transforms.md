@@ -33,6 +33,16 @@ patterns.
 
 It stacks with the others: for example Symmetry first, then Tile to repeat the rosette on a grid.
 
+## Spiral repeat
+
+Places copies of the artwork along a spiral.
+
+- **Copies**, **Turns**: how many copies, and how many times the spiral goes round.
+- **Inner radius**, **Outer radius**: where the first and last copies sit, measured from the
+  center in the artwork's own size.
+- **Last copy size**: copies grow (over 100%) or shrink (under 100%) evenly along the spiral.
+- **Turn with the spiral**: rotate each copy to face along the spiral.
+
 ## Tessellate
 
 Repeats the artwork with turns and mirrors, so copies fit together with no gaps or overlaps. The
