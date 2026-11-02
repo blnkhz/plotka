@@ -35,7 +35,7 @@ test('open a file, change the page, see stats', async () => {
 
   await dropFile(page, 'inkscape.svg');
   await expect(page.getByText('inkscape.svg')).toBeVisible();
-  await expect(page.getByText('Outlines')).toBeVisible();
+  await expect(page.getByText('Outlines', { exact: true }).first()).toBeVisible();
   await expect(page.getByText(/\d+ paths · draw/)).toBeVisible();
   if (shots) await page.screenshot({ path: join(shots, 'inkscape.png') });
 
@@ -404,5 +404,30 @@ test('help: topics, search, links between pages, and "?" buttons', async () => {
   await page.keyboard.press('Escape');
   await app.evaluate(({ Menu }) => Menu.getApplicationMenu()!.getMenuItemById('help')!.click());
   await expect(dialog).toBeVisible();
+  await app.close();
+});
+
+test('a file with only filled shapes plots right away, and undrawn fills are explained', async () => {
+  const app = await launch();
+  const page = await app.firstWindow();
+  await page.setViewportSize({ width: 1400, height: 900 });
+  await dropFile(page, 'fill-only.svg');
+  // Filled automatically with lines, so there's something to plot.
+  await expect(page.getByText(/[1-9]\d* paths · draw/)).toBeVisible();
+  if (shots) await page.screenshot({ path: join(shots, 'fill-only.png') });
+
+  // Turning the fill off: the shapes show faintly, and a notice offers ways to draw them.
+  await page.getByRole('tab', { name: 'Fill' }).click();
+  await page.getByLabel('Fill type').selectOption('none');
+  await expect(page.getByText(/2 filled shapes in Layer 1 won’t be drawn/)).toBeVisible();
+  if (shots) await page.screenshot({ path: join(shots, 'fill-only-notice.png') });
+  await page.getByRole('button', { name: 'Draw their outlines' }).click();
+  await expect(page.getByText(/won’t be drawn/)).toHaveCount(0);
+  await expect(page.getByText(/2 paths · draw/)).toBeVisible();
+
+  // "Leave them" hides the notice for this file.
+  await page.getByLabel('Draw outlines of filled shapes').uncheck();
+  await page.getByRole('button', { name: 'Leave them' }).click();
+  await expect(page.getByText(/won’t be drawn/)).toHaveCount(0);
   await app.close();
 });

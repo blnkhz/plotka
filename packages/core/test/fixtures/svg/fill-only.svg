@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Hand-written: filled shapes only, no outlines (like many exported logos and icons). -->
+<svg xmlns="http://www.w3.org/2000/svg" width="80mm" height="50mm" viewBox="0 0 80 50">
+  <circle cx="22" cy="25" r="18" fill="#1d3557"/>
+  <path d="M46 8 L74 8 L60 42 Z" fill="#e63946"/>
+</svg>

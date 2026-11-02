@@ -78,6 +78,8 @@ type State = {
   dirty: boolean;
   /** The help window: open, and which topic / section it shows. */
   help: { open: boolean; topic: string; anchor: string };
+  /** The "filled shapes won't be drawn" notice was dismissed for this file. */
+  undrawnNoticeHidden: boolean;
   /** Whether Undo / Redo have something to do (PROJ-2). */
   canUndo: boolean;
   canRedo: boolean;
@@ -151,6 +153,7 @@ export const useStore = create<State>()((set, get) => ({
   dirty: false,
   canUndo: false,
   canRedo: false,
+  undrawnNoticeHidden: false,
   help: { open: false, topic: 'getting-started', anchor: '' },
   doodle: {
     open: false,
@@ -169,6 +172,7 @@ export const useStore = create<State>()((set, get) => ({
         doc,
         loading: false,
         layerOverrides: {},
+        undrawnNoticeHidden: s.source === source ? s.undrawnNoticeHidden : false,
         selectedLayerId: doc.layers[0]?.id ?? null,
         fitRequest: s.fitRequest + 1,
       }));

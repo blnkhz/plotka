@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef } from 'react';
-import { marginBox, paperSize, type Polyline } from '@plotter-studio/core';
+import { marginBox, paperSize, undrawnFillCount, type Polyline } from '@plotter-studio/core';
 import { useProcessed, useProfile, type Processed } from '../lib/useProcessed';
 import { useStore, type ViewOptions } from '../store';
 import styles from './Preview.module.css';
@@ -292,6 +292,29 @@ function render(
   if (!processed) {
     drawPen(ctx, pen, px);
     return;
+  }
+
+  // Filled shapes nothing will draw (no fill type, no outlines): a faint tint with a dashed
+  // edge, so they don't seem to have vanished. The Original overlay covers this when it's on.
+  if (!options.original) {
+    ctx.save();
+    ctx.setLineDash([3 * px, 3 * px]);
+    ctx.lineWidth = px;
+    for (const layer of processed.placed.layers) {
+      if (!layer.visible || undrawnFillCount(layer) === 0) continue;
+      for (const f of layer.fills) {
+        if (f.knockout) continue;
+        ctx.beginPath();
+        for (const ring of f.outer) addPath(ctx, ring, true);
+        ctx.globalAlpha = 0.12;
+        ctx.fillStyle = f.color?.startsWith('#') ? f.color : layer.color;
+        ctx.fill(f.fillRule);
+        ctx.globalAlpha = 0.6;
+        ctx.strokeStyle = cssVar('--muted');
+        ctx.stroke();
+      }
+    }
+    ctx.restore();
   }
 
   // Original artwork (placed, before clipping): fills tinted, outlines faint.

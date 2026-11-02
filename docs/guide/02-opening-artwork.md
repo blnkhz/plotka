@@ -10,8 +10,13 @@ lines, curves and arcs are converted to lines the pen can follow, accurately eno
 can't see the difference.
 
 - **Strokes** (outlines) are drawn as lines.
-- **Filled shapes** can be hatched or filled with patterns (see [Fills](04-fills.md)). Fills aren't
-  drawn unless you choose a fill type.
+- **Filled shapes** are hatched or filled with patterns (see [Fills](04-fills.md)). A layer
+  with only filled shapes (no outlines), like most exported logos and icons, starts with a line
+  fill so it plots straight away. In layers that also have outlines, fills are off until you
+  choose a fill type.
+- **Filled shapes that won't be drawn** (no fill type and no outlines) show faintly in the
+  preview with a dashed edge, and a message offers **Fill them with lines** or **Draw their
+  outlines**. **Leave them** hides the message for that file.
 - **Text** can't be plotted directly. Convert text to outlines (paths) in your design app first.
   The app warns you when a file contains text.
 - **Images** (photos, bitmaps) are ignored.

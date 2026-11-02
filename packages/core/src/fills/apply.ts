@@ -132,6 +132,16 @@ export function layerFillPaths(layer: Layer): Polyline[] {
   return out;
 }
 
+/**
+ * Filled shapes in a layer that nothing will draw: the layer has no fill type and doesn't draw
+ * outlines. (White knockouts don't count; they're never drawn.)
+ */
+export function undrawnFillCount(layer: Layer): number {
+  const f = layer.settings.fill;
+  if ((f && f.type !== 'none') || layer.settings.drawOutline) return 0;
+  return layer.fills.filter((r) => !r.knockout).length;
+}
+
 /** Fill hatches only, without outlines. */
 export const layerHatches = (layer: Layer): Polyline[] =>
   layerFillPaths({ ...layer, settings: { ...layer.settings, drawOutline: false } });

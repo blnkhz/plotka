@@ -359,3 +359,25 @@ describe('importSvg: white fills', () => {
     expect(fills.map((f) => f.knockout)).toEqual([undefined, undefined]);
   });
 });
+
+describe('importSvg: fill-only layers', () => {
+  it('a layer of only filled shapes starts with the default line fill, so something plots', () => {
+    const doc = importSvg(
+      svg('<rect width="10" height="10" fill="#333"/><circle cx="20" cy="5" r="4" fill="red"/>'),
+    );
+    expect(doc.layers[0]!.strokes).toHaveLength(0);
+    expect(doc.layers[0]!.settings.fill?.type).toBe('lines');
+  });
+  it('layers with outlines keep fills off (the outlines show the drawing)', () => {
+    const doc = importSvg(svg('<rect width="10" height="10" fill="#333" stroke="black"/>'));
+    expect(doc.layers[0]!.settings.fill).toBeNull();
+  });
+  it('white knockouts alone are not a reason to fill', () => {
+    const doc = importSvg(
+      svg(
+        '<rect width="10" height="10" fill="#fff"/><line x1="0" y1="0" x2="5" y2="5" stroke="black"/>',
+      ),
+    );
+    expect(doc.layers[0]!.settings.fill).toBeNull();
+  });
+});

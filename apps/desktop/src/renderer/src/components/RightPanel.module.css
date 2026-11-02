@@ -31,3 +31,17 @@
   margin: 8px 0 0;
   line-height: 1.4;
 }
+.noticeText {
+  margin: 0 0 6px;
+  line-height: 1.4;
+}
+.noticeButtons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.noticeDismiss {
+  border-color: transparent;
+  background: transparent;
+  color: var(--muted);
+}

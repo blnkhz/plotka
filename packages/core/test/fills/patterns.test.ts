@@ -9,6 +9,7 @@ import {
   regionSpacing,
   ShapeTester,
   spiralFill,
+  undrawnFillCount,
   type FillRegion,
   type FillSettings,
   type Layer,
@@ -250,5 +251,19 @@ describe('density from color (HATCH-8)', () => {
     );
     const grey = layerFillPaths(layerWith([region([rect(0, 0, 10, 10)], { color: '#808080' })], f));
     expect(grey.length).toBeLessThan(black.length * 0.6);
+  });
+});
+
+describe('undrawnFillCount', () => {
+  it('counts filled shapes nothing draws', () => {
+    const shapes = [
+      region([rect(0, 0, 5, 5)]),
+      region([rect(10, 0, 5, 5)]),
+      region([rect(20, 0, 5, 5)], { knockout: true }),
+    ];
+    expect(undrawnFillCount(layerWith(shapes, null))).toBe(2);
+    expect(undrawnFillCount(layerWith(shapes, fill({ type: 'none' })))).toBe(2);
+    expect(undrawnFillCount(layerWith(shapes, fill()))).toBe(0);
+    expect(undrawnFillCount(layerWith(shapes, null, { drawOutline: true }))).toBe(0);
   });
 });
