@@ -1,5 +1,6 @@
 import type { Vec2 } from '../geometry/vec2';
 import type { Polyline } from '../model';
+import { removeDuplicateSegments, simplifyPaths, startClosedNearest } from './clean';
 import { PointGrid } from './grid';
 import { mergeTouching } from './merge';
 
@@ -121,6 +122,12 @@ export type OptimizeSettings = {
   order: boolean;
   /** Extra 2-opt pass after the greedy order. */
   twoOpt: boolean;
+  /** OPT-3: drop segments drawn twice. */
+  dedupe: boolean;
+  /** OPT-4: simplify paths and drop tiny ones. */
+  simplify: boolean;
+  /** OPT-5: start closed shapes at the vertex nearest the pen. */
+  closedStart: boolean;
 };
 
 export const defaultOptimizeSettings = (): OptimizeSettings => ({
@@ -128,14 +135,21 @@ export const defaultOptimizeSettings = (): OptimizeSettings => ({
   mergeTolerance: 0.1,
   order: true,
   twoOpt: true,
+  dedupe: true,
+  simplify: true,
+  closedStart: true,
 });
 
-/** Merge then order one layer's paths, starting from `from`. */
+/** Clean up, merge, order and pick start points for one layer's paths, from `from`. */
 export function optimizePaths(paths: Polyline[], from: Vec2, s: OptimizeSettings): Polyline[] {
-  let out = s.merge ? mergeTouching(paths, s.mergeTolerance) : paths;
+  let out = paths;
+  if (s.dedupe) out = removeDuplicateSegments(out);
+  if (s.simplify) out = simplifyPaths(out);
+  if (s.merge) out = mergeTouching(out, s.mergeTolerance);
   if (s.order) {
     out = orderGreedy(out, from);
     if (s.twoOpt) out = improveTwoOpt(out, from);
   }
+  if (s.closedStart) out = startClosedNearest(out, from);
   return out;
 }

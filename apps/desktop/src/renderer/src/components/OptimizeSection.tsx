@@ -59,6 +59,45 @@ export function OptimizeSection() {
           </label>
         </Row>
       )}
+      <Row label="">
+        <label
+          className={styles.check}
+          title="Skip line segments the pen has already drawn in the layer, so they don't soak the paper"
+        >
+          <input
+            type="checkbox"
+            checked={optimize.dedupe}
+            onChange={(e) => setOptimize({ dedupe: e.target.checked })}
+          />
+          Remove lines drawn twice
+        </label>
+      </Row>
+      <Row label="">
+        <label
+          className={styles.check}
+          title="Drop detail smaller than 0.01 mm (less than one motor step) and paths shorter than 0.05 mm. Dots are kept."
+        >
+          <input
+            type="checkbox"
+            checked={optimize.simplify}
+            onChange={(e) => setOptimize({ simplify: e.target.checked })}
+          />
+          Simplify tiny details
+        </label>
+      </Row>
+      <Row label="">
+        <label
+          className={styles.check}
+          title="Begin each closed shape at its corner closest to where the pen is"
+        >
+          <input
+            type="checkbox"
+            checked={optimize.closedStart}
+            onChange={(e) => setOptimize({ closedStart: e.target.checked })}
+          />
+          Start shapes nearest the pen
+        </label>
+      </Row>
       {processed && (
         <table className={styles.compare}>
           <thead>
