@@ -1,0 +1,9 @@
+#!/bin/sh
+# Rebuilds the macOS .dmg from this commit in the background (see scripts/build-dmg-from-head.sh).
+# Turn it off for one commit with PLOTTER_NO_DMG_BUILD=1 git commit …, or for good with
+# `pnpm hooks:off`.
+[ -n "${PLOTTER_NO_DMG_BUILD:-}" ] && exit 0
+[ "$(uname)" = Darwin ] || exit 0
+repo=$(git rev-parse --show-toplevel)
+nohup "$repo/scripts/build-dmg-from-head.sh" >/dev/null 2>&1 &
+exit 0
