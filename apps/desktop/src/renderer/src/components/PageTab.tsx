@@ -2,6 +2,7 @@ import { PAPER_PRESETS, type Alignment, type FitMode, type Margins } from '@plot
 import { useState } from 'react';
 import { useStore } from '../store';
 import { NumberField, Row, Section, Segmented } from './controls';
+import { PagePresets } from './PagePresets';
 import styles from './PageTab.module.css';
 
 const IN = 25.4;
@@ -32,6 +33,7 @@ export function PageTab() {
 
   return (
     <>
+      <PagePresets />
       <Section title="Paper" help="page-setup#paper">
         <Row label="Size">
           <select

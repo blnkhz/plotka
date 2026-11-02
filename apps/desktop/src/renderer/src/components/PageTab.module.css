@@ -24,3 +24,12 @@
   background: var(--accent);
   border-color: var(--accent);
 }
+.presetForm {
+  display: flex;
+  gap: 6px;
+  margin-top: 6px;
+}
+.presetForm input {
+  flex: 1;
+  min-width: 0;
+}

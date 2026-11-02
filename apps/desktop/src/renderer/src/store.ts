@@ -22,7 +22,7 @@ import {
 import { DEFAULT_PROFILE_ID, getProfile } from '@plotter-studio/plotter';
 import type { PlotterStatus } from '@shared/ipc';
 import type { Processed } from './lib/pipeline';
-import { parseFill } from './lib/project';
+import { mergeDefaults, parseFill } from './lib/project';
 
 export type LayerOverride = Partial<Pick<Layer, 'visible' | 'plot' | 'color'>> & {
   settings?: Partial<LayerSettings>;
@@ -95,6 +95,10 @@ type State = {
   processing: boolean;
   /** PLOT-5: where the last plot stopped (layer, path, mm along it), to continue from. */
   checkpoint: { layerId: string; pathIndex: number; offset: number; pathCount: number } | null;
+  /** PAGE-4: named page setups, saved between sessions. */
+  pagePresets: { name: string; page: PageSetup }[];
+  savePagePreset(name: string): void;
+  deletePagePreset(name: string): void;
   /** HATCH-7: the fill used whenever the app fills shapes for you. Saved between sessions. */
   defaultFill: FillSettings;
   setDefaultFill(fill: FillSettings): void;
@@ -142,6 +146,30 @@ type State = {
 
 const PEN_HEIGHTS_KEY = 'penHeights';
 const DEFAULT_FILL_KEY = 'defaultFill';
+const PAGE_PRESETS_KEY = 'pagePresets';
+
+function loadPagePresets(): { name: string; page: PageSetup }[] {
+  try {
+    const v = JSON.parse(localStorage.getItem(PAGE_PRESETS_KEY) ?? '[]') as unknown;
+    if (!Array.isArray(v)) return [];
+    return v
+      .filter(
+        (p): p is { name: string; page: unknown } =>
+          !!p && typeof p === 'object' && typeof (p as { name?: unknown }).name === 'string',
+      )
+      .map((p) => ({ name: p.name.slice(0, 80), page: mergeDefaults(defaultPageSetup(), p.page) }));
+  } catch {
+    return [];
+  }
+}
+
+function storePagePresets(presets: { name: string; page: PageSetup }[]) {
+  try {
+    localStorage.setItem(PAGE_PRESETS_KEY, JSON.stringify(presets));
+  } catch {
+    // Storage unavailable: presets last for this session only.
+  }
+}
 
 function loadDefaultFill(): FillSettings {
   try {
@@ -199,6 +227,22 @@ export const useStore = create<State>()((set, get) => ({
   recovery: null,
   autoReload: true,
   playback: { on: false, t: 0, playing: false, speed: 20 },
+  pagePresets: loadPagePresets(),
+  savePagePreset: (name) => {
+    const n = name.trim();
+    if (!n) return;
+    const presets = [
+      ...get().pagePresets.filter((p) => p.name !== n),
+      { name: n, page: { ...get().page } },
+    ].sort((a, b) => a.name.localeCompare(b.name));
+    set({ pagePresets: presets });
+    storePagePresets(presets);
+  },
+  deletePagePreset: (name) => {
+    const presets = get().pagePresets.filter((p) => p.name !== name);
+    set({ pagePresets: presets });
+    storePagePresets(presets);
+  },
   defaultFill: loadDefaultFill(),
   setDefaultFill: (fill) => {
     set({ defaultFill: { ...fill } });

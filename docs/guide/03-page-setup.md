@@ -2,6 +2,13 @@
 
 The **Page** tab sets the paper and where the artwork goes on it.
 
+## Presets
+
+Save page setups you use often: set the paper, margins and position, type a name (for example
+"A4 landscape 15 mm") and click **Save preset**. Pick it from **Use** to apply it in one go; saving
+under an existing name replaces it, and **Delete** removes the selected one. Presets are kept for
+you across all projects.
+
 ## Paper
 
 - **Size**: A5, A4, A3, Letter, Legal, Tabloid, 9×12 in, 5×7 in, 6×6 in, or **Custom** with

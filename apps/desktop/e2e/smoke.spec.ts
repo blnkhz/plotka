@@ -815,3 +815,35 @@ test('your default fill is used for automatic fills and remembered (HATCH-7)', a
   await expect(page.getByRole('spinbutton', { name: 'Spacing', exact: true })).toHaveValue('0.4');
   await app.close();
 });
+
+test('named page presets: save, apply, delete, remembered (PAGE-4)', async () => {
+  const data = mkdtempSync(join(tmpdir(), 'plotter-studio-e2e-'));
+  let app = await launch({ PLOTTER_STUDIO_USER_DATA: data });
+  let page = await app.firstWindow();
+  await page.setViewportSize({ width: 1400, height: 900 });
+  await page.locator('#root > div').waitFor();
+  await page.getByRole('button', { name: 'Landscape' }).click();
+  const margin = page.getByRole('spinbutton', { name: 'Margin', exact: true });
+  await margin.fill('20');
+  await margin.press('Enter');
+  await page.getByLabel('Preset name').fill('A4 landscape 20 mm');
+  await page.getByRole('button', { name: 'Save preset' }).click();
+  await expect(page.getByLabel('Page preset')).toHaveValue('A4 landscape 20 mm');
+
+  // Change things, then apply the preset again.
+  await page.getByRole('button', { name: 'Portrait' }).click();
+  await expect(page.getByLabel('Page preset')).toHaveValue('');
+  await page.getByLabel('Page preset').selectOption('A4 landscape 20 mm');
+  await expect(page.getByRole('button', { name: 'Landscape' })).toHaveClass(/active/);
+  await expect(margin).toHaveValue('20');
+  await app.close();
+
+  // Remembered after a restart; Delete removes it.
+  app = await launch({ PLOTTER_STUDIO_USER_DATA: data });
+  page = await app.firstWindow();
+  await page.locator('#root > div').waitFor();
+  await page.getByLabel('Page preset').selectOption('A4 landscape 20 mm');
+  await page.getByRole('button', { name: 'Delete' }).click();
+  await expect(page.getByLabel('Page preset')).toHaveCount(0);
+  await app.close();
+});
