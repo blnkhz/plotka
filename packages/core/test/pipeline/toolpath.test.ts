@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { buildToolpath, createLayer, moveTime, toolpathStats, type PlotDocument } from '../../src';
+import {
+  applyFills,
+  buildToolpath,
+  createLayer,
+  moveTime,
+  toolpathStats,
+  type PlotDocument,
+} from '../../src';
 
 const limits = { maxSpeedPenDown: 100, maxSpeedPenUp: 200, acceleration: 1000, penLiftDelay: 0.1 };
 
@@ -48,7 +55,8 @@ describe('toolpath and stats (PREVIEW-3)', () => {
     const d = twoPathDoc();
     expect(buildToolpath(d).layers.map((l) => [l.layerId, l.paths.length])).toEqual([['a', 2]]);
     d.layers[0]!.settings.drawOutline = true;
-    expect(buildToolpath(d).layers[0]!.paths).toHaveLength(3);
+    // Outlines are added by the fills step, not buildToolpath.
+    expect(buildToolpath(applyFills(d)).layers[0]!.paths).toHaveLength(3);
   });
   it('distances, lifts and path count', () => {
     const s = toolpathStats(buildToolpath(twoPathDoc()), limits, () => ({

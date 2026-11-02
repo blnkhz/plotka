@@ -16,3 +16,5 @@ export * from './fills/apply';
 export * from './optimize/grid';
 export * from './optimize/merge';
 export * from './optimize/order';
+export * from './geometry/polygon';
+export * from './fills/patterns';

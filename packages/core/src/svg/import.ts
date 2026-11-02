@@ -1,3 +1,4 @@
+import { append } from '../util/array';
 import { IDENTITY, multiply, scaleMatrix, translate, type Matrix } from '../geometry/matrix';
 import {
   createLayer,
@@ -186,19 +187,35 @@ export function importSvg(source: string, opts: ImportOptions = {}): PlotDocumen
     if (lines.length === 0) return;
 
     let fillColor = name === 'line' ? null : resolvePaint(style.fill, style.color);
-    if (fillColor !== null && ignoreWhite && isNearWhite(fillColor)) fillColor = null;
+    const mode = opts.layerMode ?? 'auto';
+    // White fills aren't drawn. They're kept as knockouts (they hide what's under them in the
+    // same layer), except in by-color mode where they'd only make an empty white layer.
+    let knockout = false;
+    if (fillColor !== null && ignoreWhite && isNearWhite(fillColor)) {
+      knockout = mode !== 'byColor';
+      if (!knockout) fillColor = null;
+    }
     const strokeColor = resolvePaint(style.stroke, style.color);
     if (fillColor === null && strokeColor === null) return;
 
-    const item: Item = { strokes: [], fill: null, colorKey: strokeColor ?? fillColor ?? '#000000' };
+    const item: Item = {
+      strokes: [],
+      fill: null,
+      colorKey: strokeColor ?? (knockout ? '' : fillColor) ?? '#000000',
+    };
     if (strokeColor !== null) item.strokes = lines;
     if (fillColor !== null) {
       const rings = lines.map((l) => l.points).filter((r) => r.length >= 3);
-      if (rings.length) item.fill = { outer: rings, fillRule: style.fillRule, color: fillColor };
+      if (rings.length)
+        item.fill = {
+          outer: rings,
+          fillRule: style.fillRule,
+          color: fillColor,
+          ...(knockout ? { knockout: true } : {}),
+        };
     }
     if (item.strokes.length === 0 && item.fill === null) return;
 
-    const mode = opts.layerMode ?? 'auto';
     if (layerKey !== null) bucket(layerKey, '').items.push(item);
     else if (mode === 'byColor') bucket(`color:${item.colorKey}`, item.colorKey).items.push(item);
     else bucket(UNLAYERED, hasSourceLayers ? 'Other' : 'Layer 1').items.push(item);
@@ -231,7 +248,8 @@ export function importSvg(source: string, opts: ImportOptions = {}): PlotDocumen
   }
 
   const layers: Layer[] = finalBuckets
-    .filter((b) => b.items.length > 0)
+    // A layer of only white knockouts has nothing to draw.
+    .filter((b) => b.items.some((it) => it.strokes.length > 0 || (it.fill && !it.fill.knockout)))
     .map((b, i) => {
       const layer = createLayer(
         `layer-${i + 1}`,
@@ -239,7 +257,7 @@ export function importSvg(source: string, opts: ImportOptions = {}): PlotDocumen
         dominantColor(b.items),
       );
       for (const it of b.items) {
-        layer.strokes.push(...it.strokes);
+        append(layer.strokes, it.strokes);
         if (it.fill) layer.fills.push(it.fill);
       }
       return layer;

@@ -1,7 +1,25 @@
-import type { FillSettings, Layer, PlotDocument, Polyline } from '../model';
+import { emptyBounds, extendBounds } from '../geometry/bounds';
+import { append } from '../util/array';
+import {
+  clipPolylinesToShape,
+  differenceShapes,
+  regionShape,
+  shapeRegion,
+  type Shape,
+} from '../geometry/polygon';
+import type { Bounds, FillRegion, FillSettings, Layer, PlotDocument, Polyline } from '../model';
 import { hatchRegion } from './hatch';
+import { concentricFill, dotFill, spiralFill } from './patterns';
 
-export const SUPPORTED_FILL_TYPES = ['none', 'lines', 'crosshatch', 'zigzag'] as const;
+export const SUPPORTED_FILL_TYPES = [
+  'none',
+  'lines',
+  'crosshatch',
+  'zigzag',
+  'concentric',
+  'spiral',
+  'dots',
+] as const;
 
 export const defaultFillSettings = (): FillSettings => ({
   type: 'lines',
@@ -11,31 +29,123 @@ export const defaultFillSettings = (): FillSettings => ({
   connect: true,
 });
 
-/** Hatch polylines for one layer's fill regions, per its fill settings. */
-export function layerHatches(layer: Layer): Polyline[] {
+/** Spacing never grows past this multiple of the set spacing with density from color. */
+export const MAX_DENSITY_FACTOR = 10;
+/** Shapes lighter than this darkness (0..1) aren't filled with density from color. */
+export const MIN_DARKNESS = 0.05;
+
+/** 0 for white, 1 for black, from a `#rrggbb` color. Null if the color can't be read. */
+export function colorDarkness(color: string | undefined): number | null {
+  const m = color && /^#([0-9a-f]{6})$/i.exec(color);
+  if (!m) return null;
+  const n = parseInt(m[1]!, 16);
+  const r = (n >> 16) & 255;
+  const g = (n >> 8) & 255;
+  const b = n & 255;
+  return 1 - (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
+}
+
+/** Spacing for one region, or null to leave it unfilled (too light). */
+export function regionSpacing(f: FillSettings, region: FillRegion): number | null {
+  if (!f.densityFromColor) return f.spacing;
+  const d = colorDarkness(region.color);
+  if (d === null) return f.spacing;
+  if (d < MIN_DARKNESS) return null;
+  return f.spacing / Math.max(d, 1 / MAX_DENSITY_FACTOR);
+}
+
+/** Fill polylines for one region (already reduced to its visible area). */
+export function fillRegion(region: FillRegion, f: FillSettings): Polyline[] {
+  if (f.type === 'none' || !(f.spacing > 0)) return [];
+  const spacing = regionSpacing(f, region);
+  if (spacing === null) return [];
+  const base = { spacing, angle: f.angle, inset: f.inset, connect: f.connect };
+  switch (f.type) {
+    case 'lines':
+      return hatchRegion(region, base);
+    case 'zigzag':
+      return hatchRegion(region, { ...base, connect: true });
+    case 'crosshatch':
+      return [
+        ...hatchRegion(region, base),
+        ...hatchRegion(region, { ...base, angle: f.crossAngle ?? f.angle + 90 }),
+      ];
+    case 'concentric':
+      return concentricFill(region, base);
+    case 'spiral':
+      return spiralFill(region, base);
+    case 'dots':
+      return dotFill(region, { ...base, jitter: f.jitter });
+  }
+}
+
+const regionBounds = (r: FillRegion): Bounds => {
+  const b = emptyBounds();
+  for (const ring of r.outer) for (const p of ring) extendBounds(b, p);
+  return b;
+};
+const overlaps = (a: Bounds, b: Bounds) =>
+  a.minX <= b.maxX && b.minX <= a.maxX && a.minY <= b.maxY && b.minY <= a.maxY;
+
+const outlineOf = (r: FillRegion): Polyline[] =>
+  r.outer.map((points) => ({ points, closed: true }));
+
+/**
+ * What the pen draws for a layer's fill regions: hatches (per the fill settings) and outlines
+ * (with `drawOutline`). With `hideCovered`, later regions hide the parts of earlier ones they
+ * cover, and white knockouts hide without being drawn.
+ */
+export function layerFillPaths(layer: Layer): Polyline[] {
   const f = layer.settings.fill;
-  if (!f || f.type === 'none' || !(f.spacing > 0)) return [];
-  const passes: number[] =
-    f.type === 'crosshatch' ? [f.angle, f.crossAngle ?? f.angle + 90] : [f.angle];
-  const connect = f.type === 'zigzag' ? true : f.connect;
-  if (f.type !== 'lines' && f.type !== 'crosshatch' && f.type !== 'zigzag') return [];
+  const filling = !!f && f.type !== 'none' && f.spacing > 0;
+  const outlines = layer.settings.drawOutline;
+  if (!filling && !outlines) return [];
+  const regions = layer.fills;
+  const hide = layer.settings.hideCovered ?? true;
+  const bounds = hide ? regions.map(regionBounds) : [];
+  const shapes = new Map<number, Shape>();
+  const shapeOf = (i: number) => {
+    let s = shapes.get(i);
+    if (!s) shapes.set(i, (s = regionShape(regions[i]!)));
+    return s;
+  };
+
   const out: Polyline[] = [];
-  for (const region of layer.fills)
-    for (const angle of passes)
-      out.push(...hatchRegion(region, { spacing: f.spacing, angle, inset: f.inset, connect }));
+  regions.forEach((region, i) => {
+    if (region.knockout) return;
+    // Shapes painted later that overlap this one.
+    const above: Shape = [];
+    if (hide)
+      for (let j = i + 1; j < regions.length; j++)
+        if (overlaps(bounds[i]!, bounds[j]!)) append(above, shapeOf(j));
+    if (!above.length) {
+      if (outlines) append(out, outlineOf(region));
+      if (filling) append(out, fillRegion(region, f!));
+      return;
+    }
+    if (outlines) append(out, clipPolylinesToShape(outlineOf(region), above, 'outside'));
+    if (filling) {
+      const visible = differenceShapes(shapeOf(i), above);
+      if (visible.length) append(out, fillRegion(shapeRegion(visible, region.color), f!));
+    }
+  });
   return out;
 }
 
+/** Fill hatches only, without outlines. */
+export const layerHatches = (layer: Layer): Polyline[] =>
+  layerFillPaths({ ...layer, settings: { ...layer.settings, drawOutline: false } });
+
 /**
- * Fills pipeline step: adds hatch lines to each layer's strokes. Fill regions are kept so
- * outlines can still be drawn.
+ * Fills pipeline step: adds fill hatches and outlines to each layer's strokes. Fill regions are
+ * kept for the preview.
  */
 export function applyFills(doc: PlotDocument): PlotDocument {
   return {
     ...doc,
     layers: doc.layers.map((l) => {
-      const hatches = layerHatches(l);
-      return hatches.length ? { ...l, strokes: [...l.strokes, ...hatches] } : l;
+      const paths = layerFillPaths(l);
+      return paths.length ? { ...l, strokes: [...l.strokes, ...paths] } : l;
     }),
   };
 }

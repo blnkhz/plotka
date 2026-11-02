@@ -52,7 +52,7 @@ export function LayersPanel() {
               {l.name}
             </span>
             <span className={styles.count} title="Strokes / filled shapes">
-              {l.strokes.length}/{l.fills.length}
+              {l.strokes.length}/{l.fills.filter((f) => !f.knockout).length}
             </span>
             <button
               className={styles.icon}

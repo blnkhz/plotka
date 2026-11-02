@@ -10,8 +10,13 @@ export type Polyline = { points: Vec2[]; closed: boolean };
 export type FillRegion = {
   outer: Vec2[][];
   fillRule: 'nonzero' | 'evenodd';
-  /** Source fill color, normalized to `#rrggbb` when possible. Used for density mapping later. */
+  /** Source fill color, normalized to `#rrggbb` when possible. Used for density from color. */
   color?: string;
+  /**
+   * Paper-colored (white) fill: never drawn, but hides shapes under it when the layer's
+   * `hideCovered` is on.
+   */
+  knockout?: boolean;
 };
 
 export type FillType =
@@ -27,8 +32,12 @@ export type FillSettings = {
   crossAngle?: number;
   /** mm pulled in from the outline so fills don't overrun the stroke. */
   inset: number;
-  /** Join adjacent hatch lines without lifting the pen when safe. */
+  /** Join adjacent hatch lines (or concentric rings) without lifting the pen when safe. */
   connect: boolean;
+  /** Dots: random offset as a fraction of spacing, 0..1. */
+  jitter?: number;
+  /** Darker source colors get tighter spacing (spacing ÷ darkness). */
+  densityFromColor?: boolean;
 };
 
 export type LayerSettings = {
@@ -40,6 +49,8 @@ export type LayerSettings = {
   penPosDown: number;
   fill: FillSettings | null;
   drawOutline: boolean;
+  /** Later shapes in the layer hide the parts of earlier ones they cover, like in the SVG. */
+  hideCovered: boolean;
 };
 
 export type Layer = {
@@ -87,6 +98,7 @@ export const defaultLayerSettings = (): LayerSettings => ({
   penPosDown: 30,
   fill: null,
   drawOutline: false,
+  hideCovered: true,
 });
 
 export function createLayer(id: string, name: string, color = '#000000'): Layer {

@@ -84,3 +84,33 @@ test('crosshatch a layer (MVP fill setup)', async () => {
   if (shots) await page.screenshot({ path: join(shots, 'optimize-off.png') });
   await app.close();
 });
+
+test('more fill types, overlaps and density from color', async () => {
+  const app = await electron.launch({ args: [join(__dirname, '..')] });
+  const page = await app.firstWindow();
+  await page.setViewportSize({ width: 1400, height: 860 });
+  await dropFile(page, 'overlap.svg');
+  await expect(page.getByText('overlap.svg')).toBeVisible();
+  await page.getByRole('tab', { name: 'Fill' }).click();
+  await expect(page.getByText(/1 white shape is not drawn/)).toBeVisible();
+
+  const type = page.getByRole('combobox').first();
+  await type.selectOption('lines');
+  if (shots) await page.screenshot({ path: join(shots, 'overlap-lines.png') });
+  await page.getByLabel('Hide parts covered by shapes on top').uncheck();
+  if (shots) await page.screenshot({ path: join(shots, 'overlap-lines-unhidden.png') });
+  await page.getByLabel('Hide parts covered by shapes on top').check();
+
+  await page.getByLabel('Spacing from fill color').check();
+  if (shots) await page.screenshot({ path: join(shots, 'overlap-density.png') });
+  await page.getByLabel('Spacing from fill color').uncheck();
+
+  for (const t of ['concentric', 'spiral', 'dots'] as const) {
+    await type.selectOption(t);
+    await expect(page.getByText(/\d+ paths · ≈/)).toBeVisible();
+    if (shots) await page.screenshot({ path: join(shots, `overlap-${t}.png`) });
+  }
+  await expect(page.getByText('Dot spacing')).toBeVisible();
+  await expect(page.getByText('Jitter')).toBeVisible();
+  await app.close();
+});

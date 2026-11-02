@@ -22,11 +22,11 @@ polygon library, so `packages/core/src/fills/hatch.ts` does it directly:
 Pipeline: fit → **fills** (hatch lines appended to the layer's strokes; fill regions kept for
 outlines) → clip → toolpath.
 
-## Known limitation
+## Known limitation (fixed)
 
-Overlapping filled shapes in one layer are hatched independently, so overlaps get both
-patterns (SVG would paint the top shape over the lower one). Fixing that needs polygon booleans;
-decide on a library when doing HATCH-4 (concentric needs offsets too).
+Overlapping filled shapes in one layer used to be hatched independently. Fixed with polygon
+booleans in [epic-4b-more-fills.md](epic-4b-more-fills.md) ("Hide parts covered by shapes on
+top").
 
 ## UI
 

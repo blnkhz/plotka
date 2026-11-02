@@ -341,12 +341,21 @@ describe('importSvg: white fills', () => {
   const s = svg(
     '<rect width="10" height="10" fill="#fff"/><rect width="5" height="5" fill="#f5f5f5" stroke="black"/>',
   );
-  it('skips white and near-white fills by default but keeps their strokes', () => {
+  it('keeps white and near-white fills as knockouts by default, and their strokes', () => {
     const doc = importSvg(s);
-    expect(doc.layers[0]!.fills).toHaveLength(0);
+    expect(doc.layers[0]!.fills.map((f) => f.knockout)).toEqual([true, true]);
     expect(doc.layers[0]!.strokes).toHaveLength(1);
   });
+  it('drops white fills in by-color mode (no empty white layer)', () => {
+    const doc = importSvg(s, { layerMode: 'byColor' });
+    expect(doc.layers).toHaveLength(1);
+    expect(doc.layers[0]!.fills).toHaveLength(0);
+  });
+  it('drops a layer that only has knockouts', () => {
+    expect(importSvg(svg('<rect width="10" height="10" fill="#fff"/>')).layers).toHaveLength(0);
+  });
   it('can keep them', () => {
-    expect(importSvg(s, { ignoreWhiteFills: false }).layers[0]!.fills).toHaveLength(2);
+    const fills = importSvg(s, { ignoreWhiteFills: false }).layers[0]!.fills;
+    expect(fills.map((f) => f.knockout)).toEqual([undefined, undefined]);
   });
 });

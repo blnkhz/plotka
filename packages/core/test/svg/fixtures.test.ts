@@ -47,13 +47,16 @@ describe('fixtures (IMPORT-1)', () => {
     expect(roundDoc(doc)).toMatchSnapshot();
   });
 
-  it('Figma: px size at 96 dpi, clip-path warning, white background ignored', async () => {
+  it('Figma: px size at 96 dpi, clip-path warning, white background is a knockout', async () => {
     const doc = await load(figma, 'figma.svg');
     expect(doc.width).toBeCloseTo((400 / 96) * 25.4, 6);
     expect(doc.warnings.some((w) => /Clipping/.test(w))).toBe(true);
     const layer = doc.layers[0]!;
-    // white background rect is skipped; only the evenodd square remains
-    expect(layer.fills.map((f) => f.color)).toEqual(['#1e1e1e']);
+    // white background rect is a knockout (not drawn); the evenodd square is the real fill
+    expect(layer.fills.map((f) => [f.color, !!f.knockout])).toEqual([
+      ['#ffffff', true],
+      ['#1e1e1e', false],
+    ]);
     // circle, line, curve
     expect(layer.strokes).toHaveLength(3);
     expect(roundDoc(doc)).toMatchSnapshot();

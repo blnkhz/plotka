@@ -242,6 +242,9 @@ importers:
 
   packages/core:
     dependencies:
+      '@countertype/clipper2-ts':
+        specifier: 1.5.4-3.9a869ba
+        version: 1.5.4-3.9a869ba
       svgpath:
         specifier: ^2.6.0
         version: 2.6.0
@@ -342,6 +345,11 @@ packages:
 
   '@cacheable/utils@2.5.0':
     resolution: {integrity: sha512-buipgOVDkkPXNR5+xBpDw7Zk2n1EvU7qBJCNUcL7rhQ//kfpOXPAvQ511Os0vpLYJ1pZnvudNytkQt2hst3wqA==}
+
+  '@countertype/clipper2-ts@1.5.4-3.9a869ba':
+    resolution: {integrity: sha512-LeO+CRdfipmLjSBszws6FC2KIjyjOpqDlNgLIrC5LtdV/ab0YXCt4cioIMYFaIVGT3saQQ51ejdHhWw28Rmdjw==}
+    engines: {node: '>=14.0.0'}
+    deprecated: Package moved to clipper2-ts (no scope). Please update your dependencies
 
   '@electron-internal/extract-zip@1.0.8':
     resolution: {integrity: sha512-8iajeLFbzNwM0m3AsQZSZgYREWglAImyGvvFSWU34FgMW8sHlzdwj9QKvv9dgN7jMP591EFUF/sLOC3Jl9YIjQ==}
@@ -2429,6 +2437,8 @@ snapshots:
     dependencies:
       hashery: 1.5.1
       keyv: 5.6.0
+
+  '@countertype/clipper2-ts@1.5.4-3.9a869ba': {}
 
   '@electron-internal/extract-zip@1.0.8': {}
 

@@ -10,20 +10,14 @@ export type LayerToolpath = {
 export type Toolpath = { layers: LayerToolpath[] };
 
 /**
- * Collects what the pen will draw: strokes, plus fill outlines when `drawOutline` is on.
- * Hatch fills are added here by the fill step (Epic 4). Only layers with `plot` on are included.
+ * Collects what the pen will draw, from layers with `plot` on. Fill hatches and outlines are
+ * already in the strokes (added by the fills step). Dots are zero-length two-point paths.
  */
 export function buildToolpath(doc: PlotDocument): Toolpath {
   return {
     layers: doc.layers
       .filter((l) => l.plot)
-      .map((l) => {
-        const paths: Polyline[] = [...l.strokes];
-        if (l.settings.drawOutline)
-          for (const f of l.fills)
-            for (const ring of f.outer) paths.push({ points: ring, closed: true });
-        return { layerId: l.id, paths: paths.filter((p) => p.points.length > 1) };
-      }),
+      .map((l) => ({ layerId: l.id, paths: l.strokes.filter((p) => p.points.length > 1) })),
   };
 }
 

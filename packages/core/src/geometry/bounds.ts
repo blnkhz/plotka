@@ -22,13 +22,13 @@ export function polylinesBounds(lines: Polyline[], b: Bounds = emptyBounds()): B
   return b;
 }
 
-/** Bounds of all strokes and fill rings in visible layers. */
+/** Bounds of all strokes and fill rings (white knockouts don't count). */
 export function documentBounds(doc: PlotDocument): Bounds {
   const b = emptyBounds();
   for (const layer of doc.layers) {
     polylinesBounds(layer.strokes, b);
     for (const f of layer.fills)
-      for (const ring of f.outer) for (const p of ring) extendBounds(b, p);
+      if (!f.knockout) for (const ring of f.outer) for (const p of ring) extendBounds(b, p);
   }
   return b;
 }
