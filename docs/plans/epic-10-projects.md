@@ -47,3 +47,18 @@ The toolbar summary shows paths, pen-down distance, pen-up travel and time. The 
 table already has these per layer.
 
 Later: PROJ-2 undo/redo, PROJ-4 recent files and autosave.
+
+## PROJ-2 undo / redo
+
+- **What's undoable:** the project's settings: layer settings (fills, passes, visibility,
+  colors), layer mode, page setup, optimization, the transform list, plot layer choices, pen
+  width and the machine profile. Opening a file or project starts a fresh history. Doodle strokes
+  keep their own undo inside the doodle pad. Machine actions (jog, pen) aren't undoable.
+- **How:** snapshots of those settings before each change, up to 200 steps. Changes within
+  0.4 s of each other (spinner clicks, a re-import after a layer mode change) form one step.
+  Undoing a layer mode change re-imports the file in the old mode, then restores the layer
+  settings.
+- **Shortcuts:** a real app menu (File: Open, Save, Save As; Edit: Undo, Redo, Cut, Copy,
+  Paste, Select All). Menu shortcuts are the only handlers for ⌘O, ⌘S, ⇧⌘S, ⌘Z, ⇧⌘Z, so a
+  key press never acts twice. In a text field, Undo undoes typing. With the doodle pad open, it
+  undoes strokes. The toolbar has Undo and Redo buttons too.

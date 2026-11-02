@@ -76,6 +76,9 @@ type State = {
   /** Project name (file name without .plot.json) and whether it has unsaved changes. */
   projectName: string;
   dirty: boolean;
+  /** Whether Undo / Redo have something to do (PROJ-2). */
+  canUndo: boolean;
+  canRedo: boolean;
 
   openFile(source: Source): Promise<void>;
   setLayerMode(mode: LayerMode): Promise<void>;
@@ -91,6 +94,9 @@ type State = {
   removeStep(id: string): void;
   moveStep(id: string, delta: -1 | 1): void;
   setDoodle(patch: Partial<DoodleState>): void;
+  /** Undo / redo the last stroke in the doodle pad. */
+  doodleUndo(): void;
+  doodleRedo(): void;
   setPenHeights(h: { up: number; down: number }): void;
   togglePlotLayer(id: string): void;
   /** Turns the doodle into vectors and opens it as the artwork. */
@@ -138,6 +144,8 @@ export const useStore = create<State>()((set, get) => ({
   plotSkip: {},
   projectName: 'Untitled',
   dirty: false,
+  canUndo: false,
+  canRedo: false,
   doodle: {
     open: false,
     strokes: [],
@@ -213,6 +221,22 @@ export const useStore = create<State>()((set, get) => ({
     }),
 
   setDoodle: (patch) => set((s) => ({ doodle: { ...s.doodle, ...patch } })),
+  doodleUndo: () =>
+    set((s) => {
+      const { strokes, undone } = s.doodle;
+      const last = strokes[strokes.length - 1];
+      return last
+        ? { doodle: { ...s.doodle, strokes: strokes.slice(0, -1), undone: [...undone, last] } }
+        : {};
+    }),
+  doodleRedo: () =>
+    set((s) => {
+      const { strokes, undone } = s.doodle;
+      const next = undone[undone.length - 1];
+      return next
+        ? { doodle: { ...s.doodle, strokes: [...strokes, next], undone: undone.slice(0, -1) } }
+        : {};
+    }),
   setPenHeights: (penHeights) => {
     set({ penHeights });
     try {

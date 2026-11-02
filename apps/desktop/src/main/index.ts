@@ -1,6 +1,7 @@
 import { join } from 'node:path';
 import { app, BrowserWindow, dialog, shell } from 'electron';
 import { registerIpcHandlers } from './ipc';
+import { installMenu } from './menu';
 import { PlotterService } from './plotter';
 import { project } from './project';
 
@@ -73,6 +74,7 @@ function createWindow(): BrowserWindow {
 
 void app.whenReady().then(() => {
   registerIpcHandlers(plotter);
+  installMenu();
   createWindow();
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();

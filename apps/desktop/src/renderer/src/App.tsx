@@ -6,7 +6,7 @@ import { Preview } from './components/Preview';
 import { RightPanel } from './components/RightPanel';
 import { openDroppedFile, openWithDialog } from './lib/openFile';
 import { command, control, subscribePlotter } from './lib/plotter';
-import { saveProject, trackProject } from './lib/projectActions';
+import { redo, saveProject, trackProject, undo } from './lib/projectActions';
 import { fmtDistance } from './lib/format';
 import { useProcessed } from './lib/useProcessed';
 import { fmtDuration } from './lib/format';
@@ -19,6 +19,7 @@ export function App() {
   useShortcuts();
   useEffect(() => subscribePlotter(), []);
   useEffect(() => trackProject(), []);
+  useEffect(() => window.api.on('app:menu', ({ action }) => void menuAction(action)), []);
 
   return (
     <div
@@ -61,6 +62,8 @@ function Toolbar() {
   const processed = useProcessed();
   const setDoodle = useStore((s) => s.setDoodle);
   const hasDoodle = useStore((s) => s.doodle.strokes.length > 0);
+  const canUndo = useStore((s) => s.canUndo);
+  const canRedo = useStore((s) => s.canRedo);
 
   return (
     <header className={styles.toolbar}>
@@ -73,6 +76,12 @@ function Toolbar() {
         title="Save project (⌘S). ⇧⌘S saves a copy under a new name."
       >
         Save
+      </button>
+      <button onClick={() => void undo()} disabled={!canUndo} title="Undo (⌘Z)" aria-label="Undo">
+        ↶
+      </button>
+      <button onClick={() => void redo()} disabled={!canRedo} title="Redo (⇧⌘Z)" aria-label="Redo">
+        ↷
       </button>
       <button
         onClick={() => setDoodle({ open: true })}
@@ -100,19 +109,46 @@ function Toolbar() {
   );
 }
 
+/** Text fields where Undo should undo typing rather than settings. */
+function editingText(): boolean {
+  const el = document.activeElement;
+  if (el instanceof HTMLTextAreaElement) return true;
+  return (
+    el instanceof HTMLInputElement && /^(text|number|search|url|email|password)$/.test(el.type)
+  );
+}
+
+async function menuAction(action: 'open' | 'save' | 'saveAs' | 'undo' | 'redo') {
+  const doodleOpen = useStore.getState().doodle.open;
+  switch (action) {
+    case 'open':
+      return openWithDialog();
+    case 'save':
+    case 'saveAs':
+      return void (await saveProject(action === 'saveAs'));
+    case 'undo':
+    case 'redo':
+      if (editingText()) {
+        // execCommand is the way to reach the field's own undo stack.
+        document.execCommand(action);
+        return;
+      }
+      if (doodleOpen) {
+        const s = useStore.getState();
+        return action === 'undo' ? s.doodleUndo() : s.doodleRedo();
+      }
+      return action === 'undo' ? undo() : redo();
+  }
+}
+
 function useShortcuts() {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement;
       const typing = target.closest('input, select, textarea') !== null;
       const mod = e.metaKey || e.ctrlKey;
-      if (mod && e.key.toLowerCase() === 'o') {
-        e.preventDefault();
-        void openWithDialog();
-      } else if (mod && e.key.toLowerCase() === 's') {
-        e.preventDefault();
-        void saveProject(e.shiftKey);
-      } else if (!mod && !typing && e.key.toLowerCase() === 'f') {
+      // ⌘O, ⌘S, ⌘Z… come through the app menu (menuAction), not here.
+      if (!mod && !typing && e.key.toLowerCase() === 'f') {
         useStore.getState().requestFit();
       } else if (!mod && !typing && !useStore.getState().doodle.open) {
         // Plot shortcuts: Space pauses / resumes; U / D raise / lower the pen when not plotting.

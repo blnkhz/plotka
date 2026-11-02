@@ -304,3 +304,68 @@ test('save a project and open it again with all its settings (PROJ-1)', async ()
   if (shots) await page.screenshot({ path: join(shots, 'project-reopened.png') });
   await app.close();
 });
+
+test('undo and redo settings from the Edit menu and the toolbar (PROJ-2)', async () => {
+  const app = await launch();
+  const page = await app.firstWindow();
+  await page.setViewportSize({ width: 1400, height: 900 });
+  const menu = (id: string) =>
+    app.evaluate(({ Menu }, id) => Menu.getApplicationMenu()!.getMenuItemById(id)!.click(), id);
+
+  await dropFile(page, 'motif.svg');
+  await expect(page.getByRole('button', { name: 'Undo' })).toBeDisabled();
+  const landscape = page.getByRole('button', { name: 'Landscape' });
+  await landscape.click();
+  await page.getByLabel('Add transform').selectOption('tile');
+  await page.getByRole('tab', { name: 'Fill' }).click();
+  await page.getByLabel('Fill type').selectOption('spiral');
+
+  await menu('undo');
+  await expect(page.getByLabel('Fill type')).toHaveValue('none');
+  await menu('undo');
+  await expect(page.getByLabel('Use Tile')).toHaveCount(0);
+  await page.getByRole('tab', { name: 'Page' }).click();
+  await expect(landscape).toHaveClass(/active/);
+  await page.getByRole('button', { name: 'Undo' }).click();
+  await expect(landscape).not.toHaveClass(/active/);
+  await expect(page.getByRole('button', { name: 'Undo' })).toBeDisabled();
+
+  await menu('redo');
+  await expect(landscape).toHaveClass(/active/);
+  await page.getByRole('button', { name: 'Redo' }).click();
+  await expect(page.getByLabel('Use Tile')).toHaveCount(1);
+  // A new change clears what could be redone.
+  await page.getByRole('button', { name: 'Portrait' }).click();
+  await expect(page.getByRole('button', { name: 'Redo' })).toBeDisabled();
+
+  // Layer mode: undo imports the file again in the old mode.
+  await page.getByRole('button', { name: 'By color' }).click();
+  await expect(page.getByRole('button', { name: 'By color' })).toHaveClass(/active/);
+  await menu('undo');
+  await expect(page.getByRole('button', { name: 'One layer' })).toHaveClass(/active/);
+
+  // In a text field, Undo undoes the typing, not a setting.
+  const scale = page.getByRole('spinbutton', { name: 'Scale', exact: true }).first();
+  const before = await scale.inputValue();
+  await scale.click();
+  await scale.pressSequentially('5');
+  expect(await scale.inputValue()).not.toBe(before);
+  await menu('undo');
+  await expect(scale).toHaveValue(before);
+  await expect(page.getByRole('button', { name: 'Portrait' })).toHaveClass(/active/);
+  await page.keyboard.press('Escape');
+
+  // In the doodle pad, Undo removes the last stroke.
+  await page.getByRole('button', { name: 'Doodle…' }).click();
+  const box = (await page.getByTestId('doodle-canvas').boundingBox())!;
+  await page.mouse.move(box.x + 100, box.y + 100);
+  await page.mouse.down();
+  await page.mouse.move(box.x + 300, box.y + 200, { steps: 20 });
+  await page.mouse.up();
+  await expect(page.getByText(/^1 stroke →/)).toBeVisible();
+  await menu('undo');
+  await expect(page.getByText(/^0 strokes →/)).toBeVisible();
+  await menu('redo');
+  await expect(page.getByText(/^1 stroke →/)).toBeVisible();
+  await app.close();
+});

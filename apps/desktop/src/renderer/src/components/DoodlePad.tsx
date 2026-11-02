@@ -38,16 +38,10 @@ export function DoodlePad() {
     (next: DoodleStroke[]) => setDoodle({ strokes: next, undone: [] }),
     [setDoodle],
   );
-  const undo = useCallback(() => {
-    const { strokes, undone } = useStore.getState().doodle;
-    const last = strokes[strokes.length - 1];
-    if (last) setDoodle({ strokes: strokes.slice(0, -1), undone: [...undone, last] });
-  }, [setDoodle]);
-  const redo = useCallback(() => {
-    const { strokes, undone } = useStore.getState().doodle;
-    const next = undone[undone.length - 1];
-    if (next) setDoodle({ strokes: [...strokes, next], undone: undone.slice(0, -1) });
-  }, [setDoodle]);
+  // ⌘Z / ⇧⌘Z come through the app menu (Edit → Undo / Redo), which routes them here while
+  // the pad is open.
+  const undo = useStore((s) => s.doodleUndo);
+  const redo = useStore((s) => s.doodleRedo);
   const close = useCallback(() => setDoodle({ open: false }), [setDoodle]);
 
   // --- drawing ---
@@ -139,18 +133,11 @@ export function DoodlePad() {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      const typing = (e.target as HTMLElement).closest('input, select, textarea') !== null;
       if (e.key === 'Escape') close();
-      else if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'z' && !typing) {
-        e.preventDefault();
-        e.stopPropagation();
-        if (e.shiftKey) redo();
-        else undo();
-      }
     };
     window.addEventListener('keydown', onKey, true);
     return () => window.removeEventListener('keydown', onKey, true);
-  }, [close, undo, redo]);
+  }, [close]);
 
   const toMm = (e: { clientX: number; clientY: number }): Vec2 => {
     const r = canvasRef.current!.getBoundingClientRect();
