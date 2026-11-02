@@ -4,3 +4,5 @@ export * from './profile';
 export * from './servo';
 export * from './ebb';
 export * from './motion/plan';
+export * from './driver/types';
+export * from './driver/sim';
