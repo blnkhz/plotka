@@ -6,6 +6,8 @@ import { Preview } from './components/Preview';
 import { RightPanel } from './components/RightPanel';
 import { openDroppedFile, openWithDialog } from './lib/openFile';
 import { command, control, subscribePlotter } from './lib/plotter';
+import { saveProject, trackProject } from './lib/projectActions';
+import { fmtDistance } from './lib/format';
 import { useProcessed } from './lib/useProcessed';
 import { fmtDuration } from './lib/format';
 import { useStore } from './store';
@@ -16,6 +18,7 @@ export function App() {
   const doodleOpen = useStore((s) => s.doodle.open);
   useShortcuts();
   useEffect(() => subscribePlotter(), []);
+  useEffect(() => trackProject(), []);
 
   return (
     <div
@@ -65,6 +68,13 @@ function Toolbar() {
         Open…
       </button>
       <button
+        onClick={() => void saveProject(false)}
+        disabled={!doc && !hasDoodle}
+        title="Save project (⌘S). ⇧⌘S saves a copy under a new name."
+      >
+        Save
+      </button>
+      <button
         onClick={() => setDoodle({ open: true })}
         title="Draw something and turn it into vectors"
       >
@@ -80,7 +90,9 @@ function Toolbar() {
       <span className={styles.spacer} />
       {processed && (
         <span className={styles.summary}>
-          {processed.stats.total.pathCount} paths · ≈{' '}
+          {processed.stats.total.pathCount} paths · draw{' '}
+          {fmtDistance(processed.stats.total.penDownDistance)} · travel{' '}
+          {fmtDistance(processed.stats.total.travelDistance)} · ≈{' '}
           {fmtDuration(processed.stats.total.estimatedTime)}
         </span>
       )}
@@ -97,6 +109,9 @@ function useShortcuts() {
       if (mod && e.key.toLowerCase() === 'o') {
         e.preventDefault();
         void openWithDialog();
+      } else if (mod && e.key.toLowerCase() === 's') {
+        e.preventDefault();
+        void saveProject(e.shiftKey);
       } else if (!mod && !typing && e.key.toLowerCase() === 'f') {
         useStore.getState().requestFit();
       } else if (!mod && !typing && !useStore.getState().doodle.open) {

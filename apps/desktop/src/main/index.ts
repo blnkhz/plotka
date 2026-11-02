@@ -2,6 +2,7 @@ import { join } from 'node:path';
 import { app, BrowserWindow, dialog, shell } from 'electron';
 import { registerIpcHandlers } from './ipc';
 import { PlotterService } from './plotter';
+import { project } from './project';
 
 const plotter = new PlotterService();
 
@@ -26,7 +27,21 @@ function createWindow(): BrowserWindow {
   // PLOT-4: closing the window mid-plot asks first; if confirmed, the pen goes up and home.
   let closing = false;
   win.on('close', (e) => {
-    if (closing || !plotter.isPlotting()) return;
+    // Automated tests close the window themselves; there's nobody to answer a question.
+    if (closing || process.env['PLOTTER_STUDIO_E2E']) return;
+    if (!plotter.isPlotting()) {
+      if (!project.dirty) return;
+      const choice = dialog.showMessageBoxSync(win, {
+        type: 'warning',
+        buttons: ['Cancel', 'Close without saving'],
+        defaultId: 0,
+        cancelId: 0,
+        message: `“${project.name}” has unsaved changes.`,
+        detail: 'Save with ⌘S to keep them.',
+      });
+      if (choice === 0) e.preventDefault();
+      return;
+    }
     e.preventDefault();
     const choice = dialog.showMessageBoxSync(win, {
       type: 'warning',

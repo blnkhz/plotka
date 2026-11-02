@@ -73,6 +73,9 @@ type State = {
   penHeights: { up: number; down: number };
   /** Layers left out of the next plot (PLOT-3). */
   plotSkip: Record<string, true>;
+  /** Project name (file name without .plot.json) and whether it has unsaved changes. */
+  projectName: string;
+  dirty: boolean;
 
   openFile(source: Source): Promise<void>;
   setLayerMode(mode: LayerMode): Promise<void>;
@@ -133,6 +136,8 @@ export const useStore = create<State>()((set, get) => ({
   plotterError: null,
   penHeights: loadPenHeights(),
   plotSkip: {},
+  projectName: 'Untitled',
+  dirty: false,
   doodle: {
     open: false,
     strokes: [],

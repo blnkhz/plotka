@@ -3,6 +3,7 @@ import { basename } from 'node:path';
 import { app, BrowserWindow, dialog, ipcMain } from 'electron';
 import type { InvokeChannel, InvokeChannels } from '@shared/ipc';
 import type { PlotterService } from './plotter';
+import { isProjectPath, project, projectName, updateWindow } from './project';
 import { listPorts } from './serial';
 
 type Handler<C extends InvokeChannel> = (
@@ -41,7 +42,41 @@ export function registerIpcHandlers(plotter: PlotterService): void {
     const path = result.filePaths[0];
     if (result.canceled || !path) return null;
     const bytes = new Uint8Array(await readFile(path));
+    // Opening a project makes it the current project; opening artwork starts a new one.
+    project.path = isProjectPath(path) ? path : null;
     return { path, name: basename(path), bytes };
+  });
+
+  handle('project:save', async (event, content, saveAs, suggestedName) => {
+    const win = BrowserWindow.fromWebContents(event.sender);
+    let path = saveAs ? null : project.path;
+    if (!path) {
+      const opts: Electron.SaveDialogOptions = {
+        defaultPath: `${suggestedName}.plot.json`,
+        filters: [{ name: 'Plotter Studio project', extensions: ['json'] }],
+      };
+      const r = win ? await dialog.showSaveDialog(win, opts) : await dialog.showSaveDialog(opts);
+      if (r.canceled || !r.filePath) return null;
+      path = isProjectPath(r.filePath)
+        ? r.filePath
+        : r.filePath.replace(/(\.json)?$/i, '.plot.json');
+    }
+    await writeFile(path, content, 'utf8');
+    project.path = path;
+    project.name = projectName(path);
+    project.dirty = false;
+    updateWindow(win);
+    return { name: project.name };
+  });
+
+  handle('project:forget', () => {
+    project.path = null;
+  });
+
+  handle('project:state', (event, name, dirty) => {
+    project.name = name;
+    project.dirty = dirty;
+    updateWindow(BrowserWindow.fromWebContents(event.sender));
   });
 
   handle('file:saveText', async (event, defaultName, content, extensions) => {

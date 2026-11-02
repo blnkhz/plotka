@@ -5,6 +5,13 @@ import { _electron as electron, expect, test, type Page } from '@playwright/test
 const fixtures = join(__dirname, '../../../packages/core/test/fixtures/svg');
 const shots = process.env['SCREENSHOT_DIR'];
 
+/** Launches the app; PLOTTER_STUDIO_E2E skips the "unsaved changes" question on close. */
+const launch = (env: Record<string, string> = {}) =>
+  electron.launch({
+    args: [join(__dirname, '..')],
+    env: { ...process.env, PLOTTER_STUDIO_E2E: '1', ...env },
+  });
+
 async function dropFile(page: Page, name: string) {
   const content = readFileSync(join(fixtures, name), 'utf8');
   await page.locator('#root > div').waitFor();
@@ -21,7 +28,7 @@ async function dropFile(page: Page, name: string) {
 }
 
 test('open a file, change the page, see stats', async () => {
-  const app = await electron.launch({ args: [join(__dirname, '..')] });
+  const app = await launch();
   const page = await app.firstWindow();
   await page.setViewportSize({ width: 1400, height: 860 });
   await expect(page.getByText('Open or drop an SVG to start.')).toBeVisible();
@@ -29,7 +36,7 @@ test('open a file, change the page, see stats', async () => {
   await dropFile(page, 'inkscape.svg');
   await expect(page.getByText('inkscape.svg')).toBeVisible();
   await expect(page.getByText('Outlines')).toBeVisible();
-  await expect(page.getByText(/\d+ paths · ≈/)).toBeVisible();
+  await expect(page.getByText(/\d+ paths · draw/)).toBeVisible();
   if (shots) await page.screenshot({ path: join(shots, 'inkscape.png') });
 
   // A4 landscape, 15 mm margin (MVP setup)
@@ -54,14 +61,14 @@ test('open a file, change the page, see stats', async () => {
 });
 
 test('crosshatch a layer (MVP fill setup)', async () => {
-  const app = await electron.launch({ args: [join(__dirname, '..')] });
+  const app = await launch();
   const page = await app.firstWindow();
   await page.setViewportSize({ width: 1400, height: 860 });
   await dropFile(page, 'inkscape.svg');
   await page.getByRole('button', { name: 'Landscape' }).click();
 
   const pathCount = async () =>
-    Number((await page.getByText(/\d+ paths · ≈/).textContent())!.match(/(\d+) paths/)![1]);
+    Number((await page.getByText(/\d+ paths · draw/).textContent())!.match(/(\d+) paths/)![1]);
   const before = await pathCount();
 
   await page.getByText('Fills', { exact: true }).click();
@@ -86,7 +93,7 @@ test('crosshatch a layer (MVP fill setup)', async () => {
 });
 
 test('more fill types, overlaps and density from color', async () => {
-  const app = await electron.launch({ args: [join(__dirname, '..')] });
+  const app = await launch();
   const page = await app.firstWindow();
   await page.setViewportSize({ width: 1400, height: 860 });
   await dropFile(page, 'overlap.svg');
@@ -107,7 +114,7 @@ test('more fill types, overlaps and density from color', async () => {
 
   for (const t of ['concentric', 'spiral', 'dots'] as const) {
     await type.selectOption(t);
-    await expect(page.getByText(/\d+ paths · ≈/)).toBeVisible();
+    await expect(page.getByText(/\d+ paths · draw/)).toBeVisible();
     if (shots) await page.screenshot({ path: join(shots, `overlap-${t}.png`) });
   }
   await expect(page.getByText('Dot spacing')).toBeVisible();
@@ -116,7 +123,7 @@ test('more fill types, overlaps and density from color', async () => {
 });
 
 test('passes: repeat a layer with slight shifts in several pen colors', async () => {
-  const app = await electron.launch({ args: [join(__dirname, '..')] });
+  const app = await launch();
   const page = await app.firstWindow();
   await page.setViewportSize({ width: 1400, height: 860 });
   await dropFile(page, 'overlap.svg');
@@ -137,7 +144,7 @@ test('passes: repeat a layer with slight shifts in several pen colors', async ()
 });
 
 test('doodle, turn it into vectors, then tile it', async () => {
-  const app = await electron.launch({ args: [join(__dirname, '..')] });
+  const app = await launch();
   const page = await app.firstWindow();
   await page.setViewportSize({ width: 1400, height: 860 });
   await page.locator('#root > div').waitFor();
@@ -189,7 +196,7 @@ test('doodle, turn it into vectors, then tile it', async () => {
   await page.getByLabel('Mirror').selectOption('columns');
   await page.getByRole('tab', { name: 'Fill' }).click();
   await page.getByLabel('Fill type').selectOption('lines');
-  await expect(page.getByText(/\d+ paths · ≈/)).toBeVisible();
+  await expect(page.getByText(/\d+ paths · draw/)).toBeVisible();
   if (shots) await page.screenshot({ path: join(shots, 'tile.png') });
 
   // Turning the step off restores the single drawing.
@@ -199,7 +206,7 @@ test('doodle, turn it into vectors, then tile it', async () => {
 });
 
 test('tessellate with wallpaper patterns', async () => {
-  const app = await electron.launch({ args: [join(__dirname, '..')] });
+  const app = await launch();
   const page = await app.firstWindow();
   await page.setViewportSize({ width: 1400, height: 900 });
   await dropFile(page, 'motif.svg');
@@ -209,7 +216,7 @@ test('tessellate with wallpaper patterns', async () => {
   await page.getByLabel('Fill type').selectOption('lines');
   for (const pattern of ['p6m', 'p6', 'p4', 'p4g', 'p3', 'p31m', 'hex', 'tri', 'pgg', 'cmm']) {
     await page.getByLabel('Pattern').selectOption(pattern);
-    await expect(page.getByText(/\d+ paths · ≈/)).toBeVisible();
+    await expect(page.getByText(/\d+ paths · draw/)).toBeVisible();
     if (shots) await page.screenshot({ path: join(shots, `tess-${pattern}.png`) });
   }
   await page.getByLabel('Pattern').selectOption('p4');
@@ -222,10 +229,7 @@ test('tessellate with wallpaper patterns', async () => {
 });
 
 test('connect the simulated plotter, jog, plot, pause, resume, finish', async () => {
-  const app = await electron.launch({
-    args: [join(__dirname, '..')],
-    env: { ...process.env, PLOTTER_SIM_SPEED: '40' },
-  });
+  const app = await launch({ PLOTTER_SIM_SPEED: '40' });
   const page = await app.firstWindow();
   await page.setViewportSize({ width: 1400, height: 900 });
   await dropFile(page, 'motif.svg');
@@ -252,5 +256,51 @@ test('connect the simulated plotter, jog, plot, pause, resume, finish', async ()
   await page.getByRole('button', { name: 'Resume' }).click();
   await expect(page.getByText('Done', { exact: true })).toBeVisible({ timeout: 60000 });
   if (shots) await page.screenshot({ path: join(shots, 'plot-done.png') });
+  await app.close();
+});
+
+test('save a project and open it again with all its settings (PROJ-1)', async () => {
+  const { mkdtempSync, readFileSync: read } = await import('node:fs');
+  const { tmpdir } = await import('node:os');
+  const file = join(mkdtempSync(join(tmpdir(), 'plotter-studio-')), 'My pattern.plot.json');
+  const app = await launch();
+  // Stand in for the native dialogs.
+  await app.evaluate(({ dialog }, path) => {
+    dialog.showSaveDialog = (async () => ({ canceled: false, filePath: path })) as never;
+    dialog.showOpenDialog = (async () => ({ canceled: false, filePaths: [path] })) as never;
+  }, file);
+  const page = await app.firstWindow();
+  await page.setViewportSize({ width: 1400, height: 900 });
+  const title = () =>
+    app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]!.getTitle());
+
+  await dropFile(page, 'motif.svg');
+  await page.getByRole('button', { name: 'Landscape' }).click();
+  await page.getByLabel('Add transform').selectOption('tessellate');
+  await page.getByLabel('Pattern').selectOption('p4g');
+  await page.getByRole('tab', { name: 'Fill' }).click();
+  await page.getByLabel('Fill type').selectOption('dots');
+  await expect(page.getByText(/paths · draw .* · travel .* · ≈/)).toBeVisible();
+  await expect.poll(title).toContain('motif (edited)');
+
+  await page.getByRole('button', { name: 'Save' }).click();
+  await expect.poll(title).toBe('My pattern — Plotter Studio');
+  const saved = JSON.parse(read(file, 'utf8'));
+  expect(saved.format).toBe('plotter-studio-project');
+  expect(saved.source.name).toBe('motif.svg');
+  expect(saved.pipeline[0].params.pattern).toBe('p4g');
+
+  // Start over with another file, then reopen the project.
+  await dropFile(page, 'figma.svg');
+  await expect(page.getByLabel('Pattern')).toHaveValue('p4g'); // transforms aren't per file
+  await page.getByRole('button', { name: 'Open…' }).click();
+  await expect(page.getByText('motif.svg')).toBeVisible();
+  await expect.poll(title).toBe('My pattern — Plotter Studio');
+  await expect(page.getByLabel('Pattern')).toHaveValue('p4g');
+  await page.getByRole('tab', { name: 'Fill' }).click();
+  await expect(page.getByLabel('Fill type')).toHaveValue('dots');
+  await page.getByRole('tab', { name: 'Page' }).click();
+  await expect(page.getByRole('button', { name: 'Landscape' })).toHaveClass(/active/);
+  if (shots) await page.screenshot({ path: join(shots, 'project-reopened.png') });
   await app.close();
 });

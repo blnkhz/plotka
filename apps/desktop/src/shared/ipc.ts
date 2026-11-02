@@ -64,6 +64,18 @@ export interface InvokeChannels {
   'app:getInfo': { args: []; result: AppInfo };
   'file:open': { args: [extensions: string[]]; result: OpenFileResult };
   /** Shows a save dialog and writes text. Returns the saved path, or null if cancelled. */
+  /**
+   * Saves the project text. Without `saveAs`, writes to the current project file if there is
+   * one; otherwise asks where. Returns the project name, or null if cancelled.
+   */
+  'project:save': {
+    args: [content: string, saveAs: boolean, suggestedName: string];
+    result: { name: string } | null;
+  };
+  /** The renderer started a new, untitled project (e.g. a dropped SVG). */
+  'project:forget': { args: []; result: void };
+  /** Title and edited state for the window. */
+  'project:state': { args: [name: string, dirty: boolean]; result: void };
   'plotter:listPorts': { args: []; result: PortInfo[] };
   'plotter:connect': { args: [port: string, profileId: string]; result: ActionResult };
   'plotter:disconnect': { args: []; result: ActionResult };
@@ -92,6 +104,9 @@ export const INVOKE_CHANNELS = [
   'app:getInfo',
   'file:open',
   'file:saveText',
+  'project:save',
+  'project:forget',
+  'project:state',
   'plotter:listPorts',
   'plotter:connect',
   'plotter:disconnect',

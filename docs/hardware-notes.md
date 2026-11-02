@@ -119,4 +119,5 @@ provisional until then).
   by itself on a single press: the board's "pressed since last reading" bit registers a held or
   bouncing press more than once. The runner now ignores the button until it reads released and
   750 ms have passed since it last acted.
-- Still to record: actual plot time vs the estimate (MOTION-2, within 10%).
+- **Time estimate confirmed:** the test plot's actual time matched the planner's estimate
+  (MOTION-2).
