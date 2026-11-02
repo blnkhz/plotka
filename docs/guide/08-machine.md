@@ -40,3 +40,21 @@ motors switch on**. Home is the top-left corner of the page in the app.
 Drag **Up** and **Down**: the pen moves as you drag, so you can see it. Set **Up** so the pen
 clears the paper comfortably and **Down** so it just touches. A pen pressed too hard skips and
 wears; too light and lines break up. The heights are remembered and used for every layer.
+
+## Machine profiles
+
+**Machine → Profile** picks your plotter. Each profile holds its travel (how far it can reach),
+motor steps per mm, top speeds, acceleration and pen-lift servo settings.
+
+- **Tested**: the AxiDraw V3/A3, confirmed on real hardware.
+- **Not yet tested**: the other AxiDraw models (V2/V3/SE A4, V3 XLX, V3/B6, MiniKit, SE/A2,
+  SE/A1) and the Bantam Tools NextDraw 8511, 1117 and 2234. Their values come from the makers'
+  documentation. Plot a small test first (the calibration plot in the hardware checklist is
+  ideal), and please report how it went so the profile can be marked tested.
+- **Your profiles**: **Duplicate to edit** makes your own copy of any profile, with fields for
+  the travel, steps per mm, speeds, acceleration and servo. Changes are checked as you make them
+  and saved for next time. **Delete** removes one of yours.
+
+NextDraw notes: their brushless pen lift is driven on servo pin 2 with its own signal range, and
+their automatic homing isn't used yet, so move the carriage to the home corner by hand like an
+AxiDraw. After changing the profile while connected, disconnect and connect again.

@@ -17,8 +17,12 @@ export const ebb = {
   /** Motors: 1 = 16x microstepping, 2 = 8x, 0 = off. */
   enableMotors: (mode: 0 | 1 | 2) => `EM,${mode},${mode}`,
   move: (s: MotionSegment) => `XM,${s.ms},${s.x},${s.y}`,
-  /** Pen up (1) or down (0); `ms` delays the next queued command. */
-  pen: (up: boolean, ms: number) => `SP,${up ? 1 : 0},${Math.max(0, Math.round(ms))}`,
+  /**
+   * Pen up (1) or down (0); `ms` delays the next queued command. `pin` picks the port B pin of
+   * the servo (sent only when it isn't the default, 1).
+   */
+  pen: (up: boolean, ms: number, pin?: number) =>
+    `SP,${up ? 1 : 0},${Math.min(65535, Math.max(1, Math.round(ms)))}${pin !== undefined && pin !== 1 ? `,${pin}` : ''}`,
   servoUp: (v: number) => `SC,4,${v}`,
   servoDown: (v: number) => `SC,5,${v}`,
   servoRateUp: (v: number) => `SC,11,${v}`,

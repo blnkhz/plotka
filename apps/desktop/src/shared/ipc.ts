@@ -15,7 +15,12 @@ export type OpenFileResult = {
 } | null;
 
 import type { Bounds, Toolpath } from '@plotter-studio/core';
-import type { LayerMotionSettings, MachineState, RunProgress } from '@plotter-studio/plotter';
+import type {
+  LayerMotionSettings,
+  MachineProfile,
+  MachineState,
+  RunProgress,
+} from '@plotter-studio/plotter';
 
 export type PortInfo = { path: string; label: string; isPlotter: boolean };
 
@@ -48,7 +53,8 @@ export type ManualCommand =
   | { kind: 'penHeights'; up: number; down: number; show?: 'up' | 'down' };
 
 export type PlotRequest = {
-  profileId: string;
+  /** The machine profile (built-in or the user's own); validated in the main process. */
+  profile: MachineProfile;
   toolpath: Toolpath;
   settings: Record<string, LayerMotionSettings>;
 };
@@ -92,13 +98,13 @@ export interface InvokeChannels {
   /** Title and edited state for the window. */
   'project:state': { args: [name: string, dirty: boolean]; result: void };
   'plotter:listPorts': { args: []; result: PortInfo[] };
-  'plotter:connect': { args: [port: string, profileId: string]; result: ActionResult };
+  'plotter:connect': { args: [port: string, profile: MachineProfile]; result: ActionResult };
   'plotter:disconnect': { args: []; result: ActionResult };
   'plotter:status': { args: []; result: PlotterStatus };
   'plotter:command': { args: [command: ManualCommand]; result: ActionResult };
   'plot:start': { args: [request: PlotRequest]; result: ActionResult };
   /** PLOT-6: trace the drawing's bounds with the pen up. */
-  'plot:dryRun': { args: [profileId: string, bounds: Bounds]; result: ActionResult };
+  'plot:dryRun': { args: [profile: MachineProfile, bounds: Bounds]; result: ActionResult };
   'plot:control': {
     args: [action: 'pause' | 'resume' | 'stop' | 'toggle'];
     result: ActionResult;

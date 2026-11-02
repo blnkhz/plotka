@@ -1,12 +1,13 @@
-import { getProfile, type MachineProfile } from '@plotter-studio/plotter';
-import { useStore } from '../store';
+import type { MachineProfile } from '@plotter-studio/plotter';
+import { resolveProfile, useStore } from '../store';
 import type { Processed } from './pipeline';
 
 export type { Processed } from './pipeline';
 
 export function useProfile(): MachineProfile {
   const profileId = useStore((s) => s.profileId);
-  return getProfile(profileId)!;
+  const custom = useStore((s) => s.customProfiles);
+  return resolveProfile(profileId, custom);
 }
 
 /**

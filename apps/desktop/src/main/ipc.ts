@@ -26,12 +26,12 @@ export function registerIpcHandlers(
   onRendererReady: () => void = () => undefined,
 ): void {
   handle('plotter:listPorts', () => listPorts());
-  handle('plotter:connect', (_e, port, profileId) => plotter.connect(port, profileId));
+  handle('plotter:connect', (_e, port, profile) => plotter.connect(port, profile));
   handle('plotter:disconnect', () => plotter.disconnect());
   handle('plotter:status', () => plotter.status());
   handle('plotter:command', (_e, cmd) => plotter.command(cmd));
   handle('plot:start', (_e, req) => plotter.start(req));
-  handle('plot:dryRun', (_e, profileId, bounds) => plotter.dryRun(profileId, bounds));
+  handle('plot:dryRun', (_e, profile, bounds) => plotter.dryRun(profile, bounds));
   handle('plot:control', (_e, action) => plotter.control(action));
 
   handle('app:getInfo', () => ({

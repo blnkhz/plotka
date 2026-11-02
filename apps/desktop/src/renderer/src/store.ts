@@ -19,7 +19,13 @@ import {
   type PageSetup,
   type PlotDocument,
 } from '@plotter-studio/core';
-import { DEFAULT_PROFILE_ID, getProfile } from '@plotter-studio/plotter';
+import {
+  BUILTIN_PROFILES,
+  DEFAULT_PROFILE_ID,
+  getProfile,
+  validateProfile,
+  type MachineProfile,
+} from '@plotter-studio/plotter';
 import type { PlotterStatus } from '@shared/ipc';
 import type { Processed } from './lib/pipeline';
 import { mergeDefaults, parseFill } from './lib/project';
@@ -95,6 +101,13 @@ type State = {
   processing: boolean;
   /** PLOT-5: where the last plot stopped (layer, path, mm along it), to continue from. */
   checkpoint: { layerId: string; pathIndex: number; offset: number; pathCount: number } | null;
+  /** DRIVER-5b: the user's own machine profiles (copies of built-ins, edited). Saved. */
+  customProfiles: MachineProfile[];
+  /** Copy a profile to edit it; selects the copy. */
+  duplicateProfile(id: string): void;
+  /** Replace one of the user's profiles (validated by the caller). */
+  updateCustomProfile(profile: MachineProfile): void;
+  deleteCustomProfile(id: string): void;
   /** PAGE-4: named page setups, saved between sessions. */
   pagePresets: { name: string; page: PageSetup }[];
   savePagePreset(name: string): void;
@@ -147,6 +160,54 @@ type State = {
 const PEN_HEIGHTS_KEY = 'penHeights';
 const DEFAULT_FILL_KEY = 'defaultFill';
 const PAGE_PRESETS_KEY = 'pagePresets';
+const CUSTOM_PROFILES_KEY = 'customProfiles';
+const PROFILE_ID_KEY = 'profileId';
+
+/** The machine chosen last time, if it still exists. */
+function loadProfileId(): string {
+  try {
+    const id = localStorage.getItem(PROFILE_ID_KEY);
+    if (id && knownProfile(id, loadCustomProfiles())) return id;
+  } catch {
+    // Ignore unreadable storage.
+  }
+  return DEFAULT_PROFILE_ID;
+}
+
+/** A profile by id: built-in, or one of the user's; the default if neither. */
+export function resolveProfile(id: string, custom: readonly MachineProfile[]): MachineProfile {
+  return getProfile(id) ?? custom.find((p) => p.id === id) ?? getProfile(DEFAULT_PROFILE_ID)!;
+}
+
+/** Built-in and user profile ids, for checking a project's saved profile. */
+export const knownProfile = (id: string, custom: readonly MachineProfile[]) =>
+  BUILTIN_PROFILES.some((p) => p.id === id) || custom.some((p) => p.id === id);
+
+function loadCustomProfiles(): MachineProfile[] {
+  try {
+    const v = JSON.parse(localStorage.getItem(CUSTOM_PROFILES_KEY) ?? '[]') as unknown;
+    if (!Array.isArray(v)) return [];
+    const out: MachineProfile[] = [];
+    for (const p of v) {
+      try {
+        out.push(validateProfile(p));
+      } catch {
+        // Skip a broken entry rather than lose the others.
+      }
+    }
+    return out;
+  } catch {
+    return [];
+  }
+}
+
+function storeCustomProfiles(list: MachineProfile[]) {
+  try {
+    localStorage.setItem(CUSTOM_PROFILES_KEY, JSON.stringify(list));
+  } catch {
+    // Storage unavailable: edits last for this session only.
+  }
+}
 
 function loadPagePresets(): { name: string; page: PageSetup }[] {
   try {
@@ -209,7 +270,7 @@ export const useStore = create<State>()((set, get) => ({
   selectedLayerId: null,
   page: defaultPageSetup(),
   optimize: defaultOptimizeSettings(),
-  profileId: DEFAULT_PROFILE_ID,
+  profileId: loadProfileId(),
   view: { travel: false, original: false, bed: true, margins: true, penWidth: 0.4 },
   tab: 'page',
   fitRequest: 0,
@@ -227,6 +288,32 @@ export const useStore = create<State>()((set, get) => ({
   recovery: null,
   autoReload: true,
   playback: { on: false, t: 0, playing: false, speed: 20 },
+  customProfiles: loadCustomProfiles(),
+  duplicateProfile: (id) => {
+    const src = resolveProfile(id, get().customProfiles);
+    const copy: MachineProfile = {
+      ...structuredClone(src),
+      id: `custom-${Date.now().toString(36)}`,
+      name: `${src.name} (my copy)`,
+      tested: false,
+    };
+    const list = [...get().customProfiles, copy];
+    set({ customProfiles: list, profileId: copy.id });
+    storeCustomProfiles(list);
+  },
+  updateCustomProfile: (profile) => {
+    const list = get().customProfiles.map((p) => (p.id === profile.id ? profile : p));
+    set({ customProfiles: list });
+    storeCustomProfiles(list);
+  },
+  deleteCustomProfile: (id) => {
+    const list = get().customProfiles.filter((p) => p.id !== id);
+    set((s) => ({
+      customProfiles: list,
+      profileId: s.profileId === id ? DEFAULT_PROFILE_ID : s.profileId,
+    }));
+    storeCustomProfiles(list);
+  },
   pagePresets: loadPagePresets(),
   savePagePreset: (name) => {
     const n = name.trim();
@@ -444,3 +531,13 @@ export function applyOverrides(
       }),
   };
 }
+
+// Remember the chosen machine for next time.
+useStore.subscribe((s, p) => {
+  if (s.profileId === p.profileId) return;
+  try {
+    localStorage.setItem(PROFILE_ID_KEY, s.profileId);
+  } catch {
+    // Storage unavailable: the choice lasts for this session only.
+  }
+});

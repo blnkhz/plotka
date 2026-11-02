@@ -860,3 +860,36 @@ test('open paths from code as JSON (IMPORT-7)', async () => {
   if (shots) await page.screenshot({ path: join(shots, 'json-import.png') });
   await app.close();
 });
+
+test('machine profiles: pick another model, duplicate and edit your own (DRIVER-5b)', async () => {
+  const data = mkdtempSync(join(tmpdir(), 'plotter-studio-e2e-'));
+  let app = await launch({ PLOTTER_STUDIO_USER_DATA: data });
+  let page = await app.firstWindow();
+  await page.setViewportSize({ width: 1400, height: 900 });
+  await page.locator('#root > div').waitFor();
+  await page.getByRole('tab', { name: 'Machine' }).click();
+  await page.getByLabel('Machine profile').selectOption('nextdraw-8511');
+  await expect(page.getByText('300 × 218 mm')).toBeVisible();
+  await expect(page.getByText(/Not yet tested with this app/)).toBeVisible();
+
+  await page.getByRole('button', { name: 'Duplicate to edit' }).click();
+  await expect(page.getByLabel('Profile name')).toHaveValue('Bantam Tools NextDraw 8511 (my copy)');
+  const travelX = page.getByRole('spinbutton', { name: 'Travel X', exact: true });
+  await travelX.fill('320');
+  await travelX.press('Enter');
+  await expect(page.getByText('320 × 218 mm')).toBeVisible();
+  const steps = page.getByRole('spinbutton', { name: 'Steps/mm', exact: true });
+  await steps.fill('0');
+  await steps.press('Enter');
+  await expect(page.getByText(/Steps per mm must be a number from 1/)).toBeVisible();
+  await app.close();
+
+  // Your profile, and the choice of it, are remembered.
+  app = await launch({ PLOTTER_STUDIO_USER_DATA: data });
+  page = await app.firstWindow();
+  await page.locator('#root > div').waitFor();
+  await page.getByRole('tab', { name: 'Machine' }).click();
+  await expect(page.getByLabel('Profile name')).toHaveValue('Bantam Tools NextDraw 8511 (my copy)');
+  await expect(page.getByText('320 × 218 mm')).toBeVisible();
+  await app.close();
+});

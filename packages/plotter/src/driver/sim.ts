@@ -106,13 +106,13 @@ export class SimulatedDriver implements PlotterDriver {
   }
 
   async penUp(ms: number) {
-    this.send(ebb.pen(true, ms));
+    this.send(ebb.pen(true, ms, this.profile.servo.pin));
     this.penIsUp = true;
     await this.queue(ms, 0, 0);
   }
 
   async penDown(ms: number) {
-    this.send(ebb.pen(false, ms));
+    this.send(ebb.pen(false, ms, this.profile.servo.pin));
     this.penIsUp = false;
     await this.queue(ms, 0, 0);
   }

@@ -2,6 +2,7 @@ import { BrowserWindow, powerSaveBlocker } from 'electron';
 import {
   EbbDriver,
   getProfile,
+  validateProfile,
   DEFAULT_PROFILE_ID,
   Machine,
   planDryRun,
@@ -24,6 +25,10 @@ import { openSerial } from './serial';
 
 /** Simulated plotter speed (1 = real time). Tests set PLOTTER_SIM_SPEED to run faster. */
 const SIM_SPEED = Number(process.env['PLOTTER_SIM_SPEED']) || 1;
+
+/** Same machine settings (profiles arrive as fresh objects over IPC). */
+const sameProfile = (a: MachineProfile, b: MachineProfile) =>
+  JSON.stringify(a) === JSON.stringify(b);
 
 const message = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
@@ -90,16 +95,19 @@ export class PlotterService {
     }
   }
 
-  connect(port: string, profileId: string): Promise<ActionResult> {
+  connect(port: string, rawProfile: unknown): Promise<ActionResult> {
     return this.act(async () => {
       if (this.runner && MOVING.has(this.runner.state))
         throw new Error('Pause or stop the plot before reconnecting.');
-      const profile = getProfile(profileId) ?? this.profile;
+      const profile = validateProfile(rawProfile);
       const simulated = port === SIMULATED_PORT;
       // Reconnecting to the same kind of plotter keeps the machine (and its position), so an
       // interrupted plot can resume. Switching kind or profile starts fresh.
       const reuse =
-        this.driver && this.machine && this.simulated === simulated && this.profile === profile;
+        this.driver &&
+        this.machine &&
+        this.simulated === simulated &&
+        sameProfile(this.profile, profile);
       if (this.driver?.connected) await this.driver.disconnect();
       if (!reuse) {
         this.profile = profile;
@@ -169,7 +177,7 @@ export class PlotterService {
       const m = this.machine;
       if (!m || !this.driver?.connected) throw new Error('Connect the plotter first.');
       if (this.isPlotting()) throw new Error('A plot is already in progress. Stop it first.');
-      if (getProfile(req.profileId) !== this.profile)
+      if (!sameProfile(validateProfile(req.profile), this.profile))
         throw new Error('The plotter was connected with a different machine profile. Reconnect.');
       const start = m.state.position ?? { x: 0, y: 0 };
       const plan = planToolpath(
@@ -190,12 +198,12 @@ export class PlotterService {
     });
   }
 
-  dryRun(profileId: string, bounds: Bounds): Promise<ActionResult> {
+  dryRun(rawProfile: unknown, bounds: Bounds): Promise<ActionResult> {
     return this.act(async () => {
       const m = this.machine;
       if (!m || !this.driver?.connected) throw new Error('Connect the plotter first.');
       if (this.isPlotting()) throw new Error('A plot is in progress. Stop it first.');
-      if (getProfile(profileId) !== this.profile)
+      if (!sameProfile(validateProfile(rawProfile), this.profile))
         throw new Error('The plotter was connected with a different machine profile. Reconnect.');
       if (![bounds.minX, bounds.minY, bounds.maxX, bounds.maxY].every(Number.isFinite))
         throw new Error('Nothing to trace.');

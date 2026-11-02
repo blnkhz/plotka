@@ -1,0 +1,30 @@
+{
+  "id": "axidraw-v3-a4",
+  "name": "AxiDraw V2, V3, SE/A4",
+  "tested": false,
+  "bed": {
+    "width": 300,
+    "height": 218
+  },
+  "stepsPerMm": 80,
+  "maxStepRate": 25000,
+  "motion": {
+    "maxSpeedPenDown": 221,
+    "maxSpeedPenUp": 221,
+    "accelPenDown": 1016,
+    "accelPenUp": 1524
+  },
+  "servo": {
+    "min": 9855,
+    "max": 27831,
+    "sweepMs": 200,
+    "moveMinMs": 45,
+    "moveSlopeMs": 2.69,
+    "rateRaise": 75,
+    "rateLower": 50,
+    "penPosUp": 60,
+    "penPosDown": 30
+  },
+  "provisional": ["motion"],
+  "notes": "Travel from axidraw_conf.py v3.9.0 (x/y_travel for this model); motors, resolution, speeds and servo are the same as the AxiDraw V3/A3. Untested with this app: if you have one, please confirm (see docs/hardware-test.md)."
+}

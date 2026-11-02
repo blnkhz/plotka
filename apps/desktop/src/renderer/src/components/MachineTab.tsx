@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { SIMULATED_PORT, type PortInfo } from '@shared/ipc';
 import { command, connect, disconnect, listPorts } from '../lib/plotter';
-import { useProfile } from '../lib/useProcessed';
 import { useStore } from '../store';
 import { Notice, Row, Section, Segmented } from './controls';
+import { ProfileSection } from './ProfileSection';
 import styles from './MachineTab.module.css';
 
 const MOVING = new Set(['running', 'pausing', 'stopping']);
@@ -19,7 +19,7 @@ export function MachineTab() {
       <ConnectionSection />
       {connected && <ManualSection />}
       {connected && <PenHeightSection />}
-      <MachineInfo />
+      <ProfileSection />
     </>
   );
 }
@@ -271,24 +271,6 @@ function PenHeightSection() {
         Moving a slider moves the pen there so you can see it. Up should clear the paper; down
         should just touch it.
       </p>
-    </Section>
-  );
-}
-
-function MachineInfo() {
-  const profile = useProfile();
-  return (
-    <Section title="Machine">
-      <Row label="Profile">{profile.name}</Row>
-      <Row label="Travel">
-        {profile.bed.width} × {profile.bed.height} mm
-      </Row>
-      <Row label="Home">Top left of the paper</Row>
-      {profile.provisional?.length ? (
-        <p className={styles.muted}>
-          Top speeds are the maker’s values, not yet tested with this app.
-        </p>
-      ) : null}
     </Section>
   );
 }

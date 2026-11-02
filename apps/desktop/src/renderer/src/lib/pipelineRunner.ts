@@ -1,4 +1,4 @@
-import { applyOverrides, sameArtwork, useStore } from '../store';
+import { applyOverrides, resolveProfile, sameArtwork, useStore } from '../store';
 import { computeProcessed, type PipelineInput, type Processed } from './pipeline';
 
 type State = ReturnType<typeof useStore.getState>;
@@ -6,7 +6,16 @@ type Reply = { id: number; result?: Processed; error?: string };
 
 /** The store values the pipeline depends on; a change in any of them re-runs it. */
 const inputsOf = (s: State) =>
-  [s.doc, s.layerOverrides, s.page, s.optimize, s.pipeline, s.profileId, s.penHeights] as const;
+  [
+    s.doc,
+    s.layerOverrides,
+    s.page,
+    s.optimize,
+    s.pipeline,
+    s.profileId,
+    s.customProfiles,
+    s.penHeights,
+  ] as const;
 
 function buildInput(s: State): PipelineInput | null {
   if (!s.doc) return null;
@@ -15,7 +24,7 @@ function buildInput(s: State): PipelineInput | null {
     page: s.page,
     optimize: s.optimize,
     transforms: s.pipeline,
-    profileId: s.profileId,
+    profile: resolveProfile(s.profileId, s.customProfiles),
     penHeights: s.penHeights,
   };
 }

@@ -60,17 +60,29 @@ Every machine value used by the app is recorded here with its source. Values mar
 
 Narrow-band (brushless upgrade) servo values exist (`nb_servo_*`), for DRIVER-6 later.
 
-### Other models (from `axidraw_conf.py`, inches → mm, untested)
+### Other models (built-in profiles, untested; DRIVER-5b)
 
-| Model         | Travel       |
-| ------------- | ------------ |
-| V2, V3, SE/A4 | 300 × 218 mm |
-| V3/A3, SE/A3  | 430 × 297 mm |
-| V3 XLX        | 595 × 218 mm |
-| MiniKit       | 160 × 102 mm |
-| SE/A2         | 594 × 432 mm |
-| SE/A1         | 864 × 594 mm |
-| V3/B6         | 190 × 140 mm |
+| Profile                    | Travel (mm) | Source                                                         |
+| -------------------------- | ----------- | -------------------------------------------------------------- |
+| AxiDraw V2, V3, SE/A4      | 300 × 218   | `axidraw_conf.py` v3.9.0 `x/y_travel_default`                  |
+| AxiDraw V3 XLX             | 595 × 218   | `x/y_travel_V3XLX`                                             |
+| AxiDraw V3/B6              | 190 × 140   | `x/y_travel_V3B6`                                              |
+| AxiDraw MiniKit            | 160 × 101.6 | `x/y_travel_MiniKit`                                           |
+| AxiDraw SE/A2              | 594 × 432   | `x/y_travel_SEA2`                                              |
+| AxiDraw SE/A1              | 864 × 594   | `x/y_travel_SEA1`                                              |
+| Bantam Tools NextDraw 8511 | 300 × 218   | bantamtools.com product page ("usable pen travel")             |
+| Bantam Tools NextDraw 1117 | 430 × 297   | **To confirm**: Bantam lists "11×17 in / A3"; mm value assumed |
+| Bantam Tools NextDraw 2234 | 864 × 594   | bantamtools.com product page                                   |
+
+- `axidraw_conf.py` has no model-specific motors, resolution, speeds or acceleration: only travel
+  differs, so the AxiDraw profiles copy the V3/A3 values.
+- NextDraw: 2032 steps/in (80 steps/mm) per Bantam's product pages, a brushless pen lift and
+  automatic homing (nd_py docs). The brushless servo values are the narrow-band ones from
+  `axidraw_conf.py` (`nb_servo_min` 5400, `nb_servo_max` 12600, `nb_servo_sweep_time` 70 ms,
+  `nb_servo_move_min` 20 ms, `nb_servo_move_slope` 1.28 ms/%) on port B pin 2 (`nb_servo_pin`),
+  sent as `SP,value,ms,2` (EBB reference: SP's optional PortB_Pin). Bantam's "15 in/s" top
+  speed is the 8x-microstepping figure; this app runs at 16x, where the 25 000 steps/s limit
+  gives the same 221 mm/s as the AxiDraw. Homing isn't used.
 
 ## DRIVER-0 spike results (2026-11-02, AxiDraw V3/A3, macOS 26 / Apple Silicon)
 

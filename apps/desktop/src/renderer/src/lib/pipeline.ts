@@ -10,7 +10,6 @@ import {
   type ToolpathStats,
 } from '@plotter-studio/core';
 import {
-  getProfile,
   planToolpath,
   type LayerMotionSettings,
   type MachineProfile,
@@ -24,7 +23,7 @@ export type PipelineInput = {
   page: PageSetup;
   optimize: OptimizeSettings;
   transforms: PipelineStep[];
-  profileId: string;
+  profile: MachineProfile;
   penHeights: { up: number; down: number };
 };
 
@@ -99,8 +98,7 @@ function statsWithPlan(
 
 /** The whole pipeline: place, fill, repeat, clip, optimize, and stats with the plan's times. */
 export function computeProcessed(input: PipelineInput): Processed {
-  const profile = getProfile(input.profileId);
-  if (!profile) throw new Error(`Unknown machine profile "${input.profileId}".`);
+  const profile = input.profile;
   const result = processDocument({
     doc: input.doc,
     page: input.page,

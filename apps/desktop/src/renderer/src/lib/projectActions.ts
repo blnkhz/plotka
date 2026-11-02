@@ -1,5 +1,5 @@
-import { DEFAULT_PROFILE_ID, getProfile } from '@plotter-studio/plotter';
-import { sameArtwork, useStore } from '../store';
+import { DEFAULT_PROFILE_ID } from '@plotter-studio/plotter';
+import { knownProfile, sameArtwork, useStore } from '../store';
 
 type State = ReturnType<typeof useStore.getState>;
 import {
@@ -187,7 +187,7 @@ export async function openProject(
       layerMode: d.layerMode,
       page: d.page,
       optimize: d.optimize,
-      profileId: getProfile(d.profileId) ? d.profileId : DEFAULT_PROFILE_ID,
+      profileId: knownProfile(d.profileId, s.customProfiles) ? d.profileId : DEFAULT_PROFILE_ID,
       pipeline: d.pipeline,
       doodle: {
         ...s.doodle,

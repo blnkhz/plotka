@@ -149,12 +149,12 @@ export class EbbDriver implements PlotterDriver {
   }
 
   async penUp(ms: number) {
-    await this.exec(ebb.pen(true, ms), 'ok');
+    await this.exec(ebb.pen(true, ms, this.profile.servo.pin), 'ok');
     this.penIsUp = true;
   }
 
   async penDown(ms: number) {
-    await this.exec(ebb.pen(false, ms), 'ok');
+    await this.exec(ebb.pen(false, ms, this.profile.servo.pin), 'ok');
     this.penIsUp = false;
   }
 

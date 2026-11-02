@@ -5,7 +5,7 @@ import {
   defaultPageSetup,
   type PlotDocument,
 } from '@plotter-studio/core';
-import { DEFAULT_PROFILE_ID } from '@plotter-studio/plotter';
+import { DEFAULT_PROFILE_ID, getProfile } from '@plotter-studio/plotter';
 import { computeProcessed, type PipelineInput } from '../src/renderer/src/lib/pipeline';
 
 const doc = (): PlotDocument => {
@@ -27,7 +27,7 @@ const input = (o: Partial<PipelineInput> = {}): PipelineInput => ({
   page: defaultPageSetup(),
   optimize: defaultOptimizeSettings(),
   transforms: [],
-  profileId: DEFAULT_PROFILE_ID,
+  profile: getProfile(DEFAULT_PROFILE_ID)!,
   penHeights: { up: 60, down: 30 },
   ...o,
 });
@@ -75,7 +75,14 @@ describe('computeProcessed (the worker job)', () => {
     expect(far.stats.total.estimatedTime).toBeGreaterThan(near.stats.total.estimatedTime);
   });
 
-  it('an unknown profile is a clear error', () => {
-    expect(() => computeProcessed(input({ profileId: 'nope' }))).toThrow(/Unknown machine profile/);
+  it("the machine profile's speeds drive the estimate", () => {
+    const base = getProfile(DEFAULT_PROFILE_ID)!;
+    const slow = {
+      ...base,
+      motion: { ...base.motion, maxSpeedPenDown: base.motion.maxSpeedPenDown / 4 },
+    };
+    const t = (profile: typeof base) =>
+      computeProcessed(input({ profile })).stats.total.estimatedTime;
+    expect(t(slow)).toBeGreaterThan(t(base));
   });
 });

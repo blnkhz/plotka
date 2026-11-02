@@ -1,0 +1,31 @@
+{
+  "id": "nextdraw-2234",
+  "name": "Bantam Tools NextDraw 2234",
+  "tested": false,
+  "bed": {
+    "width": 864,
+    "height": 594
+  },
+  "stepsPerMm": 80,
+  "maxStepRate": 25000,
+  "motion": {
+    "maxSpeedPenDown": 221,
+    "maxSpeedPenUp": 221,
+    "accelPenDown": 1016,
+    "accelPenUp": 1524
+  },
+  "servo": {
+    "min": 5400,
+    "max": 12600,
+    "sweepMs": 70,
+    "moveMinMs": 20,
+    "moveSlopeMs": 1.28,
+    "rateRaise": 75,
+    "rateLower": 50,
+    "penPosUp": 60,
+    "penPosDown": 30,
+    "pin": 2
+  },
+  "provisional": ["motion", "servo"],
+  "notes": "Travel and 80 steps/mm from Bantam Tools' product page. Brushless pen lift: narrow-band servo values from axidraw_conf.py v3.9.0 (nb_servo_*), on port B pin 2. Speeds are this app's 16x-microstepping limit (the vendor's 15 in/s is for 8x mode); acceleration as the AxiDraw. Automatic homing isn't used: put the carriage in the home corner by hand. Untested with this app."
+}

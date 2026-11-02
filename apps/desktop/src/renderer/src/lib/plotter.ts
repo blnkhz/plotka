@@ -2,7 +2,12 @@ import type { LayerMotionSettings } from '@plotter-studio/plotter';
 import type { ActionResult, ManualCommand, PlotRequest, PlotterStatus } from '@shared/ipc';
 import { distanceAlong, toolpathFrom, type ResumePoint } from '@plotter-studio/core';
 import type { Processed } from './useProcessed';
-import { useStore } from '../store';
+import { resolveProfile, useStore } from '../store';
+
+const currentProfile = () => {
+  const { profileId, customProfiles } = useStore.getState();
+  return resolveProfile(profileId, customProfiles);
+};
 
 /** Runs a plotter action and records its error (if any) for the UI. */
 async function run(p: Promise<ActionResult>): Promise<boolean> {
@@ -58,8 +63,8 @@ export const canContinue = () => lastPlot !== null;
 export const listPorts = () => window.api.invoke('plotter:listPorts');
 
 export async function connect(port: string) {
-  const { profileId, penHeights } = useStore.getState();
-  const ok = await run(window.api.invoke('plotter:connect', port, profileId));
+  const { penHeights } = useStore.getState();
+  const ok = await run(window.api.invoke('plotter:connect', port, currentProfile()));
   // Send the saved pen heights right away so the first pen move uses them.
   if (ok) await command({ kind: 'penHeights', up: penHeights.up, down: penHeights.down });
   return ok;
@@ -77,7 +82,7 @@ export function plotLayers(processed: Processed, skip: Record<string, true>) {
 
 /** PLOT-6: trace the bounds of the layers that would be plotted, with the pen up. */
 export function dryRun(processed: Processed) {
-  const { plotSkip, profileId } = useStore.getState();
+  const { plotSkip } = useStore.getState();
   const b = { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity };
   for (const l of plotLayers(processed, plotSkip))
     for (const p of l.paths)
@@ -87,11 +92,11 @@ export function dryRun(processed: Processed) {
         b.maxX = Math.max(b.maxX, q.x);
         b.maxY = Math.max(b.maxY, q.y);
       }
-  return run(window.api.invoke('plot:dryRun', profileId, b));
+  return run(window.api.invoke('plot:dryRun', currentProfile(), b));
 }
 
 export function startPlot(processed: Processed) {
-  const { plotSkip, penHeights, profileId } = useStore.getState();
+  const { plotSkip, penHeights } = useStore.getState();
   const layers = plotLayers(processed, plotSkip);
   const byId = new Map(processed.clipped.layers.map((l) => [l.id, l.settings]));
   const settings: Record<string, LayerMotionSettings> = {};
@@ -104,7 +109,7 @@ export function startPlot(processed: Processed) {
       penPosDown: penHeights.down,
     };
   }
-  lastPlot = { profileId, toolpath: { layers }, settings };
+  lastPlot = { profile: currentProfile(), toolpath: { layers }, settings };
   useStore.setState({ checkpoint: null });
   return run(window.api.invoke('plot:start', lastPlot));
 }
