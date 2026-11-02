@@ -34,7 +34,11 @@ export function PageTab() {
     <>
       <Section title="Paper">
         <Row label="Size">
-          <select value={page.paper} onChange={(e) => setPage({ paper: e.target.value })}>
+          <select
+            aria-label="Paper"
+            value={page.paper}
+            onChange={(e) => setPage({ paper: e.target.value })}
+          >
             {PAPER_PRESETS.map((p) => (
               <option key={p.id} value={p.id}>
                 {p.label}

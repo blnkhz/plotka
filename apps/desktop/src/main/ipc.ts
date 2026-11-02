@@ -1,4 +1,4 @@
-import { readFile } from 'node:fs/promises';
+import { readFile, writeFile } from 'node:fs/promises';
 import { basename } from 'node:path';
 import { app, BrowserWindow, dialog, ipcMain } from 'electron';
 import type { InvokeChannel, InvokeChannels } from '@shared/ipc';
@@ -32,5 +32,17 @@ export function registerIpcHandlers(): void {
     if (result.canceled || !path) return null;
     const bytes = new Uint8Array(await readFile(path));
     return { path, name: basename(path), bytes };
+  });
+
+  handle('file:saveText', async (event, defaultName, content, extensions) => {
+    const win = BrowserWindow.fromWebContents(event.sender);
+    const opts: Electron.SaveDialogOptions = {
+      defaultPath: defaultName,
+      filters: [{ name: 'File', extensions: extensions.map((e) => e.replace(/^\./, '')) }],
+    };
+    const result = win ? await dialog.showSaveDialog(win, opts) : await dialog.showSaveDialog(opts);
+    if (result.canceled || !result.filePath) return null;
+    await writeFile(result.filePath, content, 'utf8');
+    return result.filePath;
   });
 }

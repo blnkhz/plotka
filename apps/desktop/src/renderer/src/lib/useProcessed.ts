@@ -46,12 +46,19 @@ export function useProcessed(): Processed | null {
   const overrides = useStore((s) => s.layerOverrides);
   const page = useStore((s) => s.page);
   const optimize = useStore((s) => s.optimize);
+  const transforms = useStore((s) => s.pipeline);
   const profile = useProfile();
 
   return useMemo(() => {
     if (!doc) return null;
     const effective = applyOverrides(doc, overrides);
-    const result = processDocument({ doc: effective, page, bed: profile.bed, optimize });
+    const result = processDocument({
+      doc: effective,
+      page,
+      bed: profile.bed,
+      optimize,
+      transforms,
+    });
     // From the processed layers, so pass layers (made by the pipeline) are included.
     const byId = new Map(result.clipped.layers.map((l) => [l.id, l.settings]));
     const settings = (id: string): LayerMotionSettings => {
@@ -66,5 +73,5 @@ export function useProcessed(): Processed | null {
     const stats = statsWithPlan(result.toolpath, profile, settings);
     const statsBefore = statsWithPlan(result.unoptimized, profile, settings);
     return { ...result, stats, statsBefore };
-  }, [doc, overrides, page, optimize, profile]);
+  }, [doc, overrides, page, optimize, profile, transforms]);
 }

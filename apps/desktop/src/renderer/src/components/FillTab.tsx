@@ -46,6 +46,7 @@ export function FillTab() {
         {drawable === 0 && <p className={styles.muted}>This layer has no filled shapes.</p>}
         <Row label="Type">
           <select
+            aria-label="Fill type"
             value={type}
             onChange={(e) => {
               const t = e.target.value as FillType;

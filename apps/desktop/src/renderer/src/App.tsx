@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
+import { DoodlePad } from './components/DoodlePad';
 import { LayersPanel } from './components/LayersPanel';
+import { TransformsPanel } from './components/TransformsPanel';
 import { Preview } from './components/Preview';
 import { RightPanel } from './components/RightPanel';
 import { openDroppedFile, openWithDialog } from './lib/openFile';
@@ -10,6 +12,7 @@ import styles from './App.module.css';
 
 export function App() {
   const [dragging, setDragging] = useState(false);
+  const doodleOpen = useStore((s) => s.doodle.open);
   useShortcuts();
 
   return (
@@ -34,11 +37,13 @@ export function App() {
       <div className={styles.main}>
         <aside className={styles.left}>
           <LayersPanel />
+          <TransformsPanel />
         </aside>
         <Preview />
         <RightPanel />
       </div>
       {dragging && <div className={styles.dropHint}>Drop to open</div>}
+      {doodleOpen && <DoodlePad />}
     </div>
   );
 }
@@ -49,11 +54,19 @@ function Toolbar() {
   const error = useStore((s) => s.error);
   const loading = useStore((s) => s.loading);
   const processed = useProcessed();
+  const setDoodle = useStore((s) => s.setDoodle);
+  const hasDoodle = useStore((s) => s.doodle.strokes.length > 0);
 
   return (
     <header className={styles.toolbar}>
       <button onClick={() => void openWithDialog()} title="Open (⌘O)">
         Open…
+      </button>
+      <button
+        onClick={() => setDoodle({ open: true })}
+        title="Draw something and turn it into vectors"
+      >
+        {hasDoodle ? 'Edit doodle…' : 'Doodle…'}
       </button>
       <span className={styles.file}>{loading ? 'Loading…' : (source?.name ?? 'No file')}</span>
       {error && <span className={styles.error}>{error}</span>}

@@ -23,6 +23,11 @@ export type AppInfo = {
 export interface InvokeChannels {
   'app:getInfo': { args: []; result: AppInfo };
   'file:open': { args: [extensions: string[]]; result: OpenFileResult };
+  /** Shows a save dialog and writes text. Returns the saved path, or null if cancelled. */
+  'file:saveText': {
+    args: [defaultName: string, content: string, extensions: string[]];
+    result: string | null;
+  };
 }
 
 export interface EventChannels {
@@ -35,6 +40,7 @@ export type EventChannel = keyof EventChannels;
 export const INVOKE_CHANNELS = [
   'app:getInfo',
   'file:open',
+  'file:saveText',
 ] as const satisfies readonly InvokeChannel[];
 export const EVENT_CHANNELS = ['app:menu'] as const satisfies readonly EventChannel[];
 

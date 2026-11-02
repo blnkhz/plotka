@@ -1,0 +1,57 @@
+.muted {
+  color: var(--muted);
+  margin: 0 0 8px;
+}
+.add {
+  width: 100%;
+}
+.card {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  margin-bottom: 8px;
+  overflow: hidden;
+}
+.card[data-disabled] .title {
+  color: var(--muted);
+}
+.header {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 6px;
+  background: var(--canvas);
+}
+.title {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 500;
+}
+.icon {
+  border: 0;
+  background: transparent;
+  padding: 2px 5px;
+  color: var(--muted);
+}
+.icon:disabled {
+  opacity: 0.35;
+}
+.params {
+  padding: 6px 8px;
+}
+.params > div {
+  grid-template-columns: 92px 1fr;
+}
+.check {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.params > div > div {
+  min-width: 0;
+}
+.params select {
+  width: 100%;
+  min-width: 0;
+}

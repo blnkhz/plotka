@@ -6,6 +6,7 @@ import { paperSize, type PageSetup, type Rect } from '../page/paper';
 import { applyFills } from '../fills/apply';
 import { clipDocument, fitToPage } from './fit';
 import { applyPasses } from './passes';
+import { applyTransforms, type PipelineStep } from '../transforms';
 import { buildToolpath, type Toolpath } from './toolpath';
 
 export type ProcessInput = {
@@ -15,6 +16,8 @@ export type ProcessInput = {
   bed: { width: number; height: number };
   /** Path optimization. Omit to keep the file's order. */
   optimize?: OptimizeSettings;
+  /** Transform steps (tile, ...), applied to the artwork before it's placed on the page. */
+  transforms?: readonly PipelineStep[];
 };
 
 export type ProcessResult = {
@@ -34,11 +37,18 @@ export type ProcessResult = {
 };
 
 /**
- * Runs the page-level pipeline: fit to page → fills → passes → clip to printable area → toolpath →
+ * Runs the page-level pipeline: transforms → fit to page → fills → passes → clip to printable area → toolpath →
  * optimize (per layer, layers stay in order, each starting where the previous one ended).
  */
-export function processDocument({ doc, page, bed, optimize }: ProcessInput): ProcessResult {
-  const placed = fitToPage(doc, page);
+export function processDocument({
+  doc,
+  page,
+  bed,
+  optimize,
+  transforms,
+}: ProcessInput): ProcessResult {
+  const art = transforms?.length ? applyTransforms(doc, transforms) : doc;
+  const placed = fitToPage(art, page);
   const paper = paperSize(page);
   const printable = intersectRects(
     { x: 0, y: 0, width: paper.width, height: paper.height },

@@ -1,8 +1,15 @@
 import { create } from 'zustand';
 import {
+  createStep,
+  defaultDoodleSettings,
   defaultOptimizeSettings,
   defaultPageSetup,
+  doodleToSvg,
   importFile,
+  type DoodleSettings,
+  type DoodleStroke,
+  type ParamValues,
+  type PipelineStep,
   type Layer,
   type LayerMode,
   type LayerSettings,
@@ -29,6 +36,16 @@ export type Tab = 'page' | 'fill' | 'machine' | 'plot';
 
 type Source = { name: string; path?: string; bytes: Uint8Array };
 
+export type DoodleState = {
+  open: boolean;
+  strokes: DoodleStroke[];
+  /** Strokes undone, for redo. */
+  undone: DoodleStroke[];
+  settings: DoodleSettings;
+  /** Artboard size in mm. */
+  size: { width: number; height: number };
+};
+
 type State = {
   source: Source | null;
   layerMode: LayerMode;
@@ -44,6 +61,9 @@ type State = {
   tab: Tab;
   /** Incremented to ask the preview to fit the view. */
   fitRequest: number;
+  /** Transform steps (tile, ...), applied in order before the page setup. */
+  pipeline: PipelineStep[];
+  doodle: DoodleState;
 
   openFile(source: Source): Promise<void>;
   setLayerMode(mode: LayerMode): Promise<void>;
@@ -54,7 +74,17 @@ type State = {
   setView(patch: Partial<ViewOptions>): void;
   setTab(tab: Tab): void;
   requestFit(): void;
+  addStep(type: string): void;
+  updateStep(id: string, patch: { enabled?: boolean; params?: ParamValues }): void;
+  removeStep(id: string): void;
+  moveStep(id: string, delta: -1 | 1): void;
+  setDoodle(patch: Partial<DoodleState>): void;
+  /** Turns the doodle into vectors and opens it as the artwork. */
+  applyDoodle(): Promise<void>;
 };
+
+/** The doodle as an SVG, with the current settings. */
+export const doodleSvg = (d: DoodleState) => doodleToSvg(d.strokes, d.settings, d.size);
 
 export const useStore = create<State>()((set, get) => ({
   source: null,
@@ -70,6 +100,14 @@ export const useStore = create<State>()((set, get) => ({
   view: { travel: false, original: false, bed: true, margins: true, penWidth: 0.4 },
   tab: 'page',
   fitRequest: 0,
+  pipeline: [],
+  doodle: {
+    open: false,
+    strokes: [],
+    undone: [],
+    settings: defaultDoodleSettings(),
+    size: { width: 150, height: 150 },
+  },
 
   async openFile(source) {
     set({ loading: true, error: null });
@@ -112,6 +150,37 @@ export const useStore = create<State>()((set, get) => ({
   setView: (patch) => set((s) => ({ view: { ...s.view, ...patch } })),
   setTab: (tab) => set({ tab }),
   requestFit: () => set((s) => ({ fitRequest: s.fitRequest + 1 })),
+
+  addStep: (type) => set((s) => ({ pipeline: [...s.pipeline, createStep(type)] })),
+  updateStep: (id, patch) =>
+    set((s) => ({
+      pipeline: s.pipeline.map((st) =>
+        st.id === id
+          ? {
+              ...st,
+              enabled: patch.enabled ?? st.enabled,
+              params: { ...st.params, ...patch.params },
+            }
+          : st,
+      ),
+    })),
+  removeStep: (id) => set((s) => ({ pipeline: s.pipeline.filter((st) => st.id !== id) })),
+  moveStep: (id, delta) =>
+    set((s) => {
+      const i = s.pipeline.findIndex((st) => st.id === id);
+      const j = i + delta;
+      if (i < 0 || j < 0 || j >= s.pipeline.length) return {};
+      const next = [...s.pipeline];
+      [next[i], next[j]] = [next[j]!, next[i]!];
+      return { pipeline: next };
+    }),
+
+  setDoodle: (patch) => set((s) => ({ doodle: { ...s.doodle, ...patch } })),
+  async applyDoodle() {
+    const svg = doodleSvg(get().doodle);
+    set((s) => ({ doodle: { ...s.doodle, open: false } }));
+    await get().openFile({ name: 'Doodle.svg', bytes: new TextEncoder().encode(svg) });
+  },
 }));
 
 /** Applies UI overrides (visibility, plot toggle, settings) to the imported layers. */
