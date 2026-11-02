@@ -29,6 +29,11 @@ export type RunnerOptions = {
   onProgress?: (p: RunProgress) => void;
   /** How often to check the physical button while plotting / paused, ms. */
   buttonPollMs?: number;
+  /**
+   * After the button pauses or resumes, ignore it until it has been seen released and this many
+   * ms have passed. One press can register more than once (held, contact bounce).
+   */
+  buttonGuardMs?: number;
   /** Minimum time between progress events while running, ms. */
   progressMs?: number;
   /** Speed for the travel back after a pause, % of pen-up max. */
@@ -73,6 +78,10 @@ export class PlotRunner {
   private readonly now: () => number;
   private readonly sleep: (ms: number) => Promise<void>;
   private readonly pollMs: number;
+  private readonly guardMs: number;
+  /** False after the button acted, until a reading shows it released. */
+  private buttonArmed = true;
+  private lastButtonAction = -Infinity;
   private readonly progressMs: number;
 
   constructor(
@@ -84,6 +93,7 @@ export class PlotRunner {
     this.sleep =
       options.sleep ?? ((ms) => new Promise((r) => void timers.setTimeout(() => r(), ms)));
     this.pollMs = options.buttonPollMs ?? 200;
+    this.guardMs = options.buttonGuardMs ?? 750;
     this.progressMs = options.progressMs ?? 100;
   }
 
@@ -205,7 +215,7 @@ export class PlotRunner {
   private async interrupted(): Promise<boolean> {
     if (!this.pauseRequested && !this.stopRequested && this.now() - this.lastPoll >= this.pollMs) {
       this.lastPoll = this.now();
-      if (await this.machine.driver.queryButton()) {
+      if (await this.buttonPressed()) {
         this.pauseRequested = true;
         this.setState('pausing');
       }
@@ -241,7 +251,7 @@ export class PlotRunner {
       await this.sleep(this.pollMs);
       if (this._state !== 'paused') return;
       try {
-        if (await this.machine.driver.queryButton()) {
+        if (await this.buttonPressed()) {
           void this.resume();
           return;
         }
@@ -249,6 +259,23 @@ export class PlotRunner {
         return;
       }
     }
+  }
+
+  /**
+   * A fresh press of the machine's button. The board only reports "pressed since the last
+   * reading", so a held or bouncing button keeps reporting presses: after acting on one, wait
+   * for a reading without a press and for the guard time before acting again.
+   */
+  private async buttonPressed(): Promise<boolean> {
+    const pressed = await this.machine.driver.queryButton();
+    if (!pressed) {
+      this.buttonArmed = true;
+      return false;
+    }
+    if (!this.buttonArmed || this.now() - this.lastButtonAction < this.guardMs) return false;
+    this.buttonArmed = false;
+    this.lastButtonAction = this.now();
+    return true;
   }
 
   /** After a pause or reconnect: back to where we stopped, pen down if it was. */

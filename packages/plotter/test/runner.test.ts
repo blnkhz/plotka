@@ -71,6 +71,16 @@ function drawnSteps(sim: SimulatedDriver) {
   return total;
 }
 
+type Timers = { setTimeout(f: () => void, ms: number): unknown };
+/** Yields to the event loop (a real macrotask), so timers and other work can run. */
+const tick = () =>
+  new Promise<void>((r) => void (globalThis as unknown as Timers).setTimeout(() => r(), 0));
+/** Lets the paused runner's button watcher poll a few times. */
+const settle = async (n = 10) => {
+  for (let i = 0; i < n; i++) await tick();
+};
+const active = (r: PlotRunner) => (r as unknown as { active: Promise<void> }).active;
+
 describe('PlotRunner (PLOT-1)', () => {
   it('runs a whole plot and ends at home with the pen up', async () => {
     const { sim, machine, plan, runner, events } = await setup();
@@ -117,13 +127,14 @@ describe('PlotRunner (PLOT-1)', () => {
     expect(drawnSteps(sim)).toBeCloseTo(fullDrawn, 6);
   });
 
-  it('the machine button pauses, and pressing it again resumes', async () => {
+  it('the machine button pauses, and a second press (after letting go) resumes', async () => {
     const { sim, machine, plan } = await setup();
     let pressed = false;
     const r = new PlotRunner(machine, plan, {
       buttonPollMs: 0,
+      buttonGuardMs: 0,
       progressMs: 0,
-      sleep: async () => undefined,
+      sleep: tick,
       onProgress: (p) => {
         if (!pressed && p.doneMs > plan.totalMs / 2) {
           pressed = true;
@@ -133,10 +144,76 @@ describe('PlotRunner (PLOT-1)', () => {
     });
     await r.start();
     expect(r.state).toBe('paused');
+    await settle(); // button released: the watcher sees no press
+    expect(r.state).toBe('paused');
     sim.pressButton();
-    // The paused runner polls the button and resumes on its own.
-    for (let i = 0; i < 1000 && r.state === 'paused'; i++) await Promise.resolve();
-    await (r as unknown as { active: Promise<void> }).active;
+    await settle();
+    await active(r);
+    expect(r.state).toBe('done');
+    expect(machine.state.position).toEqual({ x: 0, y: 0 });
+  });
+
+  it('a held or bouncing button pauses once and does not resume by itself', async () => {
+    const { sim, machine, plan } = await setup();
+    let held = 0;
+    let started = false;
+    const r = new PlotRunner(machine, plan, {
+      buttonPollMs: 0,
+      buttonGuardMs: 0,
+      progressMs: 0,
+      // Every check while "held" sees another press, as the real board reports.
+      sleep: async () => {
+        if (held > 0) {
+          held--;
+          sim.pressButton();
+        }
+        await tick();
+      },
+      onProgress: (p) => {
+        if (!started && p.doneMs > plan.totalMs / 2) {
+          started = true;
+          held = 6;
+          sim.pressButton();
+        }
+      },
+    });
+    await r.start();
+    expect(r.state).toBe('paused');
+    await settle(30);
+    expect(held).toBe(0);
+    expect(r.state).toBe('paused'); // the hold didn't resume it
+    expect(sim.penIsUp).toBe(true);
+    await r.stop();
+  });
+
+  it('ignores presses within the guard time after acting (contact bounce)', async () => {
+    const { sim, machine, plan } = await setup();
+    let t = 0;
+    let pressed = false;
+    const r = new PlotRunner(machine, plan, {
+      buttonPollMs: 0,
+      buttonGuardMs: 750,
+      progressMs: 0,
+      now: () => t,
+      sleep: tick, // time only moves when the test moves it
+      onProgress: (p) => {
+        if (!pressed && p.doneMs > plan.totalMs / 2) {
+          pressed = true;
+          sim.pressButton();
+        }
+      },
+    });
+    await r.start();
+    expect(r.state).toBe('paused');
+    await settle(); // released
+    sim.pressButton(); // a bounce right after the pause
+    await settle();
+    expect(r.state).toBe('paused');
+    t += 1000;
+    await settle(); // released again
+    sim.pressButton(); // a real second press, after the guard time
+    await settle();
+    await active(r);
     expect(r.state).toBe('done');
     expect(machine.state.position).toEqual({ x: 0, y: 0 });
   });
