@@ -4,6 +4,7 @@ import { basename } from 'node:path';
 import { BrowserWindow, dialog } from 'electron';
 import { isProjectPath, project } from './project';
 import { addRecent, removeRecent } from './recent';
+import { allowWatch, allowWatchFromProject } from './watch';
 
 /** Files the app can open from Open Recent, the Dock or Finder. */
 export const isOpenable = (path: string) => /\.(svg|plot\.json)$/i.test(path);
@@ -26,5 +27,7 @@ export async function openPath(path: string, win = BrowserWindow.getAllWindows()
   const bytes = new Uint8Array(await readFile(path));
   project.path = isProjectPath(path) ? path : null;
   addRecent(path);
+  if (isProjectPath(path)) allowWatchFromProject(new TextDecoder().decode(bytes));
+  else allowWatch(path);
   win.webContents.send('file:opened', { path, name: basename(path), bytes });
 }

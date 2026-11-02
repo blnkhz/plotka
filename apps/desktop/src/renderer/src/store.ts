@@ -41,6 +41,10 @@ export type Tab = 'page' | 'fill' | 'machine' | 'plot';
 
 type Source = { name: string; path?: string; bytes: Uint8Array };
 
+/** Same artwork file (a reload or re-import), as opposed to a different file being opened. */
+export const sameArtwork = (a: Source | null, b: Source | null) =>
+  !!a && !!b && a.name === b.name && a.path === b.path;
+
 export type DoodleState = {
   open: boolean;
   strokes: DoodleStroke[];
@@ -87,6 +91,10 @@ type State = {
   /** The pipeline's latest result (lib/pipelineRunner.ts), and whether a newer one is coming. */
   processed: Processed | null;
   processing: boolean;
+  /** IMPORT-5: reload the artwork when its file changes on disk. */
+  autoReload: boolean;
+  /** When the artwork was last reloaded from disk (for a short confirmation). */
+  reloadedAt: number | null;
   /** Unsaved work from a previous run, waiting for Restore or Discard (PROJ-4). */
   recovery: { name: string; savedAt: string } | null;
   /** Whether Undo / Redo have something to do (PROJ-2). */
@@ -95,6 +103,8 @@ type State = {
 
   openFile(source: Source): Promise<void>;
   setLayerMode(mode: LayerMode): Promise<void>;
+  /** The artwork file changed on disk: import it again, keeping every setting. */
+  reloadSource(bytes: Uint8Array): Promise<void>;
   setPage(patch: Partial<PageSetup>): void;
   setOptimize(patch: Partial<OptimizeSettings>): void;
   setLayer(id: string, patch: LayerOverride): void;
@@ -167,6 +177,8 @@ export const useStore = create<State>()((set, get) => ({
   processed: null,
   processing: false,
   recovery: null,
+  autoReload: true,
+  reloadedAt: null,
   undrawnNoticeHidden: false,
   help: { open: false, topic: 'getting-started', anchor: '' },
   doodle: {
@@ -192,6 +204,28 @@ export const useStore = create<State>()((set, get) => ({
       }));
     } catch (e) {
       set({ loading: false, error: e instanceof Error ? e.message : String(e) });
+    }
+  },
+
+  async reloadSource(bytes) {
+    const { source, layerMode } = get();
+    if (!source) return;
+    try {
+      const doc = await importFile(bytes, source.name, { layerMode });
+      set((s) => ({
+        source: { ...source, bytes },
+        doc,
+        error: null,
+        reloadedAt: Date.now(),
+        selectedLayerId: doc.layers.some((l) => l.id === s.selectedLayerId)
+          ? s.selectedLayerId
+          : (doc.layers[0]?.id ?? null),
+      }));
+    } catch (e) {
+      // Half-written or broken while the editor saves: keep the last good version.
+      set({
+        error: `Couldn’t reload ${source.name}: ${e instanceof Error ? e.message : String(e)}`,
+      });
     }
   },
 

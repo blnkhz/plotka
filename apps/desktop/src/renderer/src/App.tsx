@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { DoodlePad } from './components/DoodlePad';
 import { HelpPanel } from './components/HelpPanel';
+import { AutoReload } from './components/AutoReload';
+import { startWatching } from './lib/watch';
 import { LayersPanel } from './components/LayersPanel';
 import { TransformsPanel } from './components/TransformsPanel';
 import { Preview } from './components/Preview';
@@ -27,6 +29,7 @@ export function App() {
   useEffect(() => trackProject(), []);
   useEffect(() => startPipeline(), []);
   useEffect(() => startAutosave(), []);
+  useEffect(() => startWatching(), []);
   useEffect(() => {
     const off = window.api.on('file:opened', (f) => void openFromOutside(f));
     // Files opened from Finder before the window was ready arrive now.
@@ -110,6 +113,7 @@ function Toolbar() {
         Help
       </button>
       <span className={styles.file}>{loading ? 'Loading…' : (source?.name ?? 'No file')}</span>
+      <AutoReload />
       {error && <span className={styles.error}>{error}</span>}
       {doc?.warnings.map((w) => (
         <span key={w} className={styles.warning}>

@@ -23,6 +23,16 @@ can't see the difference.
 - **Size**: the file's own size is kept (mm, inches, points or pixels). Illustrator's pixels are
   read as points, so its artboards come in at exactly the right size.
 
+## Auto-reload
+
+When you open an SVG file, **Auto-reload** appears in the toolbar (on by default). Edit and save
+the file in Illustrator, Inkscape or your code, and Plotter Studio reloads it within a moment,
+keeping all your settings (page, fills, passes, transforms). "Reloaded" flashes in the toolbar.
+Untick **Auto-reload** to keep the current version.
+
+Projects remember where their SVG came from, so auto-reload works again when you reopen a
+project. If a save leaves the file half-written, the last good version stays.
+
 ## Layers
 
 The **Layers** list (left panel) shows how the artwork is split up. Each layer can have its own

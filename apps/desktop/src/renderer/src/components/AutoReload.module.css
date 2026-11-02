@@ -1,0 +1,11 @@
+.toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.flash {
+  color: var(--accent);
+  white-space: nowrap;
+}

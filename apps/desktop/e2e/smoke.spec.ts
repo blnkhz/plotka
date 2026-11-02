@@ -642,3 +642,40 @@ test('recent files: File → Open Recent reopens projects (PROJ-4)', async () =>
   await expect.poll(recentLabel).not.toBe('Recent test.plot.json');
   await app.close();
 });
+
+test('auto-reload: the artwork reloads when its file changes, keeping settings (IMPORT-5)', async () => {
+  const { writeFileSync, renameSync } = await import('node:fs');
+  const dir = mkdtempSync(join(tmpdir(), 'plotter-studio-watch-'));
+  const file = join(dir, 'art.svg');
+  const svg = (shapes: string) =>
+    `<svg xmlns="http://www.w3.org/2000/svg" width="100mm" height="100mm" viewBox="0 0 100 100">${shapes}</svg>`;
+  // Save the way many editors do: write a new file, then rename it over the old one.
+  const save = (shapes: string) => {
+    writeFileSync(join(dir, 'tmp.svg'), svg(shapes));
+    renameSync(join(dir, 'tmp.svg'), file);
+  };
+  writeFileSync(file, svg('<path d="M10 10 L90 10" stroke="#000"/>'));
+
+  const app = await launch();
+  await app.evaluate(({ dialog }, path) => {
+    dialog.showOpenDialog = (async () => ({ canceled: false, filePaths: [path] })) as never;
+  }, file);
+  const page = await app.firstWindow();
+  await page.setViewportSize({ width: 1400, height: 900 });
+  await page.getByRole('button', { name: 'Open…' }).click();
+  await expect(page.getByText('art.svg')).toBeVisible();
+  await expect(page.getByText(/^1 paths · draw/)).toBeVisible();
+  await page.getByRole('button', { name: 'Landscape' }).click();
+
+  save('<path d="M10 10 L90 10" stroke="#000"/><path d="M10 50 L90 50" stroke="#000"/>');
+  await expect(page.getByText('Reloaded')).toBeVisible({ timeout: 10000 });
+  await expect(page.getByText(/^2 paths · draw/)).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Landscape' })).toHaveClass(/active/); // kept
+
+  // Switched off: changes are ignored.
+  await page.getByLabel('Auto-reload').uncheck();
+  save('<path d="M10 90 L90 90" stroke="#000"/>');
+  await page.waitForTimeout(1500);
+  await expect(page.getByText(/^2 paths · draw/)).toBeVisible();
+  await app.close();
+});

@@ -7,6 +7,7 @@ import { isProjectPath, project, projectName, updateWindow } from './project';
 import { listPorts } from './serial';
 import { checkRecovery, clearRecovery, readRecovery, writeRecovery } from './autosave';
 import { addRecent } from './recent';
+import { allowWatch, allowWatchFromProject, startWatch, stopWatch } from './watch';
 import { existsSync } from 'node:fs';
 
 type Handler<C extends InvokeChannel> = (
@@ -52,6 +53,8 @@ export function registerIpcHandlers(
     // Opening a project makes it the current project; opening artwork starts a new one.
     project.path = isProjectPath(path) ? path : null;
     addRecent(path);
+    if (isProjectPath(path)) allowWatchFromProject(new TextDecoder().decode(bytes));
+    else allowWatch(path);
     return { path, name: basename(path), bytes };
   });
 
@@ -79,14 +82,21 @@ export function registerIpcHandlers(
   });
 
   handle('app:rendererReady', () => onRendererReady());
+  handle('watch:start', (event, path) => {
+    const win = BrowserWindow.fromWebContents(event.sender);
+    return win && typeof path === 'string' ? startWatch(win, path) : false;
+  });
+  handle('watch:stop', () => stopWatch());
   handle('autosave:write', (_e, content, name) => writeRecovery(content, name));
   handle('autosave:clear', () => clearRecovery());
   handle('autosave:check', () => checkRecovery());
   handle('autosave:read', () => readRecovery());
   // Only lists the file in Open Recent: a dropped file never becomes the path Save writes to.
   handle('file:dropped', (_e, path) => {
-    if (typeof path === 'string' && /\.(svg|plot\.json)$/i.test(path) && existsSync(path))
+    if (typeof path === 'string' && /\.(svg|plot\.json)$/i.test(path) && existsSync(path)) {
       addRecent(path);
+      if (/\.svg$/i.test(path)) allowWatch(path);
+    }
   });
 
   handle('project:forget', () => {

@@ -84,6 +84,17 @@ describe('project files (PROJ-1)', () => {
     expect(parseProject(text)).toEqual(d);
   });
 
+  it('keeps where the artwork came from (for auto-reload), but only SVG paths', () => {
+    const d = {
+      ...sample(),
+      source: { name: 'motif.svg', bytes: svg, path: '/Users/me/art/motif.svg' },
+    };
+    expect(parseProject(serializeProject(d)).source?.path).toBe('/Users/me/art/motif.svg');
+    const bad = JSON.parse(serializeProject(d));
+    bad.source.path = '/etc/passwd';
+    expect(parseProject(JSON.stringify(bad)).source?.path).toBeUndefined();
+  });
+
   it('fills in defaults for missing settings (older files) and ignores wrong types', () => {
     const text = JSON.stringify({
       format: PROJECT_FORMAT,

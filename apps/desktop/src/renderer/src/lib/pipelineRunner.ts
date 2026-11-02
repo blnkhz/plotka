@@ -1,4 +1,4 @@
-import { applyOverrides, useStore } from '../store';
+import { applyOverrides, sameArtwork, useStore } from '../store';
 import { computeProcessed, type PipelineInput, type Processed } from './pipeline';
 
 type State = ReturnType<typeof useStore.getState>;
@@ -76,7 +76,7 @@ export function startPipeline(): () => void {
     const b = inputsOf(p);
     if (a.every((v, i) => v === b[i])) return;
     // A different file: drop the old result rather than show it on the new page.
-    if (s.doc !== p.doc) useStore.setState({ processed: null });
+    if (s.doc !== p.doc && !sameArtwork(s.source, p.source)) useStore.setState({ processed: null });
     run(s);
   });
   run(useStore.getState());

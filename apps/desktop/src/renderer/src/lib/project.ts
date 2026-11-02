@@ -30,7 +30,8 @@ export type ProjectLayerOverride = {
 };
 
 export type ProjectData = {
-  source: { name: string; bytes: Uint8Array } | null;
+  /** The artwork, embedded. `path` is where it came from (for reloading when it changes). */
+  source: { name: string; bytes: Uint8Array; path?: string } | null;
   layerMode: LayerMode;
   layerOverrides: Record<string, ProjectLayerOverride>;
   page: PageSetup;
@@ -83,7 +84,13 @@ export function serializeProject(d: ProjectData, now = new Date()): string {
       format: PROJECT_FORMAT,
       version: PROJECT_VERSION,
       savedAt: now.toISOString(),
-      source: d.source ? { name: d.source.name, base64: toBase64(d.source.bytes) } : null,
+      source: d.source
+        ? {
+            name: d.source.name,
+            base64: toBase64(d.source.bytes),
+            ...(d.source.path ? { path: d.source.path } : {}),
+          }
+        : null,
       layerMode: d.layerMode,
       layerOverrides: d.layerOverrides,
       page: d.page,
@@ -234,6 +241,7 @@ export function parseProject(text: string): ProjectData {
   if (isObj(src) && typeof src['name'] === 'string' && typeof src['base64'] === 'string') {
     try {
       source = { name: src['name'], bytes: fromBase64(src['base64']) };
+      if (typeof src['path'] === 'string' && /\.svg$/i.test(src['path'])) source.path = src['path'];
     } catch {
       throw new ProjectError('The artwork inside this project is damaged.');
     }

@@ -34,10 +34,11 @@ export async function openDroppedFile(file: File): Promise<void> {
     return;
   }
   const bytes = new Uint8Array(await file.arrayBuffer());
-  // A dropped file has no path the main process knows, so Save will ask where.
-  if (isProjectFile(file.name)) await openProject(bytes, file.name, { forget: true });
-  else await openArtwork({ name: file.name, bytes }, { forget: true });
-  // List it in Open Recent (the main process checks the path).
+  // List it in Open Recent and allow watching it (the main process checks the path) before
+  // opening, so auto-reload can start right away.
   const path = window.api.pathForFile(file);
-  if (path) void window.api.invoke('file:dropped', path);
+  if (path) await window.api.invoke('file:dropped', path);
+  // A dropped project's own path isn't trusted for saving, so Save will ask where.
+  if (isProjectFile(file.name)) await openProject(bytes, file.name, { forget: true });
+  else await openArtwork({ name: file.name, bytes, ...(path ? { path } : {}) }, { forget: true });
 }

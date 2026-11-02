@@ -1,5 +1,5 @@
 import { DEFAULT_PROFILE_ID, getProfile } from '@plotter-studio/plotter';
-import { useStore } from '../store';
+import { sameArtwork, useStore } from '../store';
 
 type State = ReturnType<typeof useStore.getState>;
 import {
@@ -28,7 +28,13 @@ async function quietly(fn: () => Promise<void> | void) {
 export function currentProject(): ProjectData {
   const s = useStore.getState();
   return {
-    source: s.source ? { name: s.source.name, bytes: s.source.bytes } : null,
+    source: s.source
+      ? {
+          name: s.source.name,
+          bytes: s.source.bytes,
+          ...(s.source.path ? { path: s.source.path } : {}),
+        }
+      : null,
     layerMode: s.layerMode,
     layerOverrides: s.layerOverrides,
     page: s.page,
@@ -229,7 +235,7 @@ export function trackProject(): () => void {
     if (!quiet) {
       // Undo history. New artwork (a doodle, a dropped file) starts over; the layer changes
       // that come with any import (e.g. after a layer mode change) aren't steps of their own.
-      if (s.source !== p.source) resetHistory();
+      if (!sameArtwork(s.source, p.source)) resetHistory();
       else if (s.doc === p.doc) {
         const key = changedKey(s, p);
         if (key) record(snapshot(p), key);
