@@ -4,6 +4,9 @@
 # hand: `pnpm build:mac:commit`. If a build is already running, it asks that build to run once
 # more when it finishes, so quick successive commits produce one up-to-date .dmg.
 set -u
+# Git runs hooks with variables pointing at this repo's .git and index; they would make the git
+# commands below act on the wrong checkout.
+unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE GIT_PREFIX GIT_COMMON_DIR GIT_OBJECT_DIRECTORY
 repo=$(git rev-parse --show-toplevel)
 cache="${XDG_CACHE_HOME:-$HOME/Library/Caches}/plotter-studio-dmg-build"
 wt="$cache/checkout"
