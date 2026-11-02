@@ -1,6 +1,7 @@
 .app {
-  display: grid;
-  grid-template-rows: auto 1fr;
+  /* Toolbar, an optional banner, then the main area filling the rest. */
+  display: flex;
+  flex-direction: column;
   height: 100vh;
 }
 .toolbar {
@@ -42,6 +43,7 @@
   font-variant-numeric: tabular-nums;
 }
 .main {
+  flex: 1;
   display: grid;
   grid-template-columns: 240px 1fr 300px;
   min-height: 0;

@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer } from 'electron';
+import { contextBridge, ipcRenderer, webUtils } from 'electron';
 import { EVENT_CHANNELS, INVOKE_CHANNELS, type Api } from '@shared/ipc';
 
 const invokeAllowed = new Set<string>(INVOKE_CHANNELS);
@@ -15,6 +15,13 @@ const api: Api = {
       listener(payload as Parameters<typeof listener>[0]);
     ipcRenderer.on(channel, wrapped);
     return () => ipcRenderer.removeListener(channel, wrapped);
+  },
+  pathForFile(file) {
+    try {
+      return webUtils.getPathForFile(file);
+    } catch {
+      return '';
+    }
   },
 };
 

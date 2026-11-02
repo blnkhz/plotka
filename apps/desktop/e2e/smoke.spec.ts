@@ -1,15 +1,24 @@
-import { readFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { _electron as electron, expect, test, type Page } from '@playwright/test';
 
 const fixtures = join(__dirname, '../../../packages/core/test/fixtures/svg');
 const shots = process.env['SCREENSHOT_DIR'];
 
-/** Launches the app; PLOTTER_STUDIO_E2E skips the "unsaved changes" question on close. */
+/**
+ * Launches the app with a fresh, temporary data folder (never the user's own settings).
+ * PLOTTER_STUDIO_E2E skips the "unsaved changes" question on close.
+ */
 const launch = (env: Record<string, string> = {}) =>
   electron.launch({
     args: [join(__dirname, '..')],
-    env: { ...process.env, PLOTTER_STUDIO_E2E: '1', ...env },
+    env: {
+      ...process.env,
+      PLOTTER_STUDIO_E2E: '1',
+      PLOTTER_STUDIO_USER_DATA: mkdtempSync(join(tmpdir(), 'plotter-studio-e2e-')),
+      ...env,
+    },
   });
 
 async function dropFile(page: Page, name: string) {
@@ -260,8 +269,6 @@ test('connect the simulated plotter, jog, plot, pause, resume, finish', async ()
 });
 
 test('save a project and open it again with all its settings (PROJ-1)', async () => {
-  const { mkdtempSync, readFileSync: read } = await import('node:fs');
-  const { tmpdir } = await import('node:os');
   const file = join(mkdtempSync(join(tmpdir(), 'plotter-studio-')), 'My pattern.plot.json');
   const app = await launch();
   // Stand in for the native dialogs.
@@ -285,7 +292,7 @@ test('save a project and open it again with all its settings (PROJ-1)', async ()
 
   await page.getByRole('button', { name: 'Save' }).click();
   await expect.poll(title).toBe('My pattern — Plotter Studio');
-  const saved = JSON.parse(read(file, 'utf8'));
+  const saved = JSON.parse(readFileSync(file, 'utf8'));
   expect(saved.format).toBe('plotter-studio-project');
   expect(saved.source.name).toBe('motif.svg');
   expect(saved.pipeline[0].params.pattern).toBe('p4g');
@@ -559,5 +566,79 @@ test('heavy processing runs in the background; the window stays responsive (PREV
   await expect(page.getByRole('status')).toHaveCount(0, { timeout: 60000 });
   await expect(page.getByText(/paths · draw/)).toBeVisible();
   console.log(`tab switch while processing: ${tabMs} ms`);
+  await app.close();
+});
+
+test('autosave: unsaved work comes back after a crash (PROJ-4)', async () => {
+  const data = mkdtempSync(join(tmpdir(), 'plotter-studio-e2e-'));
+  const open = async () => {
+    const app = await launch({ PLOTTER_STUDIO_USER_DATA: data });
+    const page = await app.firstWindow();
+    await page.setViewportSize({ width: 1400, height: 900 });
+    await page.locator('#root > div').waitFor();
+    return { app, page };
+  };
+
+  let { app, page } = await open();
+  await dropFile(page, 'motif.svg');
+  await page.getByRole('button', { name: 'Landscape' }).click();
+  await page.waitForTimeout(4000); // autosave writes 3 s after the last change
+  app.process().kill('SIGKILL'); // no clean shutdown
+
+  ({ app, page } = await open());
+  const banner = page.getByRole('alert');
+  await expect(banner).toContainText('closed with unsaved changes to motif');
+  if (shots) await page.screenshot({ path: join(shots, 'recovery.png') });
+  await banner.getByRole('button', { name: 'Restore' }).click();
+  await expect(page.getByText('motif.svg')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Landscape' })).toHaveClass(/active/);
+  await expect
+    .poll(() => app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]!.getTitle()))
+    .toContain('(edited)');
+  await page.waitForTimeout(4000);
+  app.process().kill('SIGKILL');
+
+  // Discard removes it for good.
+  ({ app, page } = await open());
+  await page.getByRole('alert').getByRole('button', { name: 'Discard' }).click();
+  await expect(page.getByRole('alert')).toHaveCount(0);
+  await app.close();
+  ({ app, page } = await open());
+  await page.waitForTimeout(500);
+  await expect(page.getByRole('alert')).toHaveCount(0);
+  await app.close();
+});
+
+test('recent files: File → Open Recent reopens projects (PROJ-4)', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'plotter-studio-'));
+  const file = join(dir, 'Recent test.plot.json');
+  const app = await launch();
+  await app.evaluate(({ dialog }, path) => {
+    dialog.showSaveDialog = (async () => ({ canceled: false, filePath: path })) as never;
+    dialog.showMessageBox = (async () => ({ response: 0, checkboxChecked: false })) as never;
+  }, file);
+  const page = await app.firstWindow();
+  await page.setViewportSize({ width: 1400, height: 900 });
+  await dropFile(page, 'motif.svg');
+  await page.getByRole('button', { name: 'Landscape' }).click();
+  await page.getByRole('button', { name: 'Save' }).click();
+  const recentLabel = () =>
+    app.evaluate(
+      ({ Menu }) => Menu.getApplicationMenu()!.getMenuItemById('recent-0')?.label ?? null,
+    );
+  await expect.poll(recentLabel).toBe('Recent test.plot.json');
+
+  // Open something else, then reopen the project from the menu.
+  await dropFile(page, 'figma.svg');
+  await expect(page.getByText('figma.svg')).toBeVisible();
+  await app.evaluate(({ Menu }) => Menu.getApplicationMenu()!.getMenuItemById('recent-0')!.click());
+  await expect(page.getByText('motif.svg')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Landscape' })).toHaveClass(/active/);
+
+  // A file that's gone is dropped from the menu.
+  const { rmSync } = await import('node:fs');
+  rmSync(file);
+  await app.evaluate(({ Menu }) => Menu.getApplicationMenu()!.getMenuItemById('recent-0')!.click());
+  await expect.poll(recentLabel).not.toBe('Recent test.plot.json');
   await app.close();
 });

@@ -87,6 +87,8 @@ type State = {
   /** The pipeline's latest result (lib/pipelineRunner.ts), and whether a newer one is coming. */
   processed: Processed | null;
   processing: boolean;
+  /** Unsaved work from a previous run, waiting for Restore or Discard (PROJ-4). */
+  recovery: { name: string; savedAt: string } | null;
   /** Whether Undo / Redo have something to do (PROJ-2). */
   canUndo: boolean;
   canRedo: boolean;
@@ -164,6 +166,7 @@ export const useStore = create<State>()((set, get) => ({
   canRedo: false,
   processed: null,
   processing: false,
+  recovery: null,
   undrawnNoticeHidden: false,
   help: { open: false, topic: 'getting-started', anchor: '' },
   doodle: {

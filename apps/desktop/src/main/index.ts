@@ -4,6 +4,13 @@ import { registerIpcHandlers } from './ipc';
 import { installMenu } from './menu';
 import { PlotterService } from './plotter';
 import { project } from './project';
+import { clearRecovery } from './autosave';
+import { isOpenable, openPath } from './openFile';
+
+// Automated tests run with their own data folder, so they never touch the user's settings,
+// saved pen heights, recent files or recovery file.
+if (process.env['PLOTTER_STUDIO_USER_DATA'])
+  app.setPath('userData', process.env['PLOTTER_STUDIO_USER_DATA']);
 
 const plotter = new PlotterService();
 
@@ -41,6 +48,8 @@ function createWindow(): BrowserWindow {
         detail: 'Save with ⌘S to keep them.',
       });
       if (choice === 0) e.preventDefault();
+      // Closing without saving was a deliberate choice: don't offer the work back next time.
+      else clearRecovery();
       return;
     }
     e.preventDefault();
@@ -72,8 +81,22 @@ function createWindow(): BrowserWindow {
   return win;
 }
 
+// Files opened from Finder or the Dock (also before the window exists).
+const pendingOpens: string[] = [];
+app.on('open-file', (e, path) => {
+  e.preventDefault();
+  if (!isOpenable(path)) return;
+  if (app.isReady() && BrowserWindow.getAllWindows().length) void openPath(path);
+  else pendingOpens.push(path);
+});
+
+/** Opens files that arrived before the window was listening. */
+export function flushPendingOpens() {
+  for (const p of pendingOpens.splice(0)) void openPath(p);
+}
+
 void app.whenReady().then(() => {
-  registerIpcHandlers(plotter);
+  registerIpcHandlers(plotter, flushPendingOpens);
   installMenu();
   createWindow();
   app.on('activate', () => {

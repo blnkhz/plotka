@@ -9,6 +9,9 @@ import { openDroppedFile, openWithDialog } from './lib/openFile';
 import { command, control, subscribePlotter } from './lib/plotter';
 import { redo, saveProject, trackProject, undo } from './lib/projectActions';
 import { startPipeline } from './lib/pipelineRunner';
+import { startAutosave } from './lib/autosave';
+import { RecoveryBanner } from './components/RecoveryBanner';
+import { openFromOutside } from './lib/openFile';
 import { fmtDistance } from './lib/format';
 import { useProcessed, useProcessing } from './lib/useProcessed';
 import { fmtDuration } from './lib/format';
@@ -23,6 +26,13 @@ export function App() {
   useEffect(() => subscribePlotter(), []);
   useEffect(() => trackProject(), []);
   useEffect(() => startPipeline(), []);
+  useEffect(() => startAutosave(), []);
+  useEffect(() => {
+    const off = window.api.on('file:opened', (f) => void openFromOutside(f));
+    // Files opened from Finder before the window was ready arrive now.
+    void window.api.invoke('app:rendererReady');
+    return off;
+  }, []);
   useEffect(() => window.api.on('app:menu', ({ action }) => void menuAction(action)), []);
 
   return (
@@ -44,6 +54,7 @@ export function App() {
       }}
     >
       <Toolbar />
+      <RecoveryBanner />
       <div className={styles.main}>
         <aside className={styles.left}>
           <LayersPanel />

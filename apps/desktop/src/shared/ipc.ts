@@ -74,6 +74,16 @@ export interface InvokeChannels {
     args: [content: string, saveAs: boolean, suggestedName: string];
     result: { name: string } | null;
   };
+  /** PROJ-4 autosave: write unsaved work to the recovery file, or remove it. */
+  'autosave:write': { args: [content: string, name: string]; result: void };
+  'autosave:clear': { args: []; result: void };
+  /** Unsaved work left by a previous run, if any. */
+  'autosave:check': { args: []; result: { name: string; savedAt: string } | null };
+  'autosave:read': { args: []; result: string | null };
+  /** The window is listening for 'file:opened': open files that arrived before it was. */
+  'app:rendererReady': { args: []; result: void };
+  /** A file dropped on the window, for the recent files list (path from the preload). */
+  'file:dropped': { args: [path: string]; result: void };
   /** The renderer started a new, untitled project (e.g. a dropped SVG). */
   'project:forget': { args: []; result: void };
   /** Title and edited state for the window. */
@@ -99,6 +109,8 @@ export interface InvokeChannels {
 export interface EventChannels {
   'app:menu': { action: 'open' | 'save' | 'saveAs' | 'undo' | 'redo' | 'help' };
   'plotter:changed': PlotterStatus;
+  /** A file opened from Open Recent, the Dock or Finder. */
+  'file:opened': { path: string; name: string; bytes: Uint8Array };
 }
 
 export type InvokeChannel = keyof InvokeChannels;
@@ -110,6 +122,12 @@ export const INVOKE_CHANNELS = [
   'file:saveText',
   'project:save',
   'project:forget',
+  'autosave:write',
+  'autosave:clear',
+  'autosave:check',
+  'autosave:read',
+  'file:dropped',
+  'app:rendererReady',
   'project:state',
   'plotter:listPorts',
   'plotter:connect',
@@ -123,6 +141,7 @@ export const INVOKE_CHANNELS = [
 export const EVENT_CHANNELS = [
   'app:menu',
   'plotter:changed',
+  'file:opened',
 ] as const satisfies readonly EventChannel[];
 
 /** The shape of `window.api` exposed by the preload script. */
@@ -132,4 +151,6 @@ export type Api = {
     ...args: InvokeChannels[C]['args']
   ): Promise<InvokeChannels[C]['result']>;
   on<C extends EventChannel>(channel: C, listener: (payload: EventChannels[C]) => void): () => void;
+  /** The file system path of a dropped file ('' if it has none). */
+  pathForFile(file: File): string;
 };

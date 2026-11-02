@@ -20,6 +20,22 @@ The window title shows the project's name, with "(edited)" when there are unsave
 Closing with unsaved changes asks first. Opening an SVG starts a new project; the transforms stay,
 so you can try the same pattern on other artwork.
 
+## Recent files
+
+**File → Open Recent** lists the last 10 projects and SVGs you opened or saved (also in the Dock
+icon's menu). **Clear Menu** empties it. A file that has been moved or deleted is taken off the
+list when you pick it. You can also open SVGs and projects from Finder with **Open With**.
+
+## Autosave and recovery
+
+While you have unsaved changes, Plotter Studio keeps a copy of your work a few seconds after
+each change. It's stored in the app's own data, never over your project file, so nothing is
+saved anywhere you didn't choose.
+
+If the app closes without saving (a crash, a forced quit, the computer shutting down), the next
+start shows a bar: **Restore** brings the work back as an unsaved project (save it to keep it),
+**Discard** throws it away. Saving, or choosing **Close without saving**, removes the copy.
+
 ## Undo and redo
 
 **Undo** (⌘Z) and **Redo** (⇧⌘Z), also in the toolbar and the Edit menu, step back and forward

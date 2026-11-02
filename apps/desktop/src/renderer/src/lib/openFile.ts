@@ -22,6 +22,12 @@ export function isSupportedFile(name: string): boolean {
 const unsupported = (name: string) =>
   `Can't open ${name}. Supported: ${[...supportedExtensions(), PROJECT_EXTENSION].join(', ')}`;
 
+/** A file from Open Recent, the Dock or Finder (the main process already set the project path). */
+export async function openFromOutside(f: { name: string; path: string; bytes: Uint8Array }) {
+  if (isProjectFile(f.name)) await openProject(f.bytes, f.name, { forget: false });
+  else await openArtwork(f, { forget: false });
+}
+
 export async function openDroppedFile(file: File): Promise<void> {
   if (!isProjectFile(file.name) && !isSupportedFile(file.name)) {
     useStore.setState({ error: unsupported(file.name) });
@@ -31,4 +37,7 @@ export async function openDroppedFile(file: File): Promise<void> {
   // A dropped file has no path the main process knows, so Save will ask where.
   if (isProjectFile(file.name)) await openProject(bytes, file.name, { forget: true });
   else await openArtwork({ name: file.name, bytes }, { forget: true });
+  // List it in Open Recent (the main process checks the path).
+  const path = window.api.pathForFile(file);
+  if (path) void window.api.invoke('file:dropped', path);
 }

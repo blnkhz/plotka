@@ -5,6 +5,9 @@ import type { InvokeChannel, InvokeChannels } from '@shared/ipc';
 import type { PlotterService } from './plotter';
 import { isProjectPath, project, projectName, updateWindow } from './project';
 import { listPorts } from './serial';
+import { checkRecovery, clearRecovery, readRecovery, writeRecovery } from './autosave';
+import { addRecent } from './recent';
+import { existsSync } from 'node:fs';
 
 type Handler<C extends InvokeChannel> = (
   event: Electron.IpcMainInvokeEvent,
@@ -17,7 +20,10 @@ function handle<C extends InvokeChannel>(channel: C, handler: Handler<C>): void 
   );
 }
 
-export function registerIpcHandlers(plotter: PlotterService): void {
+export function registerIpcHandlers(
+  plotter: PlotterService,
+  onRendererReady: () => void = () => undefined,
+): void {
   handle('plotter:listPorts', () => listPorts());
   handle('plotter:connect', (_e, port, profileId) => plotter.connect(port, profileId));
   handle('plotter:disconnect', () => plotter.disconnect());
@@ -45,6 +51,7 @@ export function registerIpcHandlers(plotter: PlotterService): void {
     const bytes = new Uint8Array(await readFile(path));
     // Opening a project makes it the current project; opening artwork starts a new one.
     project.path = isProjectPath(path) ? path : null;
+    addRecent(path);
     return { path, name: basename(path), bytes };
   });
 
@@ -63,11 +70,23 @@ export function registerIpcHandlers(plotter: PlotterService): void {
         : r.filePath.replace(/(\.json)?$/i, '.plot.json');
     }
     await writeFile(path, content, 'utf8');
+    addRecent(path);
     project.path = path;
     project.name = projectName(path);
     project.dirty = false;
     updateWindow(win);
     return { name: project.name };
+  });
+
+  handle('app:rendererReady', () => onRendererReady());
+  handle('autosave:write', (_e, content, name) => writeRecovery(content, name));
+  handle('autosave:clear', () => clearRecovery());
+  handle('autosave:check', () => checkRecovery());
+  handle('autosave:read', () => readRecovery());
+  // Only lists the file in Open Recent: a dropped file never becomes the path Save writes to.
+  handle('file:dropped', (_e, path) => {
+    if (typeof path === 'string' && /\.(svg|plot\.json)$/i.test(path) && existsSync(path))
+      addRecent(path);
   });
 
   handle('project:forget', () => {
