@@ -93,6 +93,8 @@ type State = {
   processing: boolean;
   /** PLOT-5: where the last plot stopped (layer, path, mm along it), to continue from. */
   checkpoint: { layerId: string; pathIndex: number; offset: number; pathCount: number } | null;
+  /** PREVIEW-4: playback of the plot order in the preview (time in ms, speed multiplier). */
+  playback: { on: boolean; t: number; playing: boolean; speed: number };
   /** IMPORT-5: reload the artwork when its file changes on disk. */
   autoReload: boolean;
   /** When the artwork was last reloaded from disk (for a short confirmation). */
@@ -180,6 +182,7 @@ export const useStore = create<State>()((set, get) => ({
   processing: false,
   recovery: null,
   autoReload: true,
+  playback: { on: false, t: 0, playing: false, speed: 20 },
   checkpoint: null,
   reloadedAt: null,
   undrawnNoticeHidden: false,

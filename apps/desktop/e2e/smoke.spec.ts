@@ -758,3 +758,34 @@ test('export what will be plotted as SVG and toolpath JSON (PREVIEW-6)', async (
   expect(json.layers[0].paths).toHaveLength(paths);
   await app.close();
 });
+
+test('playback: scrub and play the plot order (PREVIEW-4)', async () => {
+  const app = await launch();
+  const page = await app.firstWindow();
+  await page.setViewportSize({ width: 1400, height: 900 });
+  await dropFile(page, 'motif.svg');
+  await page.getByRole('tab', { name: 'Fill' }).click();
+  await page.getByLabel('Fill type').selectOption('lines');
+  await expect(page.getByText(/\d+ paths · draw/)).toBeVisible();
+  await page.getByRole('button', { name: '▶ Playback' }).click();
+  const bar = page.getByRole('group', { name: 'Playback' });
+  await expect(bar).toBeVisible();
+  await bar.getByRole('button', { name: 'Pause playback' }).click(); // it starts playing
+
+  const slider = bar.getByLabel('Playback time');
+  const max = Number(await slider.getAttribute('max'));
+  await slider.fill(String(Math.round(max * 0.4)));
+  await expect(bar.getByText(/^\d+:\d\d \/ \d+:\d\d$/)).toBeVisible();
+  if (shots) await page.screenshot({ path: join(shots, 'playback.png') });
+
+  await bar.getByRole('button', { name: '100×' }).click();
+  await bar.getByRole('button', { name: 'Play', exact: true }).click();
+  await expect(bar.getByRole('button', { name: 'Play', exact: true })).toBeVisible({
+    timeout: 20000,
+  }); // ended
+  const [now, total] = (await bar.getByText(/ \/ /).textContent())!.split(' / ');
+  expect(now).toBe(total);
+  await bar.getByRole('button', { name: 'Close playback' }).click();
+  await expect(bar).toHaveCount(0);
+  await app.close();
+});

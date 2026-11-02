@@ -33,6 +33,9 @@ Anything outside the paper (or the plotter's reach) is cut off and shown in red,
 - **Travel** shows the pen-up moves between lines.
 - **Original** shows the artwork as it is in the file, faintly, under the plot.
 - **Bed** shows the plotter's reach; **Margins** shows the margin box.
+- **▶ Playback** shows the plot being drawn in order, timed like the real plot: drag the slider
+  to any moment, press play, and pick a speed (1× to 100×). Everything not yet drawn shows
+  faintly, and the blue ring is where the pen would be. ✕ closes it.
 - **Pen** sets the width the lines are drawn with in the preview. Set it to your pen's tip width
   (for example 0.3 mm for a fineliner) to see how dark the plot will be.
 - The blue ring is the pen's position when the plotter is connected; it's filled while the pen

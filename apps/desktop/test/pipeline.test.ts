@@ -41,6 +41,27 @@ describe('computeProcessed (the worker job)', () => {
     expect(r.stats.layers.get('a')!.estimatedTime).toBeGreaterThan(0);
   });
 
+  it('timeline: each path draw window in plot order, within the plan total time', () => {
+    const d = doc();
+    d.layers[0]!.strokes.push({
+      points: [
+        { x: 0, y: 40 },
+        { x: 30, y: 40 },
+      ],
+      closed: false,
+    });
+    const r = computeProcessed(input({ doc: d }));
+    const tl = r.timeline;
+    expect(tl.start.length).toBe(2);
+    expect(tl.totalMs).toBeCloseTo(r.stats.total.estimatedTime * 1000, 6);
+    for (let i = 0; i < 2; i++) {
+      expect(tl.end[i]!).toBeGreaterThan(tl.start[i]!);
+      expect(tl.end[i]!).toBeLessThanOrEqual(tl.totalMs);
+    }
+    expect(tl.start[1]!).toBeGreaterThan(tl.end[0]!); // in order, with the pen lift and travel between
+    expect([...tl.path].sort()).toEqual([0, 1]);
+  });
+
   it('results survive structured cloning (what crossing to and from the worker does)', () => {
     const r = computeProcessed(input());
     const copy = structuredClone(r);

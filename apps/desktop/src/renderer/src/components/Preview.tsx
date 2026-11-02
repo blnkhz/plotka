@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { marginBox, paperSize, undrawnFillCount, type Polyline } from '@plotter-studio/core';
 import { useProcessed, useProfile, type Processed } from '../lib/useProcessed';
+import { completedCount, partialRoute, penAt } from '../lib/playback';
+import { PlaybackBar } from './PlaybackBar';
 import { useStore, type ViewOptions } from '../store';
 import styles from './Preview.module.css';
 
@@ -32,9 +34,11 @@ export function Preview() {
         down: plotPenDown ?? machine.penUp === false,
       }
     : null;
-  const inputs = useRef({ processed, page, options, bed: profile.bed, pen });
+  const playback = useStore((s) => s.playback);
+  const playbackT = playback.on ? playback.t : null;
+  const inputs = useRef({ processed, page, options, bed: profile.bed, pen, playbackT });
   useEffect(() => {
-    inputs.current = { processed, page, options, bed: profile.bed, pen };
+    inputs.current = { processed, page, options, bed: profile.bed, pen, playbackT };
   });
 
   const draw = useCallback(() => {
@@ -64,7 +68,7 @@ export function Preview() {
   }, [draw]);
 
   // Redraw when inputs change.
-  useEffect(draw, [draw, processed, page, options, profile, pen?.x, pen?.y, pen?.down]);
+  useEffect(draw, [draw, processed, page, options, profile, pen?.x, pen?.y, pen?.down, playbackT]);
   // Fit on request (file opened, F key, button) and when paper size changes.
   useEffect(fit, [
     fit,
@@ -171,6 +175,7 @@ export function Preview() {
   return (
     <div className={styles.wrap} ref={wrapRef}>
       <canvas ref={canvasRef} className={styles.canvas} />
+      <PlaybackBar />
       <ViewToggles />
       <div className={styles.zoom}>
         <button onClick={() => zoomButton(1 / 1.25)} title="Zoom out">
@@ -207,6 +212,17 @@ function ViewToggles() {
       {toggle('original', 'Original')}
       {toggle('bed', 'Bed')}
       {toggle('margins', 'Margins')}
+      <button
+        className={styles.playButton}
+        onClick={() =>
+          useStore.setState((s) => ({
+            playback: { ...s.playback, on: !s.playback.on, playing: !s.playback.on, t: 0 },
+          }))
+        }
+        title="Watch the plot order, at adjustable speed"
+      >
+        ▶ Playback
+      </button>
       <label className={styles.toggle} title="Pen tip width">
         Pen
         <input
@@ -233,6 +249,8 @@ type RenderInput = {
   bed: { width: number; height: number };
   /** Live pen position from the plotter, mm from home, and whether it's down. */
   pen: { x: number; y: number; down: boolean } | null;
+  /** PREVIEW-4: playback time (ms) when playback is on. */
+  playbackT: number | null;
 };
 
 function cssVar(name: string): string {
@@ -242,7 +260,7 @@ function cssVar(name: string): string {
 function render(
   canvas: HTMLCanvasElement,
   v: ViewTransform,
-  { processed, page, options, bed, pen }: RenderInput,
+  { processed, page, options, bed, pen, playbackT }: RenderInput,
 ) {
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
@@ -359,12 +377,14 @@ function render(
   ctx.lineWidth = Math.max(options.penWidth, 0.75 * px);
   // Multiply, so layers drawn over each other mix like ink (shows passes and moiré).
   ctx.globalCompositeOperation = 'multiply';
-  for (const lt of processed.toolpath.layers) {
-    const layer = visible.get(lt.layerId);
-    if (!layer?.visible) continue;
-    ctx.strokeStyle = layer.color;
-    ctx.stroke(cachedPath(lt.paths));
-  }
+  if (playbackT === null) {
+    for (const lt of processed.toolpath.layers) {
+      const layer = visible.get(lt.layerId);
+      if (!layer?.visible) continue;
+      ctx.strokeStyle = layer.color;
+      ctx.stroke(cachedPath(lt.paths));
+    }
+  } else drawPlayback(ctx, processed, visible, playbackT);
   ctx.globalCompositeOperation = 'source-over';
 
   // Clipped-away parts
@@ -399,6 +419,79 @@ function render(
   }
 
   drawPen(ctx, pen, px);
+  if (playbackT !== null) {
+    const tp = processed.toolpath;
+    drawPen(
+      ctx,
+      penAt(processed.timeline, (l, p) => tp.layers[l]?.paths[p], playbackT),
+      px,
+    );
+  }
+}
+
+/**
+ * PREVIEW-4: everything faint, the paths drawn by time t in full, the current one partly. The
+ * finished paths are added to a cached Path2D per layer as time moves forward, so long plots
+ * play smoothly; moving back rebuilds it.
+ */
+let played: {
+  timeline: Processed['timeline'] | null;
+  count: number;
+  byLayer: Map<number, Path2D>;
+} = {
+  timeline: null,
+  count: 0,
+  byLayer: new Map(),
+};
+function drawPlayback(
+  ctx: CanvasRenderingContext2D,
+  processed: Processed,
+  visible: Map<string, { visible: boolean; color: string }>,
+  t: number,
+) {
+  const tp = processed.toolpath;
+  const tl = processed.timeline;
+  ctx.save();
+  ctx.globalAlpha = 0.15;
+  for (const lt of tp.layers) {
+    const layer = visible.get(lt.layerId);
+    if (!layer?.visible) continue;
+    ctx.strokeStyle = layer.color;
+    ctx.stroke(cachedPath(lt.paths));
+  }
+  ctx.restore();
+
+  const k = completedCount(tl, t);
+  if (played.timeline !== tl || k < played.count)
+    played = { timeline: tl, count: 0, byLayer: new Map() };
+  for (let i = played.count; i < k; i++) {
+    const li = tl.layer[i]!;
+    const p = tp.layers[li]?.paths[tl.path[i]!];
+    if (!p) continue;
+    let path = played.byLayer.get(li);
+    if (!path) played.byLayer.set(li, (path = new Path2D()));
+    addPath(path, p.points, p.closed);
+  }
+  played.count = k;
+  for (const [li, path] of played.byLayer) {
+    const layer = visible.get(tp.layers[li]!.layerId);
+    if (!layer?.visible) continue;
+    ctx.strokeStyle = layer.color;
+    ctx.stroke(path);
+  }
+  // The path being drawn right now.
+  if (k < tl.end.length && tl.start[k]! <= t) {
+    const li = tl.layer[k]!;
+    const p = tp.layers[li]?.paths[tl.path[k]!];
+    const layer = visible.get(tp.layers[li]?.layerId ?? '');
+    if (p && layer?.visible) {
+      const span = tl.end[k]! - tl.start[k]!;
+      ctx.strokeStyle = layer.color;
+      ctx.beginPath();
+      addPath(ctx, partialRoute(p, span > 0 ? (t - tl.start[k]!) / span : 1), false);
+      ctx.stroke();
+    }
+  }
 }
 
 /** The live pen: a ring with a crosshair, filled while the pen is down. */
