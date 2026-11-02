@@ -5,6 +5,7 @@ import { optimizePaths, type OptimizeSettings } from '../optimize/order';
 import { paperSize, type PageSetup, type Rect } from '../page/paper';
 import { applyFills } from '../fills/apply';
 import { clipDocument, fitToPage } from './fit';
+import { applyPasses } from './passes';
 import { buildToolpath, type Toolpath } from './toolpath';
 
 export type ProcessInput = {
@@ -33,7 +34,7 @@ export type ProcessResult = {
 };
 
 /**
- * Runs the page-level pipeline: fit to page → fills → clip to printable area → toolpath →
+ * Runs the page-level pipeline: fit to page → fills → passes → clip to printable area → toolpath →
  * optimize (per layer, layers stay in order, each starting where the previous one ended).
  */
 export function processDocument({ doc, page, bed, optimize }: ProcessInput): ProcessResult {
@@ -43,7 +44,7 @@ export function processDocument({ doc, page, bed, optimize }: ProcessInput): Pro
     { x: 0, y: 0, width: paper.width, height: paper.height },
     { x: 0, y: 0, width: bed.width, height: bed.height },
   );
-  const { doc: clipped, removed } = clipDocument(applyFills(placed), printable);
+  const { doc: clipped, removed } = clipDocument(applyPasses(applyFills(placed)), printable);
   const unoptimized = buildToolpath(clipped);
   const EPS = 1e-6;
   return {

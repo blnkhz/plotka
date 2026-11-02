@@ -306,6 +306,8 @@ function render(
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
   ctx.lineWidth = Math.max(options.penWidth, 0.75 * px);
+  // Multiply, so layers drawn over each other mix like ink (shows passes and moiré).
+  ctx.globalCompositeOperation = 'multiply';
   for (const lt of processed.toolpath.layers) {
     const layer = visible.get(lt.layerId);
     if (!layer?.visible) continue;
@@ -314,6 +316,7 @@ function render(
     for (const p of lt.paths) addPath(ctx, p.points, p.closed);
     ctx.stroke();
   }
+  ctx.globalCompositeOperation = 'source-over';
 
   // Clipped-away parts
   ctx.strokeStyle = cssVar('--danger');

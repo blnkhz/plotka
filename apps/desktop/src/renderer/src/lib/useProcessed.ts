@@ -52,7 +52,8 @@ export function useProcessed(): Processed | null {
     if (!doc) return null;
     const effective = applyOverrides(doc, overrides);
     const result = processDocument({ doc: effective, page, bed: profile.bed, optimize });
-    const byId = new Map(effective.layers.map((l) => [l.id, l.settings]));
+    // From the processed layers, so pass layers (made by the pipeline) are included.
+    const byId = new Map(result.clipped.layers.map((l) => [l.id, l.settings]));
     const settings = (id: string): LayerMotionSettings => {
       const s = byId.get(id);
       return {

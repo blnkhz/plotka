@@ -1,15 +1,13 @@
 import type { PathStats } from '@plotter-studio/core';
 import { fmtDistance, fmtDuration } from '../lib/format';
-import { applyOverrides, useStore } from '../store';
 import { useProcessed } from '../lib/useProcessed';
 import styles from './StatsTable.module.css';
 
 export function StatsTable() {
   const processed = useProcessed();
-  const doc = useStore((s) => s.doc);
-  const overrides = useStore((s) => s.layerOverrides);
-  if (!processed || !doc) return null;
-  const names = new Map(applyOverrides(doc, overrides).layers.map((l) => [l.id, l]));
+  if (!processed) return null;
+  // Processed layers include the pass layers the pipeline makes.
+  const names = new Map(processed.clipped.layers.map((l) => [l.id, l]));
   const rows: [string, string, PathStats][] = [...processed.stats.layers].map(([id, s]) => [
     id,
     names.get(id)?.name ?? id,

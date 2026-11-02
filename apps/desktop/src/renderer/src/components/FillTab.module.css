@@ -7,3 +7,16 @@
   align-items: center;
   gap: 5px;
 }
+.swatches {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.swatches input[type='color'] {
+  width: 26px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid var(--border, #ccc);
+  border-radius: 4px;
+  background: none;
+}

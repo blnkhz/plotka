@@ -114,3 +114,24 @@ test('more fill types, overlaps and density from color', async () => {
   await expect(page.getByText('Jitter')).toBeVisible();
   await app.close();
 });
+
+test('passes: repeat a layer with slight shifts in several pen colors', async () => {
+  const app = await electron.launch({ args: [join(__dirname, '..')] });
+  const page = await app.firstWindow();
+  await page.setViewportSize({ width: 1400, height: 860 });
+  await dropFile(page, 'overlap.svg');
+  await page.getByRole('tab', { name: 'Fill' }).click();
+  await page.getByRole('combobox').first().selectOption('lines');
+  const angle = page.getByRole('spinbutton', { name: 'Angle', exact: true });
+  await angle.fill('90');
+  await angle.press('Enter');
+  await page.getByLabel('Repeat with slight shifts').check();
+  await expect(page.getByText('Pens', { exact: true })).toBeVisible();
+  if (shots) await page.screenshot({ path: join(shots, 'passes.png') });
+
+  await page.getByRole('tab', { name: 'Plot' }).click();
+  await expect(page.getByText('Layer 1 · pass 3')).toBeVisible();
+  for (let i = 0; i < 4; i++) await page.getByRole('button', { name: '+' }).click();
+  if (shots) await page.screenshot({ path: join(shots, 'passes-zoom.png') });
+  await app.close();
+});

@@ -1,6 +1,7 @@
 import { defaultFillSettings, type FillSettings, type FillType } from '@plotter-studio/core';
 import { applyOverrides, useStore } from '../store';
 import { Notice, NumberField, Row, Section } from './controls';
+import { PassesSection } from './PassesSection';
 import styles from './FillTab.module.css';
 
 const TYPES: { value: FillType; label: string }[] = [
@@ -190,6 +191,7 @@ export function FillTab() {
           </p>
         )}
       </Section>
+      <PassesSection layer={layer} />
       {layers.length > 1 && (
         <Section title="All layers">
           <button

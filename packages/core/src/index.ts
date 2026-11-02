@@ -18,3 +18,4 @@ export * from './optimize/merge';
 export * from './optimize/order';
 export * from './geometry/polygon';
 export * from './fills/patterns';
+export * from './pipeline/passes';

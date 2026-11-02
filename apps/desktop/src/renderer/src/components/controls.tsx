@@ -1,5 +1,8 @@
-import { useState, type ReactNode } from 'react';
+import { createContext, useContext, useState, type ReactNode } from 'react';
 import styles from './controls.module.css';
+
+/** The label of the enclosing Row, used as the accessible name of the control inside it. */
+const RowLabel = createContext<string>('');
 
 /** Number input that commits on blur or Enter, so typing intermediate values doesn't thrash. */
 export function NumberField({
@@ -23,6 +26,7 @@ export function NumberField({
   width?: number;
   title?: string;
 }) {
+  const label = useContext(RowLabel);
   const shown = String(Number(value.toFixed(digits)));
   const [draft, setDraft] = useState<string | null>(null);
   const commit = () => {
@@ -37,6 +41,7 @@ export function NumberField({
     <span className={styles.number} title={title}>
       <input
         type="number"
+        aria-label={label || title}
         value={draft ?? shown}
         min={min}
         max={max}
@@ -66,7 +71,9 @@ export function Row({ label, children }: { label: string; children: ReactNode })
   return (
     <div className={styles.row}>
       <span className={styles.label}>{label}</span>
-      <div className={styles.value}>{children}</div>
+      <div className={styles.value}>
+        <RowLabel.Provider value={label}>{children}</RowLabel.Provider>
+      </div>
     </div>
   );
 }

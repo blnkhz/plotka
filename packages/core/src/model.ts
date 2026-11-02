@@ -40,6 +40,24 @@ export type FillSettings = {
   densityFromColor?: boolean;
 };
 
+/**
+ * Plot the layer several times, each pass shifted / turned / scaled slightly from the last,
+ * usually with different pen colors.
+ */
+export type PassSettings = {
+  /** Number of passes; 1 = off. */
+  count: number;
+  /** mm between neighboring passes. */
+  offsetX: number;
+  offsetY: number;
+  /** Degrees between neighboring passes. */
+  rotate: number;
+  /** % size change between neighboring passes. */
+  scale: number;
+  /** Pen color per pass, cycled. */
+  colors: string[];
+};
+
 export type LayerSettings = {
   /** % of max. */
   speedPenDown: number;
@@ -51,6 +69,8 @@ export type LayerSettings = {
   drawOutline: boolean;
   /** Later shapes in the layer hide the parts of earlier ones they cover, like in the SVG. */
   hideCovered: boolean;
+  /** Repeat the layer with slight shifts. Null or count 1 = off. */
+  passes?: PassSettings | null;
 };
 
 export type Layer = {
@@ -68,6 +88,8 @@ export type Layer = {
   /** Closed shapes that can be hatched. */
   fills: FillRegion[];
   settings: LayerSettings;
+  /** Set on layers made by the passes step: which layer and pass they came from. */
+  passOf?: { layerId: string; index: number; count: number };
 };
 
 export type Bounds = { minX: number; minY: number; maxX: number; maxY: number };
