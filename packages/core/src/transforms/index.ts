@@ -1,4 +1,5 @@
 import type { PlotDocument } from '../model';
+import { symmetry } from './symmetry';
 import { tessellate } from './tessellate';
 import { tile } from './tile';
 import type { ParamValues, PipelineStep, TransformDef } from './types';
@@ -6,10 +7,11 @@ import type { ParamValues, PipelineStep, TransformDef } from './types';
 export * from './types';
 export { tile, MAX_TILE_POINTS } from './tile';
 export { tessellate, MAX_TESSELLATE_POINTS } from './tessellate';
+export { symmetry, MAX_SYMMETRY_POINTS } from './symmetry';
 export { seededRandom } from './random';
 
 /** Every transform the app offers, in menu order. Add new ones here. */
-export const TRANSFORMS: readonly TransformDef[] = [tile, tessellate];
+export const TRANSFORMS: readonly TransformDef[] = [tile, tessellate, symmetry];
 
 export const getTransform = (type: string): TransformDef | undefined =>
   TRANSFORMS.find((t) => t.type === type);

@@ -1,4 +1,4 @@
-# Transforms: Tile and Tessellate
+# Transforms: Tile, Tessellate and Symmetry
 
 Transforms repeat or rearrange the artwork before it goes on the page. Add them in the left
 panel under **Transforms** with **Add transform…**. Each one has a checkbox to turn it off, arrows
@@ -21,6 +21,17 @@ Repeats the artwork on a grid.
 - **Grid angle**: turn the whole grid.
 - **Rotation jitter**, **Size jitter**: random variation per tile. **Seed** picks a different
   random pattern; the same seed always gives the same result.
+
+## Symmetry
+
+Turns and mirrors copies of the artwork around its center, for rosettes and mandala-like
+patterns.
+
+- **Copies**: copies turned evenly around the center (6 = every 60°).
+- **Mirror**: also add mirrored copies: left–right, top–bottom, or both.
+- **Start angle**: turns the whole pattern.
+
+It stacks with the others: for example Symmetry first, then Tile to repeat the rosette on a grid.
 
 ## Tessellate
 
