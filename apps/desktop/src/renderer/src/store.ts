@@ -23,6 +23,8 @@ import type { PlotterStatus } from '@shared/ipc';
 
 export type LayerOverride = Partial<Pick<Layer, 'visible' | 'plot' | 'color'>> & {
   settings?: Partial<LayerSettings>;
+  /** Removed from the drawing (not shown, not plotted, not listed). Restorable. */
+  removed?: boolean;
 };
 
 export type ViewOptions = {
@@ -294,11 +296,13 @@ export function applyOverrides(
 ): PlotDocument {
   return {
     ...doc,
-    layers: doc.layers.map((l) => {
-      const o = overrides[l.id];
-      if (!o) return l;
-      const { settings, ...rest } = o;
-      return { ...l, ...rest, settings: { ...l.settings, ...settings } };
-    }),
+    layers: doc.layers
+      .filter((l) => !overrides[l.id]?.removed)
+      .map((l) => {
+        const o = overrides[l.id];
+        if (!o) return l;
+        const { settings, removed: _removed, ...rest } = o;
+        return { ...l, ...rest, settings: { ...l.settings, ...settings } };
+      }),
   };
 }

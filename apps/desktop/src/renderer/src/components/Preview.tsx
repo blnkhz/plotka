@@ -337,6 +337,21 @@ function render(
     ctx.globalAlpha = 1;
   }
 
+  // Layers left out of the plot (checkbox off): faint, so it's clear they're excluded.
+  ctx.save();
+  ctx.globalAlpha = 0.18;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.lineWidth = Math.max(options.penWidth, 0.75 * px);
+  for (const layer of processed.clipped.layers) {
+    if (layer.plot || !layer.visible) continue;
+    ctx.strokeStyle = layer.color;
+    ctx.beginPath();
+    for (const s of layer.strokes) addPath(ctx, s.points, s.closed);
+    ctx.stroke();
+  }
+  ctx.restore();
+
   // Pen-down strokes
   const visible = new Map(processed.clipped.layers.map((l) => [l.id, l]));
   ctx.lineCap = 'round';

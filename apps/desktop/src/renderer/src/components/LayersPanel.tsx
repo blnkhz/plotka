@@ -20,6 +20,7 @@ export function LayersPanel() {
     );
   }
   const layers = applyOverrides(doc, overrides).layers;
+  const removed = doc.layers.filter((l) => overrides[l.id]?.removed).map((l) => l.id);
   const modeOptions: { value: LayerMode; label: string; title?: string }[] = [
     ...(doc.source?.hasLayers ? [{ value: 'auto' as const, label: 'From file' }] : []),
     { value: doc.source?.hasLayers ? 'single' : 'auto', label: 'One layer' },
@@ -67,13 +68,49 @@ export function LayersPanel() {
             <input
               type="checkbox"
               checked={l.plot}
-              title="Plot this layer"
+              aria-label={`Plot ${l.name}`}
+              title={
+                l.plot && !l.visible
+                  ? 'Hidden in the preview, but still plotted. Untick to leave it out of the plot.'
+                  : 'Plot this layer'
+              }
+              className={l.plot && !l.visible ? styles.hiddenPlotted : undefined}
               onClick={(e) => e.stopPropagation()}
               onChange={(e) => setLayer(l.id, { plot: e.target.checked })}
             />
+            <button
+              className={styles.icon}
+              title="Remove this layer (Undo brings it back)"
+              aria-label={`Remove ${l.name}`}
+              onClick={(e) => {
+                e.stopPropagation();
+                setLayer(l.id, { removed: true });
+                if (selected === l.id) selectLayer(layers.find((x) => x.id !== l.id)?.id ?? null);
+              }}
+            >
+              ✕
+            </button>
           </li>
         ))}
       </ul>
+      {layers.some((l) => l.plot && !l.visible) && (
+        <p className={styles.warn}>
+          A hidden layer is still plotted. Untick its checkbox to leave it out.
+        </p>
+      )}
+      {removed.length > 0 && (
+        <p className={styles.removed}>
+          {removed.length} removed {removed.length === 1 ? 'layer' : 'layers'} ·{' '}
+          <button
+            className={styles.link}
+            onClick={() => {
+              for (const id of removed) setLayer(id, { removed: false });
+            }}
+          >
+            Restore
+          </button>
+        </p>
+      )}
     </Section>
   );
 }

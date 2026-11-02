@@ -464,3 +464,33 @@ test('doodle: fill closed shapes without keeping their outlines', async () => {
   if (shots) await page.screenshot({ path: join(shots, 'doodle-fill-only-used.png') });
   await app.close();
 });
+
+test('remove and restore layers; a hidden layer that still plots is flagged', async () => {
+  const app = await launch();
+  const page = await app.firstWindow();
+  await page.setViewportSize({ width: 1400, height: 900 });
+  await dropFile(page, 'inkscape.svg');
+  const paths = async () =>
+    Number((await page.getByText(/\d+ paths · draw/).textContent())!.match(/(\d+) paths/)![1]);
+  const before = await paths();
+
+  // Hiding a layer that's still ticked for plotting shows a warning.
+  await page.getByTitle('Hide in preview').first().click();
+  await expect(page.getByText('A hidden layer is still plotted.', { exact: false })).toBeVisible();
+  await page.getByTitle('Show in preview').first().click();
+
+  // Remove a layer: gone from the list and the plot; Restore and Undo bring it back.
+  await page.getByRole('button', { name: 'Remove Outlines' }).click();
+  await expect(page.getByRole('button', { name: 'Remove Outlines' })).toHaveCount(0);
+  await expect(page.getByText('1 removed layer')).toBeVisible();
+  expect(await paths()).toBeLessThan(before);
+  if (shots) await page.screenshot({ path: join(shots, 'layer-removed.png') });
+  await page.getByRole('button', { name: 'Restore' }).click();
+  await expect(page.getByRole('button', { name: 'Remove Outlines' })).toBeVisible();
+  expect(await paths()).toBe(before);
+
+  await page.getByRole('button', { name: 'Remove Outlines' }).click();
+  await page.getByRole('button', { name: 'Undo' }).click();
+  await expect(page.getByRole('button', { name: 'Remove Outlines' })).toBeVisible();
+  await app.close();
+});

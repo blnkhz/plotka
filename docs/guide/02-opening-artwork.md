@@ -32,8 +32,15 @@ fill and passes, and can be turned off for plotting.
 - **One layer**: everything together.
 - **By color**: one layer per stroke color. Handy for plotting each color with a different pen.
 
-Each layer row has a color swatch (the color it's shown in), its name, a count of strokes and
-filled shapes, an eye (show or hide in the preview) and a checkbox (plot it or not).
+Each layer row has:
+
+- a color swatch (the color it's shown in),
+- its name and a count of strokes / filled shapes,
+- an **eye**: show or hide it in the preview. Hiding doesn't stop it plotting: a hidden layer
+  that's still ticked gets an orange outline on its checkbox and a warning.
+- a **checkbox**: plot it or not. Unticked layers show faintly in the preview.
+- **✕**: remove the layer from the drawing. "N removed layers · Restore" under the list brings
+  them back, and so does Undo. Removed layers stay removed in the saved project.
 
 ## White shapes
 

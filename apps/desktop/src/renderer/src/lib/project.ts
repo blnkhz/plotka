@@ -26,6 +26,7 @@ export type ProjectLayerOverride = {
   plot?: boolean;
   color?: string;
   settings?: Partial<LayerSettings>;
+  removed?: boolean;
 };
 
 export type ProjectData = {
@@ -172,6 +173,7 @@ function parseOverrides(v: unknown): Record<string, ProjectLayerOverride> {
     const r: ProjectLayerOverride = {};
     if (typeof o['visible'] === 'boolean') r.visible = o['visible'];
     if (typeof o['plot'] === 'boolean') r.plot = o['plot'];
+    if (o['removed'] === true) r.removed = true;
     if (typeof o['color'] === 'string' && /^#[0-9a-f]{6}$/i.test(o['color'])) r.color = o['color'];
     const s = parseLayerSettings(o['settings']);
     if (s && Object.keys(s).length) r.settings = s;
