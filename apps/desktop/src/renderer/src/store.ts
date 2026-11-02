@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import {
   createStep,
   defaultDoodleSettings,
+  defaultFillSettings,
   defaultOptimizeSettings,
   defaultPageSetup,
   doodleToSvg,
@@ -272,9 +273,17 @@ export const useStore = create<State>()((set, get) => ({
       return { plotSkip: next };
     }),
   async applyDoodle() {
-    const svg = doodleSvg(get().doodle);
+    const doodle = get().doodle;
+    const svg = doodleSvg(doodle);
     set((s) => ({ doodle: { ...s.doodle, open: false } }));
     await get().openFile({ name: 'Doodle.svg', bytes: new TextEncoder().encode(svg) });
+    // Shapes were filled on purpose: hatch them (unless the import already chose a fill),
+    // so a fill-only shape next to open lines doesn't end up undrawn.
+    const doc = get().doc;
+    if (doodle.settings.fillClosed && doc)
+      for (const l of doc.layers)
+        if (!l.settings.fill && l.fills.length > 0)
+          get().setLayer(l.id, { settings: { fill: defaultFillSettings() } });
   },
 }));
 

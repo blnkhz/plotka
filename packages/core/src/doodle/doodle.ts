@@ -15,6 +15,8 @@ export type DoodleSettings = {
   closeGap: number;
   /** Fill closed shapes (so they can be hatched). */
   fillClosed: boolean;
+  /** With fillClosed: also draw the outline of filled shapes. Off = fill only. */
+  keepOutlines: boolean;
 };
 
 export const defaultDoodleSettings = (): DoodleSettings => ({
@@ -23,6 +25,7 @@ export const defaultDoodleSettings = (): DoodleSettings => ({
   keepCorners: true,
   closeGap: 3,
   fillClosed: false,
+  keepOutlines: true,
 });
 
 /** A processed stroke: straight segments or cubic curves through the smoothed path. */
@@ -189,8 +192,11 @@ export function doodleToSvg(
 ): string {
   const paths = strokes.map((st) => processStroke(st, s)).filter((p): p is DoodlePath => !!p);
   const els = paths.map((p) => {
-    const fill = p.closed && s.fillClosed ? '#000000' : 'none';
-    return `  <path d="${pathData(p)}" fill="${fill}" stroke="#000000" stroke-width="0.4" stroke-linecap="round" stroke-linejoin="round"/>`;
+    const filled = p.closed && s.fillClosed;
+    const fill = filled ? '#000000' : 'none';
+    // Open strokes always keep their line; filled shapes only if outlines are wanted.
+    const stroke = filled && !s.keepOutlines ? 'none' : '#000000';
+    return `  <path d="${pathData(p)}" fill="${fill}" stroke="${stroke}" stroke-width="0.4" stroke-linecap="round" stroke-linejoin="round"/>`;
   });
   return [
     '<?xml version="1.0" encoding="UTF-8"?>',

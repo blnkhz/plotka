@@ -20,7 +20,10 @@ Your strokes are kept as drawn, so you can change these at any time:
 - **Keep sharp corners**: corners you drew stay sharp instead of being rounded off.
 - **Close shapes when the ends meet**: a stroke that ends near where it started becomes a
   closed shape.
-- **Fill closed shapes**: closed shapes become filled, so they can be hatched in the Fill tab.
+- **Fill closed shapes**: closed shapes become filled. When you use the drawing they're hatched
+  with lines (change the fill in the Fill tab).
+- **Keep outlines**: also draws the line around each filled shape. Untick it to plot only the
+  fill. Open strokes always keep their line.
 - **Show what I drew**: shows your original strokes faintly under the result.
 
 The header shows how many strokes became how many curves or lines.

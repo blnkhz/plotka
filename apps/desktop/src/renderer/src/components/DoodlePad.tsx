@@ -109,11 +109,13 @@ export function DoodlePad() {
         for (const [, a, b, e] of p.curves) ctx.bezierCurveTo(a.x, a.y, b.x, b.y, e.x, e.y);
       }
       if (p.closed) ctx.closePath();
-      if (p.closed && settings.fillClosed) {
+      const filled = p.closed && settings.fillClosed;
+      if (filled) {
         ctx.fillStyle = 'rgba(0,0,0,0.12)';
         ctx.fill();
       }
-      ctx.stroke();
+      // A filled shape without its outline shows as the tint only.
+      if (!filled || settings.keepOutlines) ctx.stroke();
     }
     if (live.current) {
       ctx.strokeStyle = '#111';
@@ -122,7 +124,7 @@ export function DoodlePad() {
       polyline(ctx, live.current);
       ctx.stroke();
     }
-  }, [processed, strokes, settings.fillClosed, showRaw, size]);
+  }, [processed, strokes, settings.fillClosed, settings.keepOutlines, showRaw, size]);
 
   useEffect(draw, [draw]);
   useEffect(() => {
@@ -316,6 +318,22 @@ export function DoodlePad() {
                   }
                 />
                 Fill closed shapes
+              </label>
+            </Row>
+            <Row label="">
+              <label
+                className={`${styles.check} ${styles.indent}`}
+                title="Also draw the outline around each filled shape. Off: only the fill is plotted."
+              >
+                <input
+                  type="checkbox"
+                  checked={settings.keepOutlines}
+                  disabled={settings.closeGap === 0 || !settings.fillClosed}
+                  onChange={(e) =>
+                    setDoodle({ settings: { ...settings, keepOutlines: e.target.checked } })
+                  }
+                />
+                Keep outlines
               </label>
             </Row>
             <Row label="">

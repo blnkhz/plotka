@@ -431,3 +431,36 @@ test('a file with only filled shapes plots right away, and undrawn fills are exp
   await expect(page.getByText(/won’t be drawn/)).toHaveCount(0);
   await app.close();
 });
+
+test('doodle: fill closed shapes without keeping their outlines', async () => {
+  const app = await launch();
+  const page = await app.firstWindow();
+  await page.setViewportSize({ width: 1400, height: 900 });
+  await page.locator('#root > div').waitFor();
+  await page.getByRole('button', { name: 'Doodle…' }).click();
+  const box = (await page.getByTestId('doodle-canvas').boundingBox())!;
+  const cx = box.x + box.width / 2;
+  const cy = box.y + box.height / 2;
+  await page.mouse.move(cx + 120, cy);
+  await page.mouse.down();
+  for (let i = 1; i <= 120; i++) {
+    const a = (i / 120) * Math.PI * 2 * 0.99;
+    await page.mouse.move(cx + 120 * Math.cos(a), cy + 120 * Math.sin(a));
+  }
+  await page.mouse.up();
+
+  await expect(page.getByLabel('Keep outlines')).toBeDisabled();
+  await page.getByLabel('Fill closed shapes').check();
+  await expect(page.getByLabel('Keep outlines')).toBeChecked();
+  await page.getByLabel('Keep outlines').uncheck();
+  if (shots) await page.screenshot({ path: join(shots, 'doodle-fill-only.png') });
+  await page.getByRole('button', { name: 'Use drawing' }).click();
+
+  // No outline strokes, one filled shape, hatched with lines.
+  await expect(page.getByTitle('Strokes / filled shapes')).toHaveText('0/1');
+  await page.getByRole('tab', { name: 'Fill' }).click();
+  await expect(page.getByLabel('Fill type')).toHaveValue('lines');
+  await expect(page.getByText(/won’t be drawn/)).toHaveCount(0);
+  if (shots) await page.screenshot({ path: join(shots, 'doodle-fill-only-used.png') });
+  await app.close();
+});

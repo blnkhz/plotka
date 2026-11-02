@@ -186,3 +186,32 @@ describe('doodleToSvg', () => {
     expect(importSvg(lines).layers[0]!.fills).toHaveLength(0);
   });
 });
+
+describe('doodleToSvg: fill without outlines', () => {
+  const strokes = [
+    { points: wobblyCircle(1) },
+    {
+      points: [
+        { x: 5, y: 90 },
+        { x: 95, y: 92 },
+      ],
+    },
+  ];
+  it('keeps outlines by default', () => {
+    const doc = importSvg(
+      doodleToSvg(strokes, settings({ fillClosed: true }), { width: 100, height: 100 }),
+    );
+    expect(doc.layers[0]!.strokes).toHaveLength(2);
+    expect(doc.layers[0]!.fills).toHaveLength(1);
+  });
+  it('with keepOutlines off, filled shapes have no outline; open lines keep theirs', () => {
+    const svgText = doodleToSvg(strokes, settings({ fillClosed: true, keepOutlines: false }), {
+      width: 100,
+      height: 100,
+    });
+    expect(svgText).toMatch(/fill="#000000" stroke="none"/);
+    const doc = importSvg(svgText);
+    expect(doc.layers[0]!.strokes).toHaveLength(1); // the open line only
+    expect(doc.layers[0]!.fills).toHaveLength(1);
+  });
+});
