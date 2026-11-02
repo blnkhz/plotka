@@ -23,3 +23,4 @@ export * from './transforms';
 export * from './doodle/doodle';
 export * from './doodle/fit';
 export * from './optimize/clean';
+export * from './pipeline/resume';

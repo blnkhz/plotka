@@ -77,3 +77,12 @@
 .primary:disabled {
   opacity: 0.5;
 }
+.continue {
+  margin: 8px 0;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+.continue .note {
+  margin-top: 0;
+}

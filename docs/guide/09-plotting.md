@@ -25,6 +25,22 @@ ring in the preview follows the pen.
 
 During a plot the computer won't go to sleep, and closing the window asks first.
 
+## Continuing after a problem
+
+If the pen runs dry, skips, or the paper moves: click **Stop**, fix the problem (change the pen,
+re-tape the paper at the same spot), then continue. After a stop the Plot tab shows where it got
+to, for example "Stopped at path 37 of 120 in Layer 1, 42.0 mm along it", with:
+
+- **From path**: where to continue. It starts at the path where it stopped; earlier paths are
+  skipped. Pick an earlier path to redo a stretch that came out faint.
+- **Back up**: when continuing the path it stopped in, start this many mm before the stop point,
+  so the line has no gap (1 mm by default).
+- **Continue plot** plots the rest, with the same paths and settings as the stopped plot.
+  **Forget** hides the panel.
+
+For a quick break, **Pause** and **Resume** are simpler: they pick up exactly where the pen left
+off.
+
 ## If the cable comes out
 
 The plot stops and the app keeps its place. Plug the cable back in, **Reconnect** in the Machine

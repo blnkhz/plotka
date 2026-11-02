@@ -1,5 +1,6 @@
 import type { LayerMotionSettings } from '@plotter-studio/plotter';
-import type { ActionResult, ManualCommand } from '@shared/ipc';
+import type { ActionResult, ManualCommand, PlotRequest, PlotterStatus } from '@shared/ipc';
+import { distanceAlong, toolpathFrom, type ResumePoint } from '@plotter-studio/core';
 import type { Processed } from './useProcessed';
 import { useStore } from '../store';
 
@@ -13,8 +14,46 @@ async function run(p: Promise<ActionResult>): Promise<boolean> {
 /** Listens for status pushes from the main process. Call once at startup. */
 export function subscribePlotter(): () => void {
   void window.api.invoke('plotter:status').then((plotter) => useStore.setState({ plotter }));
-  return window.api.on('plotter:changed', (plotter) => useStore.setState({ plotter }));
+  return window.api.on('plotter:changed', (plotter) => {
+    noteCheckpoint(useStore.getState().plotter, plotter);
+    useStore.setState({ plotter });
+  });
 }
+
+// --- PLOT-5: where a stopped plot got to, and continuing from there ---
+
+/** What the last plot was asked to draw, so it can be continued with the same paths. */
+let lastPlot: PlotRequest | null = null;
+
+/**
+ * When a plot starts stopping (or fails), remember where the pen was: the path, and how far
+ * along it the pen got if it was drawing. Stop then lifts the pen and goes home.
+ */
+function noteCheckpoint(prev: PlotterStatus | null, next: PlotterStatus) {
+  const was = prev?.plot?.state;
+  const p = next.plot;
+  if (!p || !lastPlot || next.plotKind !== 'plot' || was === p.state) return;
+  if (p.state !== 'stopping' && p.state !== 'error') return;
+  if (p.state === 'stopping' && was !== 'running' && was !== 'pausing' && was !== 'paused') return;
+  const layer = lastPlot.toolpath.layers.find((l) => l.layerId === p.layerId);
+  if (!layer) return;
+  const pathIndex = Math.max(0, p.pathIndex);
+  const path = layer.paths[pathIndex];
+  const offset = path && p.penDown && p.position ? distanceAlong(path, p.position) : 0;
+  useStore.setState({
+    checkpoint: { layerId: layer.layerId, pathIndex, offset, pathCount: layer.paths.length },
+  });
+}
+
+/** Continues the last plot from a path (and offset along it), with the same settings. */
+export function continuePlot(from: ResumePoint) {
+  if (!lastPlot) return Promise.resolve(false);
+  const req = { ...lastPlot, toolpath: toolpathFrom(lastPlot.toolpath, from) };
+  useStore.setState({ checkpoint: null });
+  return run(window.api.invoke('plot:start', req));
+}
+
+export const canContinue = () => lastPlot !== null;
 
 export const listPorts = () => window.api.invoke('plotter:listPorts');
 
@@ -65,5 +104,7 @@ export function startPlot(processed: Processed) {
       penPosDown: penHeights.down,
     };
   }
-  return run(window.api.invoke('plot:start', { profileId, toolpath: { layers }, settings }));
+  lastPlot = { profileId, toolpath: { layers }, settings };
+  useStore.setState({ checkpoint: null });
+  return run(window.api.invoke('plot:start', lastPlot));
 }

@@ -91,6 +91,8 @@ type State = {
   /** The pipeline's latest result (lib/pipelineRunner.ts), and whether a newer one is coming. */
   processed: Processed | null;
   processing: boolean;
+  /** PLOT-5: where the last plot stopped (layer, path, mm along it), to continue from. */
+  checkpoint: { layerId: string; pathIndex: number; offset: number; pathCount: number } | null;
   /** IMPORT-5: reload the artwork when its file changes on disk. */
   autoReload: boolean;
   /** When the artwork was last reloaded from disk (for a short confirmation). */
@@ -178,6 +180,7 @@ export const useStore = create<State>()((set, get) => ({
   processing: false,
   recovery: null,
   autoReload: true,
+  checkpoint: null,
   reloadedAt: null,
   undrawnNoticeHidden: false,
   help: { open: false, topic: 'getting-started', anchor: '' },

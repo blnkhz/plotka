@@ -679,3 +679,28 @@ test('auto-reload: the artwork reloads when its file changes, keeping settings (
   await expect(page.getByText(/^2 paths · draw/)).toBeVisible();
   await app.close();
 });
+
+test('continue a stopped plot from where it stopped (PLOT-5)', async () => {
+  test.setTimeout(90000);
+  const app = await launch({ PLOTTER_SIM_SPEED: '4' });
+  const page = await app.firstWindow();
+  await page.setViewportSize({ width: 1400, height: 900 });
+  await dropFile(page, 'motif.svg'); // outlines only: about 20 s of plotting, 5 s at 4x
+  await page.getByRole('tab', { name: 'Machine' }).click();
+  await page.getByLabel('Port').selectOption('simulated');
+  await page.getByRole('button', { name: 'Connect' }).click();
+  await page.getByRole('tab', { name: 'Plot' }).click();
+  await page.getByRole('button', { name: 'Start plot' }).click();
+  await expect(page.getByText('Plotting')).toBeVisible();
+  await page.waitForTimeout(1500);
+  await page.getByRole('button', { name: 'Stop' }).click();
+  await expect(page.getByText('Stopped', { exact: true })).toBeVisible({ timeout: 20000 });
+
+  const panel = page.getByText(/^Stopped at path \d+ of \d+ in Layer 1/);
+  await expect(panel).toBeVisible();
+  if (shots) await page.screenshot({ path: join(shots, 'continue.png') });
+  await page.getByRole('button', { name: 'Continue plot' }).click();
+  await expect(page.getByText('Done', { exact: true })).toBeVisible({ timeout: 60000 });
+  await expect(panel).toHaveCount(0);
+  await app.close();
+});

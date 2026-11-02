@@ -3,6 +3,7 @@ import { control, dryRun, plotLayers, startPlot } from '../lib/plotter';
 import { useProcessed } from '../lib/useProcessed';
 import { useStore } from '../store';
 import { Notice, Section } from './controls';
+import { ContinueSection } from './ContinueSection';
 import styles from './PlotSection.module.css';
 
 const STATE_LABEL: Record<string, string> = {
@@ -111,6 +112,7 @@ export function PlotSection() {
         </div>
       )}
       {state === 'error' && plot?.message && <Notice kind="error">{plot.message}</Notice>}
+      {!active && <ContinueSection layerName={(id) => names.get(id)?.name ?? id} />}
       {error && !active && <Notice kind="error">{error}</Notice>}
 
       <div className={styles.buttons}>
