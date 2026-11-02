@@ -704,3 +704,57 @@ test('continue a stopped plot from where it stopped (PLOT-5)', async () => {
   await expect(panel).toHaveCount(0);
   await app.close();
 });
+
+test('export what will be plotted as SVG and toolpath JSON (PREVIEW-6)', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'plotter-studio-export-'));
+  const app = await launch();
+  await app.evaluate(({ dialog }, dir) => {
+    dialog.showSaveDialog = (async (...args: unknown[]) => {
+      const opts = args[args.length - 1] as { defaultPath: string };
+      return { canceled: false, filePath: `${dir}/${opts.defaultPath}` };
+    }) as never;
+  }, dir);
+  const page = await app.firstWindow();
+  await page.setViewportSize({ width: 1400, height: 900 });
+  await dropFile(page, 'motif.svg');
+  await page.getByRole('tab', { name: 'Fill' }).click();
+  await page.getByLabel('Fill type').selectOption('lines');
+  await page.getByRole('tab', { name: 'Plot' }).click();
+  const count = async () =>
+    Number((await page.getByText(/\d+ paths · draw/).textContent())!.match(/(\d+) paths/)![1]);
+  await expect.poll(count).toBeGreaterThan(3);
+  const paths = await count();
+
+  await page.getByRole('button', { name: 'Export SVG…' }).click();
+  const svgFile = join(dir, 'motif (plotted).svg');
+  await expect
+    .poll(() => {
+      try {
+        return readFileSync(svgFile, 'utf8').length;
+      } catch {
+        return 0;
+      }
+    })
+    .toBeGreaterThan(0);
+  const svg = readFileSync(svgFile, 'utf8');
+  expect(svg).toContain('inkscape:groupmode="layer"');
+  expect(svg.match(/<path /g)).toHaveLength(paths);
+
+  await app.evaluate(({ Menu }) =>
+    Menu.getApplicationMenu()!.getMenuItemById('exportJson')!.click(),
+  );
+  const jsonFile = join(dir, 'motif (plotted).json');
+  await expect
+    .poll(() => {
+      try {
+        return readFileSync(jsonFile, 'utf8').length;
+      } catch {
+        return 0;
+      }
+    })
+    .toBeGreaterThan(0);
+  const json = JSON.parse(readFileSync(jsonFile, 'utf8'));
+  expect(json.format).toBe('plotter-studio-toolpath');
+  expect(json.layers[0].paths).toHaveLength(paths);
+  await app.close();
+});

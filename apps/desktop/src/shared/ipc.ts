@@ -110,7 +110,9 @@ export interface InvokeChannels {
 }
 
 export interface EventChannels {
-  'app:menu': { action: 'open' | 'save' | 'saveAs' | 'undo' | 'redo' | 'help' };
+  'app:menu': {
+    action: 'open' | 'save' | 'saveAs' | 'undo' | 'redo' | 'help' | 'exportSvg' | 'exportJson';
+  };
   'plotter:changed': PlotterStatus;
   /** A file opened from Open Recent, the Dock or Finder. */
   'file:opened': { path: string; name: string; bytes: Uint8Array };

@@ -66,6 +66,14 @@ The toolbar shows the estimated time, how far the pen draws, and how far it trav
 up. The estimate uses the same motion plan the plotter follows, including pen lifts, so it's
 close to the real time. The **Stats** table has these numbers per layer.
 
+## Exporting
+
+**File → Export SVG…** (⌘E) saves what will be plotted, with fills, passes, transforms and
+optimization applied, as an SVG on the paper size in mm, one layer per plotted layer. It's handy
+for other plotting software or for keeping a record. **File → Export Toolpath JSON…** (⇧⌘E)
+saves the same paths as JSON (mm from the paper's top-left corner, in plot order) for your own
+scripts. Both are also under the Stats table in the Plot tab.
+
 ## Multiple colors
 
 Plot one layer, pause or let it finish, change the pen, then plot the next layer. Don't turn the

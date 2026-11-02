@@ -3,6 +3,7 @@ import { DoodlePad } from './components/DoodlePad';
 import { HelpPanel } from './components/HelpPanel';
 import { AutoReload } from './components/AutoReload';
 import { startWatching } from './lib/watch';
+import { exportPlot } from './lib/exportPlot';
 import { LayersPanel } from './components/LayersPanel';
 import { TransformsPanel } from './components/TransformsPanel';
 import { Preview } from './components/Preview';
@@ -147,9 +148,15 @@ function editingText(): boolean {
   );
 }
 
-async function menuAction(action: 'open' | 'save' | 'saveAs' | 'undo' | 'redo' | 'help') {
+async function menuAction(
+  action: 'open' | 'save' | 'saveAs' | 'undo' | 'redo' | 'help' | 'exportSvg' | 'exportJson',
+) {
   const doodleOpen = useStore.getState().doodle.open;
   switch (action) {
+    case 'exportSvg':
+      return exportPlot('svg');
+    case 'exportJson':
+      return exportPlot('json');
     case 'help':
       return useStore.getState().openHelp();
     case 'open':

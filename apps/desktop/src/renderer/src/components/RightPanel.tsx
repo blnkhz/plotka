@@ -5,6 +5,7 @@ import { Notice, Section } from './controls';
 import { FillTab } from './FillTab';
 import { MachineTab } from './MachineTab';
 import { PlotSection } from './PlotSection';
+import { exportPlot } from '../lib/exportPlot';
 import { OptimizeSection } from './OptimizeSection';
 import { PageTab } from './PageTab';
 import { StatsTable } from './StatsTable';
@@ -123,6 +124,22 @@ function PlotTab() {
       <PlotSection />
       <Section title="Stats" help="plotting#time-and-distance">
         {doc ? <StatsTable /> : <p className={styles.muted}>No file open.</p>}
+        {doc && (
+          <div className={styles.exportRow}>
+            <button
+              onClick={() => void exportPlot('svg')}
+              title="Save what will be plotted as an SVG (⌘E)"
+            >
+              Export SVG…
+            </button>
+            <button
+              onClick={() => void exportPlot('json')}
+              title="Save the planned paths as JSON, in mm (⇧⌘E)"
+            >
+              Export JSON…
+            </button>
+          </div>
+        )}
       </Section>
       <OptimizeSection />
     </>
