@@ -111,3 +111,12 @@ when idle.
 **DRIVER-0 is complete.** Still to measure later (hardware test checklist): real plot time vs
 the planner estimate (MOTION-2, within 10%), and safe top speeds (the motion values stay
 provisional until then).
+
+## First plots from the app (2026-11-02, AxiDraw V3/A3)
+
+- Connecting, jogging, home and pen-height sliders work on the real machine.
+- Pause / resume works from the app and from the machine's button. The first version resumed
+  by itself on a single press: the board's "pressed since last reading" bit registers a held or
+  bouncing press more than once. The runner now ignores the button until it reads released and
+  750 ms have passed since it last acted.
+- Still to record: actual plot time vs the estimate (MOTION-2, within 10%).
