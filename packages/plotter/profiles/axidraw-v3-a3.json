@@ -22,6 +22,6 @@
     "penPosUp": 60,
     "penPosDown": 30
   },
-  "provisional": ["stepsPerMm", "motion"],
-  "notes": "Values from axidraw_conf.py v3.9.0 (16x microstepping limits); see docs/hardware-notes.md. Axis directions and the pen were verified by the DRIVER-0 spike; steps/mm awaits a 100 mm measurement."
+  "provisional": ["motion"],
+  "notes": "Values from axidraw_conf.py v3.9.0 (16x microstepping limits); see docs/hardware-notes.md. Steps/mm, axis directions, pen and button verified by the DRIVER-0 spike; speed limits are vendor values not yet tested with this app."
 }

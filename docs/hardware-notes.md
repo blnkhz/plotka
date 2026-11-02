@@ -1,7 +1,7 @@
 # Hardware notes
 
 Every machine value used by the app is recorded here with its source. Values marked
-**provisional** are placeholders and must be confirmed in the DRIVER-0 spike.
+**provisional** are placeholders still to be confirmed on hardware.
 
 ## Sources read
 
@@ -41,22 +41,22 @@ Every machine value used by the app is recorded here with its source. Values mar
 
 ## AxiDraw V3/A3 (primary machine)
 
-| Value               | Used                                                   | Status             | Source                                                                                                       |
-| ------------------- | ------------------------------------------------------ | ------------------ | ------------------------------------------------------------------------------------------------------------ |
-| Usable pen travel   | 430 × 297 mm                                           | Confirmed (vendor) | Product page; `axidraw_conf.py` 16.93 × 11.69 in                                                             |
-| Vertical pen travel | 17 mm                                                  | Vendor spec        | Product page                                                                                                 |
-| Home position       | Top left                                               | Decided            | Paper top-left at home. No "set origin here" for now.                                                        |
-| Steps per mm        | 80 (16x)                                               | **To verify**      | `axidraw_conf.py`: native_res_factor 1016 steps/in, ×2 at 16x = 2032 steps/in. Spike measures a 100 mm line. |
-| Mixed-axis mapping  | motor1 = x+y, motor2 = x−y (XM A = x, B = y)           | **To verify**      | EBB XM docs. Spike checks which way +X / +Y go.                                                              |
-| Servo range         | 9855 – 27831 (0–100%)                                  | Vendor default     | `axidraw_conf.py` servo_min / servo_max (standard servo)                                                     |
-| Pen up / down       | 60% / 30%                                              | Vendor default     | `axidraw_conf.py` pen_pos_up / pen_pos_down                                                                  |
-| Servo full sweep    | 200 ms at 100% rate                                    | Vendor default     | `axidraw_conf.py` servo_sweep_time; raise 75%, lower 50%                                                     |
-| Pen move time       | 45 ms + 2.69 ms per %                                  | Vendor default     | `axidraw_conf.py` servo_move_min / servo_move_slope                                                          |
-| Pen wait (model)    | slower of servo travel and sweep·dist/rate, blended    | Vendor behavior    | AxiDraw `pen_handling.py` (GPL, read only). 60→30%: raise ≈ 131 ms, lower ≈ 146 ms. Sent as `SP,x,ms`.       |
-| Max XY speed        | 8.70 in/s (221 mm/s) at 16x; 15 in/s (381 mm/s) at 8x  | Vendor             | `axidraw_conf.py` speed_lim_xy_hr / _lr                                                                      |
-| Acceleration        | 40 in/s² (1016 mm/s²) pen down, 60 in/s² (1524) pen up | Vendor             | `axidraw_conf.py` accel_rate / accel_rate_pu                                                                 |
-| Max step rate       | 25 000 steps/s per motor                               | EBB docs           | XM / SM docs. The planner stretches any command that would exceed it.                                        |
-| Default speeds      | 25% pen down, 75% pen up                               | Vendor default     | `axidraw_conf.py`                                                                                            |
+| Value               | Used                                                   | Status             | Source                                                                                                          |
+| ------------------- | ------------------------------------------------------ | ------------------ | --------------------------------------------------------------------------------------------------------------- |
+| Usable pen travel   | 430 × 297 mm                                           | Confirmed (vendor) | Product page; `axidraw_conf.py` 16.93 × 11.69 in                                                                |
+| Vertical pen travel | 17 mm                                                  | Vendor spec        | Product page                                                                                                    |
+| Home position       | Top left                                               | Decided            | Paper top-left at home. No "set origin here" for now.                                                           |
+| Steps per mm        | 80 (16x)                                               | Confirmed (spike)  | `axidraw_conf.py`: 1016 steps/in native, ×2 at 16x = 2032 steps/in. A 100 mm line (8000 steps) measured 100 mm. |
+| Mixed-axis mapping  | motor1 = x+y, motor2 = x−y (XM A = x, B = y)           | Confirmed (spike)  | EBB XM docs. +X moves right, +Y moves down (toward the user).                                                   |
+| Servo range         | 9855 – 27831 (0–100%)                                  | Vendor default     | `axidraw_conf.py` servo_min / servo_max (standard servo)                                                        |
+| Pen up / down       | 60% / 30%                                              | Vendor default     | `axidraw_conf.py` pen_pos_up / pen_pos_down                                                                     |
+| Servo full sweep    | 200 ms at 100% rate                                    | Vendor default     | `axidraw_conf.py` servo_sweep_time; raise 75%, lower 50%                                                        |
+| Pen move time       | 45 ms + 2.69 ms per %                                  | Vendor default     | `axidraw_conf.py` servo_move_min / servo_move_slope                                                             |
+| Pen wait (model)    | slower of servo travel and sweep·dist/rate, blended    | Vendor behavior    | AxiDraw `pen_handling.py` (GPL, read only). 60→30%: raise ≈ 131 ms, lower ≈ 146 ms. Sent as `SP,x,ms`.          |
+| Max XY speed        | 8.70 in/s (221 mm/s) at 16x; 15 in/s (381 mm/s) at 8x  | Vendor             | `axidraw_conf.py` speed_lim_xy_hr / _lr                                                                         |
+| Acceleration        | 40 in/s² (1016 mm/s²) pen down, 60 in/s² (1524) pen up | Vendor             | `axidraw_conf.py` accel_rate / accel_rate_pu                                                                    |
+| Max step rate       | 25 000 steps/s per motor                               | EBB docs           | XM / SM docs. The planner stretches any command that would exceed it.                                           |
+| Default speeds      | 25% pen down, 75% pen up                               | Vendor default     | `axidraw_conf.py`                                                                                               |
 
 Narrow-band (brushless upgrade) servo values exist (`nb_servo_*`), for DRIVER-6 later.
 
@@ -84,10 +84,10 @@ Narrow-band (brushless upgrade) servo values exist (`nb_servo_*`), for DRIVER-6 
 | Y+          | `XM,1000,0,800` moved **down (toward the user) ~10 mm**; motor steps after: `800,-800`.                                                                                                                                                                                                                                                                                                      |
 | Return      | Both moves came back to exactly `0,0` steps.                                                                                                                                                                                                                                                                                                                                                 |
 | Mixed axis  | Confirmed: XM A = x steps, B = y steps; motor1 = A+B, motor2 = A−B. +X right, +Y down, matching the app's coordinates (origin top left).                                                                                                                                                                                                                                                     |
-| Steps/mm    | 80 assumed; 10 mm moves looked right by eye. **100 mm measurement pending.**                                                                                                                                                                                                                                                                                                                 |
+| Steps/mm    | **80 confirmed.** `XM,4000,8000,0` with the pen down drew a line measured at 100 mm (second run, same day).                                                                                                                                                                                                                                                                                  |
 | QG on 2.8.1 | Idle `D0`, moving `DE`. Bits 0–3 track motion as documented. Bits 6–7 are set at idle: on 2.x they reflect pins RB2/RB5, not "power lost"/"limit", so ignore them on firmware < 3.0.                                                                                                                                                                                                         |
 | **FIFO**    | **The motion queue holds one command. When it's full, the board does not reply to the next queued command (XM, SP…) until the move ahead of it has started.** A reply can therefore take as long as the queued motion (4 s in the test). The driver must size reply timeouts by the queued motion time, not a fixed 2 s, and keep at most one move queued ahead to stay responsive to pause. |
-| Button      | Not reached yet.                                                                                                                                                                                                                                                                                                                                                                             |
+| Button      | **Works.** QG read `F0` after one press (bit 5, "button pressed since last check", set) versus `D0` at rest. The bit latches until read, so polling QG between moves catches a press.                                                                                                                                                                                                        |
 
 NextDraw differences: not tested (no hardware).
 
@@ -102,3 +102,12 @@ them after the hardware test if plots skip steps or corners look rounded.
 | Slice              | 25 ms   | Sampling while accelerating (each slice is one constant-speed `XM`).     |
 | Max chunk          | 200 ms  | Longest constant-speed command, so pause reacts within about 0.2 s.      |
 | Min command        | 5 ms    | Tiny samples are merged so the one-command FIFO never runs dry over USB. |
+
+The second run also confirmed the FIFO behavior: the reply to the queued return move
+(`XM,4000,-8000,0`) arrived 4.07 s after it was sent, once the move ahead started, and the
+updated script waited for it without error. While both moves ran, QG read `D9`/`DE`, then `D0`
+when idle.
+
+**DRIVER-0 is complete.** Still to measure later (hardware test checklist): real plot time vs
+the planner estimate (MOTION-2, within 10%), and safe top speeds (the motion values stay
+provisional until then).
