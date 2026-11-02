@@ -57,8 +57,8 @@ Open `long.svg` (a ring with a hole and a disc), **Fit** to the margins, fill **
 - [ ] Lines stop cleanly at the outlines and inside the hole; no lines in the white square.
 - [ ] No skipped steps: the crosshatch stays aligned with the outlines from start to end (draw
       outlines too, to check).
-- [ ] Faster test: set the speeds high (when per-layer speeds exist) and repeat a small fill;
-      note the highest speed that still plots cleanly.
+- [ ] Faster test: raise **Fill → Speed → Drawing** in steps (40%, 60%, 80%) and repeat a small
+      fill; note the highest speed that still plots cleanly with this pen.
 
 ## 5. Long plot (30+ minutes)
 

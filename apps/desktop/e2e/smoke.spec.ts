@@ -494,3 +494,24 @@ test('remove and restore layers; a hidden layer that still plots is flagged', as
   await expect(page.getByRole('button', { name: 'Remove Outlines' })).toBeVisible();
   await app.close();
 });
+
+test('per-layer speed changes the time estimate (MOTION-3)', async () => {
+  const app = await launch();
+  const page = await app.firstWindow();
+  await page.setViewportSize({ width: 1400, height: 900 });
+  await dropFile(page, 'motif.svg');
+  const seconds = async () => {
+    const t = (await page.getByText(/paths · draw/).textContent())!.split('≈')[1]!.trim();
+    const m = /(?:(\d+)m\s*)?(\d+)s/.exec(t)!;
+    return Number(m[1] ?? 0) * 60 + Number(m[2]);
+  };
+  const before = await seconds();
+  await page.getByRole('tab', { name: 'Fill' }).click();
+  await expect(page.getByText('55 mm/s')).toBeVisible(); // 25% of 221 mm/s
+  const drawing = page.getByRole('spinbutton', { name: 'Drawing', exact: true });
+  await drawing.fill('60');
+  await drawing.press('Enter');
+  await expect(page.getByText('133 mm/s')).toBeVisible();
+  await expect.poll(seconds).toBeLessThan(before);
+  await app.close();
+});

@@ -2,8 +2,8 @@
 
 A pen can't paint an area, so filled shapes are filled with lines or dots. Select a layer in the
 left panel, open the **Fill** tab and pick a **Type**. Layers with only filled shapes start with
-**Lines**; choose **None** to leave fills undrawn. Each layer has its own fill; **Use these
-fill settings on all layers** copies them to the others.
+**Lines**; choose **None** to leave fills undrawn. Each layer has its own fill; **Use these settings on all
+layers** copies them (and the layer's speeds) to the others.
 
 ## Fill types
 

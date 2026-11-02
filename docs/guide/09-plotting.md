@@ -29,6 +29,19 @@ The plot stops and the app keeps its place. Plug the cable back in, **Reconnect*
 tab, then **Resume**. This only works if the carriage wasn't moved while it was unplugged: the
 motors go limp without USB. Otherwise click **Stop**.
 
+## Speed
+
+Each layer has its own speeds, in the **Fill** tab under **Speed**:
+
+- **Drawing**: speed with the pen down. The default, 25%, suits most pens. Go slower for thin,
+  dry or scratchy pens (fineliners, metallic markers) and for rough paper; faster for gel and
+  ballpoint pens on smooth paper.
+- **Moving**: speed with the pen up, between lines (default 75%).
+
+The mm/s next to each shows the actual speed on your machine. Speeds are saved in the project,
+and the time estimate follows them. **Use these settings on all layers** copies them to the
+other layers.
+
 ## Time and distance
 
 The toolbar shows the estimated time, how far the pen draws, and how far it travels with the pen

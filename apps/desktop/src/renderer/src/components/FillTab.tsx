@@ -2,6 +2,7 @@ import { defaultFillSettings, type FillSettings, type FillType } from '@plotter-
 import { applyOverrides, useStore } from '../store';
 import { Notice, NumberField, Row, Section } from './controls';
 import { PassesSection } from './PassesSection';
+import { SpeedSection } from './SpeedSection';
 import styles from './FillTab.module.css';
 
 const TYPES: { value: FillType; label: string }[] = [
@@ -193,6 +194,7 @@ export function FillTab() {
         )}
       </Section>
       <PassesSection layer={layer} />
+      <SpeedSection layer={layer} />
       {layers.length > 1 && (
         <Section title="All layers">
           <button
@@ -203,12 +205,14 @@ export function FillTab() {
                     settings: {
                       fill: fill ? { ...fill } : null,
                       drawOutline: layer.settings.drawOutline,
+                      speedPenDown: layer.settings.speedPenDown,
+                      speedPenUp: layer.settings.speedPenUp,
                       hideCovered: layer.settings.hideCovered,
                     },
                   });
             }}
           >
-            Use these fill settings on all layers
+            Use these settings on all layers
           </button>
         </Section>
       )}
