@@ -7,7 +7,7 @@ import { addRecent, removeRecent } from './recent';
 import { allowWatch, allowWatchFromProject } from './watch';
 
 /** Files the app can open from Open Recent, the Dock or Finder. */
-export const isOpenable = (path: string) => /\.(svg|plot\.json)$/i.test(path);
+export const isOpenable = (path: string) => /\.(svg|json)$/i.test(path);
 
 /**
  * Opens a file chosen outside the Open dialog (Open Recent, Dock, Finder) and sends it to the

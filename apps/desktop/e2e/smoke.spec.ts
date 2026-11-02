@@ -847,3 +847,16 @@ test('named page presets: save, apply, delete, remembered (PAGE-4)', async () =>
   await expect(page.getByLabel('Page preset')).toHaveCount(0);
   await app.close();
 });
+
+test('open paths from code as JSON (IMPORT-7)', async () => {
+  const app = await launch();
+  const page = await app.firstWindow();
+  await page.setViewportSize({ width: 1400, height: 900 });
+  await dropFile(page, 'spiral.json');
+  await expect(page.getByText('spiral.json')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Remove Spiral' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Remove Dots' })).toBeVisible();
+  await expect(page.getByText(/^5 paths · draw/)).toBeVisible();
+  if (shots) await page.screenshot({ path: join(shots, 'json-import.png') });
+  await app.close();
+});

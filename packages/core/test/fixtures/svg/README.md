@@ -13,3 +13,4 @@ These are hand-made stand-ins; replace them with real exports when available
 | overlap.svg     | Hand-written: overlapping black, grey and white fills (covering, knockouts, density) |
 | motif.svg       | Hand-written asymmetric motif (curl, dot, filled leaf) for tile and tessellate       |
 | fill-only.svg   | Hand-written: filled shapes with no outlines (auto line fill, undrawn-fills notice)  |
+| spiral.json     | JSON paths (IMPORT-7): two named, colored layers; a spiral and four dots             |

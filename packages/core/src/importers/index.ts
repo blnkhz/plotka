@@ -1,11 +1,13 @@
 import type { PlotDocument } from '../model';
+import { jsonImporter } from './json';
 import { svgImporter } from './svg';
 import { ImportError, type Importer, type ImportOptions } from './types';
 
 export * from './types';
 export { svgImporter } from './svg';
+export { jsonImporter, importJsonPaths } from './json';
 
-const registry: Importer[] = [svgImporter];
+const registry: Importer[] = [svgImporter, jsonImporter];
 
 /** Adds an importer. Later registrations win when several can import the same file. */
 export function registerImporter(importer: Importer): void {

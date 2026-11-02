@@ -23,6 +23,53 @@ can't see the difference.
 - **Size**: the file's own size is kept (mm, inches, points or pixels). Illustrator's pixels are
   read as points, so its artboards come in at exactly the right size.
 
+## Paths from code (JSON)
+
+Art made by a script can skip SVG: write the paths as JSON and open the `.json` file. Points are
+`[x, y]` with y pointing down; set `units` to `mm` (the default), `cm`, `in`, `pt` or `px`.
+
+```json
+{
+  "units": "mm",
+  "width": 120,
+  "height": 120,
+  "layers": [
+    {
+      "name": "Ink",
+      "color": "#1d3557",
+      "paths": [
+        [
+          [10, 10],
+          [50, 10],
+          [50, 40]
+        ]
+      ]
+    },
+    {
+      "name": "Red",
+      "color": "#e63946",
+      "paths": [
+        {
+          "points": [
+            [0, 0],
+            [20, 0],
+            [10, 15]
+          ],
+          "closed": true
+        }
+      ]
+    }
+  ]
+}
+```
+
+- Shorter forms work too: `{ "paths": [...] }` for one layer, or just a list of paths.
+- A path with a single point is a dot (a pen tap). `"closed": true` joins the last point back to
+  the first.
+- `width` and `height` are optional; without them the drawing's own extent is used.
+- The toolpath JSON that **File → Export Toolpath JSON…** writes opens too.
+- Auto-reload works for JSON files, so the plot updates each time your script writes the file.
+
 ## Auto-reload
 
 When you open an SVG file, **Auto-reload** appears in the toolbar (on by default). Edit and save

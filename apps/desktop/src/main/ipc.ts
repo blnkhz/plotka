@@ -93,9 +93,9 @@ export function registerIpcHandlers(
   handle('autosave:read', () => readRecovery());
   // Only lists the file in Open Recent: a dropped file never becomes the path Save writes to.
   handle('file:dropped', (_e, path) => {
-    if (typeof path === 'string' && /\.(svg|plot\.json)$/i.test(path) && existsSync(path)) {
+    if (typeof path === 'string' && /\.(svg|json)$/i.test(path) && existsSync(path)) {
       addRecent(path);
-      if (/\.svg$/i.test(path)) allowWatch(path);
+      if (!/\.plot\.json$/i.test(path)) allowWatch(path);
     }
   });
 

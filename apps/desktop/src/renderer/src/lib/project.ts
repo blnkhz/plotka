@@ -241,7 +241,12 @@ export function parseProject(text: string): ProjectData {
   if (isObj(src) && typeof src['name'] === 'string' && typeof src['base64'] === 'string') {
     try {
       source = { name: src['name'], bytes: fromBase64(src['base64']) };
-      if (typeof src['path'] === 'string' && /\.svg$/i.test(src['path'])) source.path = src['path'];
+      if (
+        typeof src['path'] === 'string' &&
+        /\.(svg|json)$/i.test(src['path']) &&
+        !/\.plot\.json$/i.test(src['path'])
+      )
+        source.path = src['path'];
     } catch {
       throw new ProjectError('The artwork inside this project is damaged.');
     }

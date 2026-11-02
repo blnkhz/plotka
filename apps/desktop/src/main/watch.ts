@@ -14,6 +14,9 @@ import type { BrowserWindow } from 'electron';
 const allowed = new Set<string>();
 let current: { path: string; watcher: FSWatcher; timer: NodeJS.Timeout | null } | null = null;
 
+/** Artwork files (not projects): SVG and JSON paths. */
+export const isArtworkPath = (p: string) => /\.(svg|json)$/i.test(p) && !/\.plot\.json$/i.test(p);
+
 export function allowWatch(path: string) {
   allowed.add(path);
 }
@@ -22,7 +25,7 @@ export function allowWatch(path: string) {
 export function allowWatchFromProject(text: string) {
   try {
     const p = JSON.parse(text) as { source?: { path?: unknown } };
-    if (typeof p.source?.path === 'string' && /\.svg$/i.test(p.source.path))
+    if (typeof p.source?.path === 'string' && isArtworkPath(p.source.path))
       allowWatch(p.source.path);
   } catch {
     // Not readable: nothing to allow.
