@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react';
-import { useColorScheme } from '../lib/useColorScheme';
+import { useThemeKey } from '../lib/useThemeKey';
 import {
   getTransform,
   marginBox,
@@ -183,10 +183,10 @@ export function Preview() {
   }, [draw]);
 
   // Redraw when inputs change (and the colours, with light / dark).
-  const scheme = useColorScheme();
+  const themeKey = useThemeKey();
   useEffect(draw, [
     draw,
-    scheme,
+    themeKey,
     processed,
     page,
     options,

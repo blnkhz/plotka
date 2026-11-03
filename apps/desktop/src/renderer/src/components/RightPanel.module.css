@@ -20,7 +20,7 @@
 }
 .tabs .active {
   color: var(--text);
-  border-bottom-color: var(--accent);
+  border-bottom-color: var(--accent-text);
 }
 .body {
   overflow-y: auto;

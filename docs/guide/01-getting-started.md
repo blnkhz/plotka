@@ -15,11 +15,13 @@ fills, check the preview, and plot over USB.
   selected layer), **Machine** (connecting and moving the plotter) and **Plot** (starting a plot,
   stats and path optimization).
 
-## Light and dark
+## Light, dark and colour themes
 
-The app follows the light or dark setting of macOS. To pick one for the app only, choose
-**View > Appearance > Light** or **Dark**; **Use System Setting** follows macOS again. The
-choice is kept for next time. The paper in the preview stays white either way.
+The app follows the light or dark setting of macOS. Under **View > Appearance** you can pick
+**Light** or **Dark** for the app only, or one of six colour themes: **Matcha Mauve**, **Cyber
+Lime**, **Butter Cobalt**, **Bubblegum Tomato**, **Ube Mint** and **Ice Tangerine**. **Use
+System Setting** follows macOS again. The choice is kept for next time. The paper in the preview
+stays white (or nearly) in every theme, so the preview still looks like the plot.
 
 ## Your first plot
 

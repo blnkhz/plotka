@@ -15,6 +15,7 @@ export type OpenFileResult = {
 } | null;
 
 import type { Bounds, Toolpath } from '@plotter-studio/core';
+import type { Appearance } from './themes';
 import type {
   LayerMotionSettings,
   MachineProfile,
@@ -166,6 +167,8 @@ export interface EventChannels {
   'file:changed': { path: string; bytes: Uint8Array };
   /** PLOT-7: the plot log changed (newest first). */
   'plotLog:changed': PlotLogEntry[];
+  /** View > Appearance changed. */
+  'app:appearance': { theme: Appearance };
 }
 
 export type InvokeChannel = keyof InvokeChannels;
@@ -205,6 +208,7 @@ export const EVENT_CHANNELS = [
   'file:opened',
   'file:changed',
   'plotLog:changed',
+  'app:appearance',
 ] as const satisfies readonly EventChannel[];
 
 /** The shape of `window.api` exposed by the preload script. */

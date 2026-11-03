@@ -1,5 +1,6 @@
 import { app, BrowserWindow, Menu, type MenuItemConstructorOptions } from 'electron';
 import type { EventChannels } from '@shared/ipc';
+import { THEMES, type Appearance } from '@shared/themes';
 import { appearance, setAppearance } from './appearance';
 import { openPath } from './openFile';
 import { clearRecent, onRecentChange, recentItems } from './recent';
@@ -75,19 +76,16 @@ function build() {
       submenu: [
         {
           label: 'Appearance',
-          submenu: (
-            [
+          // One radio group: the system, light and dark, then the colour themes.
+          submenu: [
+            ...appearanceItems([
               ['system', 'Use System Setting'],
               ['light', 'Light'],
               ['dark', 'Dark'],
-            ] as const
-          ).map(([theme, label]): MenuItemConstructorOptions => ({
-            id: `appearance-${theme}`,
-            label,
-            type: 'radio',
-            checked: appearance() === theme,
-            click: () => setAppearance(theme),
-          })),
+            ]),
+            { type: 'separator' },
+            ...appearanceItems(THEMES.map((t) => [t.id, t.label] as const)),
+          ],
         },
         { type: 'separator' },
         { role: 'togglefullscreen' },
@@ -102,4 +100,14 @@ function build() {
     },
   ];
   Menu.setApplicationMenu(Menu.buildFromTemplate(template));
+}
+
+function appearanceItems(items: readonly (readonly [Appearance, string])[]) {
+  return items.map(([theme, label]): MenuItemConstructorOptions => ({
+    id: `appearance-${theme}`,
+    label,
+    type: 'radio',
+    checked: appearance() === theme,
+    click: () => setAppearance(theme),
+  }));
 }

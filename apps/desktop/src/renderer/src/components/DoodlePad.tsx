@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useColorScheme } from '../lib/useColorScheme';
+import { useThemeKey } from '../lib/useThemeKey';
 import { processStroke, type DoodlePath, type DoodleStroke, type Vec2 } from '@plotter-studio/core';
 import { doodleSvg, useStore } from '../store';
 import { NumberField, Row, Section, Segmented } from './controls';
@@ -125,8 +125,8 @@ export function DoodlePad() {
     }
   }, [processed, strokes, settings.fillClosed, settings.keepOutlines, showRaw, size]);
 
-  const scheme = useColorScheme();
-  useEffect(draw, [draw, scheme]);
+  const themeKey = useThemeKey();
+  useEffect(draw, [draw, themeKey]);
   useEffect(() => {
     const ro = new ResizeObserver(draw);
     if (wrapRef.current) ro.observe(wrapRef.current);

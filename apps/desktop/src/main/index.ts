@@ -5,7 +5,7 @@ import { installMenu } from './menu';
 import { PlotterService } from './plotter';
 import { project } from './project';
 import { clearRecovery } from './autosave';
-import { applyAppearance } from './appearance';
+import { appearance, applyAppearance } from './appearance';
 import { isOpenable, openPath } from './openFile';
 
 // Automated tests run with their own data folder, so they never touch the user's settings,
@@ -74,10 +74,14 @@ function createWindow(): BrowserWindow {
     return { action: 'deny' };
   });
 
+  // The theme goes in the URL so the first paint already has its colours.
+  const query = { theme: appearance() };
   if (!app.isPackaged && process.env['ELECTRON_RENDERER_URL']) {
-    void win.loadURL(process.env['ELECTRON_RENDERER_URL']);
+    const url = new URL(process.env['ELECTRON_RENDERER_URL']);
+    url.searchParams.set('theme', query.theme);
+    void win.loadURL(url.toString());
   } else {
-    void win.loadFile(join(__dirname, '../renderer/index.html'));
+    void win.loadFile(join(__dirname, '../renderer/index.html'), { query });
   }
   return win;
 }

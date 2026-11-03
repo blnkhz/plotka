@@ -11,7 +11,7 @@
   border: 0;
   background: none;
   padding: 0;
-  color: var(--accent);
+  color: var(--accent-text);
   text-decoration: underline;
   cursor: pointer;
 }
@@ -69,10 +69,11 @@
   gap: 6px;
   margin-top: 8px;
 }
+/* Start plot and its kin: the theme's second, bolder colour (the accent in plain light / dark). */
 .primary {
-  background: var(--accent);
-  color: var(--on-accent);
-  border-color: var(--accent);
+  background: var(--pop);
+  color: var(--on-pop);
+  border-color: var(--pop);
 }
 .primary:disabled {
   opacity: 0.5;

@@ -6,6 +6,6 @@
   white-space: nowrap;
 }
 .flash {
-  color: var(--accent);
+  color: var(--accent-text);
   white-space: nowrap;
 }

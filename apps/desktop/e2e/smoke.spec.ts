@@ -1450,7 +1450,7 @@ test('text: type it in a single-stroke font, style it, delete and undo (LATER-6)
   await app.close();
 });
 
-test('View > Appearance switches light / dark and is kept after a restart', async () => {
+test('View > Appearance: light, dark and colour themes, kept after a restart', async () => {
   const dataDir = mkdtempSync(join(tmpdir(), 'plotter-studio-e2e-'));
   const env = { PLOTTER_STUDIO_USER_DATA: dataDir };
   const bg = (page: Page) =>
@@ -1480,16 +1480,34 @@ test('View > Appearance switches light / dark and is kept after a restart', asyn
   await pick(app, 'appearance-light');
   await expect.poll(() => bg(page)).toBe('#f4f4f2');
   await expect.poll(corner).toBe('228,228,224'); // #e4e4e0
-  await pick(app, 'appearance-dark');
+  // Colour themes: two light ones in a row still redraw the canvas.
+  await pick(app, 'appearance-butter');
+  await expect.poll(() => bg(page)).toBe('#fff1b8');
+  await expect.poll(corner).toBe('245,224,138'); // #f5e08a
+  await pick(app, 'appearance-matcha');
+  await expect.poll(() => bg(page)).toBe('#e4cee0');
+  await expect.poll(corner).toBe('215,188,210'); // #d7bcd2
+  if (shots) await page.screenshot({ path: join(shots, 'theme-matcha.png') });
+  await pick(app, 'appearance-ube');
+  await expect.poll(() => bg(page)).toBe('#241436');
+  // A dark theme is dark underneath, so native controls match.
+  expect(await page.evaluate(() => matchMedia('(prefers-color-scheme: dark)').matches)).toBe(true);
+  if (shots) await page.screenshot({ path: join(shots, 'theme-ube.png') });
+  await pick(app, 'appearance-matcha');
   await app.close();
 
-  // Kept for next time, and the menu shows it.
+  // Kept for next time (from the first paint), and the menu shows it.
   app = await launch(env);
   page = await open(app);
-  await expect.poll(() => bg(page)).toBe('#1b1b1d');
+  await expect.poll(() => bg(page)).toBe('#e4cee0');
   const checked = await app.evaluate(
-    ({ Menu }) => Menu.getApplicationMenu()!.getMenuItemById('appearance-dark')!.checked,
+    ({ Menu }) => Menu.getApplicationMenu()!.getMenuItemById('appearance-matcha')!.checked,
   );
   expect(checked).toBe(true);
+  // Back to following the system.
+  await pick(app, 'appearance-system');
+  await expect
+    .poll(() => page.evaluate(() => document.documentElement.dataset['theme']))
+    .toBe(undefined);
   await app.close();
 });
