@@ -1,4 +1,4 @@
-# Transforms: Tile, Tessellate, Symmetry and Kaleidoscope
+# Transforms: Tile, Tessellate, Symmetry, Kaleidoscope and Fractal
 
 Transforms repeat or rearrange the artwork before it goes on the page. Add them in the left
 panel under **Transforms** with **Add transform…**. Each one has a checkbox to turn it off, arrows
@@ -67,6 +67,25 @@ Places copies of the artwork along a spiral.
   center in the artwork's own size.
 - **Last copy size**: copies grow (over 100%) or shrink (under 100%) evenly along the spiral.
 - **Turn with the spiral**: rotate each copy to face along the spiral.
+
+## Fractal
+
+Copies the artwork into smaller copies of itself, then copies those again, level after level.
+Triangles of triangles, branching trees and spirals all come from a few copies repeated.
+
+- **Start from**: ready-made settings (Triangle, Branches, Spiral, Pinwheel). They replace
+  the settings below, which you can then change.
+- **Copies per level** (1 to 4), and for each copy its **size**, **turn** and **X / Y** position
+  (from the middle, as a share of the artwork's longer side; negative Y is up).
+- **Levels**: how many times the copying repeats. Copies multiply fast: 3 copies over 8 levels
+  is 6,561 of them.
+- **Smallest copy**: copies smaller than this share of the artwork are left out and their branch
+  stops, which keeps tiny detail the pen can't draw out of the plot.
+- **Keep every level**: on draws every level (trees, spirals); off draws only the last one, like
+  a Sierpinski triangle.
+
+Very deep settings stop at 100,000 copies with a message; use fewer levels or a bigger smallest
+copy.
 
 ## Tessellate
 

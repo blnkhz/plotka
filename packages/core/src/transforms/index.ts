@@ -1,4 +1,5 @@
 import type { PlotDocument } from '../model';
+import { fractal } from './fractal';
 import { kaleidoscope } from './kaleidoscope';
 import { spiralRepeat } from './spiral';
 import { symmetry } from './symmetry';
@@ -12,6 +13,7 @@ export { tessellate, MAX_TESSELLATE_POINTS } from './tessellate';
 export { symmetry, MAX_SYMMETRY_POINTS } from './symmetry';
 export { spiralRepeat, MAX_SPIRAL_POINTS } from './spiral';
 export { kaleidoscope, kaleidoscopeSourcePoint, MAX_KALEIDOSCOPE_POINTS } from './kaleidoscope';
+export { fractal, MAX_FRACTAL_POINTS, MAX_FRACTAL_COPIES, FRACTAL_SLOTS } from './fractal';
 export { seededRandom } from './random';
 
 /** Every transform the app offers, in menu order. Add new ones here. */
@@ -21,6 +23,7 @@ export const TRANSFORMS: readonly TransformDef[] = [
   symmetry,
   kaleidoscope,
   spiralRepeat,
+  fractal,
 ];
 
 export const getTransform = (type: string): TransformDef | undefined =>

@@ -49,7 +49,9 @@ Rules:
 - Anything that can grow without bound needs a cap and a message in `doc.warnings` (see
   `MAX_TILE_POINTS` in `tile.ts`).
 - Param types: `number` (with `min`, `max`, `step`, optional `suffix`, `integer`), `select`,
-  `boolean`. Add `help` for a tooltip. Labels use plain words.
+  `boolean`. Add `help` for a tooltip. Labels use plain words. `visible(params)` hides a field
+  when it doesn't apply (see the per-copy fields in `fractal.ts`).
+- `presets` (optional) adds a **Start from** menu that sets several params at once.
 
 ### Adjusting in the preview (optional)
 

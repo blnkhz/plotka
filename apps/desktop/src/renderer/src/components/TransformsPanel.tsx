@@ -58,6 +58,10 @@ function StepCard({
   const moveStep = useStore((s) => s.moveStep);
   const def = getTransform(step.type);
   const name = def?.name ?? step.type;
+  const values = Object.fromEntries(
+    (def?.params ?? []).map((p) => [p.key, step.params[p.key] ?? p.default]),
+  );
+  const shown = def?.params.filter((p) => !p.visible || p.visible(values)) ?? [];
   return (
     <div className={styles.card} data-disabled={!step.enabled || undefined}>
       <div className={styles.header}>
@@ -114,7 +118,27 @@ function StepCard({
               {adjusting ? 'Done adjusting' : 'Adjust in preview'}
             </button>
           )}
-          {def.params.map((p) => (
+          {def.presets && (
+            <Row label="Start from">
+              <select
+                aria-label="Start from"
+                title="Replace the settings below with a ready-made set"
+                value=""
+                onChange={(e) => {
+                  const pr = def.presets![Number(e.target.value)];
+                  if (pr) updateStep(step.id, { params: pr.params });
+                }}
+              >
+                <option value="">Choose…</option>
+                {def.presets.map((pr, i) => (
+                  <option key={pr.label} value={i}>
+                    {pr.label}
+                  </option>
+                ))}
+              </select>
+            </Row>
+          )}
+          {shown.map((p) => (
             <ParamField
               key={p.key}
               spec={p}

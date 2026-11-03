@@ -74,7 +74,6 @@ Previews and tests should check repeatability (same seed, same lines).
 
 ## Remaining spec stories (P2 and later)
 
-- GEN-3 fractal transform (copies through a set of affine transforms, with a size cutoff and cap)
 - PROJ-3 pen library (name, color, tip width, preferred speed, pen heights)
 - PLOT-7 plot log (date, file, duration, settings used)
 - DRIVER-6 full support for the brushless pen-lift upgrade on AxiDraws (the NextDraw profiles

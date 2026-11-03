@@ -956,3 +956,35 @@ test('kaleidoscope: adjust by dragging and zooming in the preview (GEN-1)', asyn
   await expect(page.getByRole('button', { name: 'Adjust in preview' })).toBeDisabled();
   await app.close();
 });
+
+test('fractal: presets and per-copy settings (GEN-3)', async () => {
+  const app = await launch();
+  const page = await app.firstWindow();
+  await page.setViewportSize({ width: 1400, height: 900 });
+  await dropFile(page, 'motif.svg');
+  const paths = async () =>
+    Number((await page.getByText(/\d+ paths · draw/).textContent())!.match(/(\d+) paths/)![1]);
+  await page.getByLabel('Add transform').selectOption('fractal');
+  // Default: 3 copies over 5 levels, last level only.
+  await expect(page.getByRole('spinbutton', { name: 'Copy 3 size' })).toBeVisible();
+  await expect(page.getByRole('spinbutton', { name: 'Copy 4 size' })).toHaveCount(0);
+  await expect.poll(paths).toBeGreaterThan(200);
+  await expect(page.getByText('Updating…')).toHaveCount(0);
+  if (shots) await page.screenshot({ path: join(shots, 'fractal-triangle.png') });
+
+  await page.getByLabel('Start from').selectOption({ label: 'Branches' });
+  await expect(page.getByRole('spinbutton', { name: 'Copies per level' })).toHaveValue('2');
+  await expect(page.getByRole('spinbutton', { name: 'Copy 3 size' })).toHaveCount(0);
+  await expect(page.getByLabel('Keep every level')).toBeChecked();
+  await expect(page.getByText('Updating…')).toHaveCount(0);
+  if (shots) await page.screenshot({ path: join(shots, 'fractal-branches.png') });
+
+  await page.getByLabel('Start from').selectOption({ label: 'Pinwheel' });
+  await expect(page.getByRole('spinbutton', { name: 'Copy 4 turn' })).toHaveValue('285');
+  await expect(page.getByText('Updating…')).toHaveCount(0);
+  if (shots) await page.screenshot({ path: join(shots, 'fractal-corners.png') });
+  await page.getByLabel('Start from').selectOption({ label: 'Spiral' });
+  await expect(page.getByText('Updating…')).toHaveCount(0);
+  if (shots) await page.screenshot({ path: join(shots, 'fractal-spiral.png') });
+  await app.close();
+});

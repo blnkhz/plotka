@@ -1,30 +1,31 @@
 import type { Vec2 } from '../geometry/vec2';
 import type { PlotDocument, Polyline } from '../model';
 
+/** Shared by every param type. */
+type ParamBase = {
+  key: string;
+  label: string;
+  help?: string;
+  /** Show the field only when this returns true (e.g. per-copy fields beyond the copy count). */
+  visible?: (params: ParamValues) => boolean;
+};
+
 /** One editable parameter. The settings UI is generated from these. */
-export type ParamSpec =
-  | {
-      key: string;
-      label: string;
-      type: 'number';
-      default: number;
-      min: number;
-      max: number;
-      step: number;
-      suffix?: string;
-      /** Round to whole numbers. */
-      integer?: boolean;
-      help?: string;
-    }
-  | {
-      key: string;
-      label: string;
-      type: 'select';
-      default: string;
-      options: { value: string; label: string }[];
-      help?: string;
-    }
-  | { key: string; label: string; type: 'boolean'; default: boolean; help?: string };
+export type ParamSpec = ParamBase &
+  (
+    | {
+        type: 'number';
+        default: number;
+        min: number;
+        max: number;
+        step: number;
+        suffix?: string;
+        /** Round to whole numbers. */
+        integer?: boolean;
+      }
+    | { type: 'select'; default: string; options: { value: string; label: string }[] }
+    | { type: 'boolean'; default: boolean }
+  );
 
 export type ParamValues = Record<string, number | string | boolean>;
 
@@ -34,6 +35,8 @@ export type TransformDef = {
   name: string;
   description: string;
   params: ParamSpec[];
+  /** Ready-made settings the user can start from; each sets the params it lists. */
+  presets?: { label: string; params: ParamValues }[];
   /** Pure: returns a new document. Add messages to `warnings` for anything the user should know. */
   apply(doc: PlotDocument, params: ParamValues): PlotDocument;
   /**
