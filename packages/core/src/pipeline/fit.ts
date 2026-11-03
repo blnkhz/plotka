@@ -102,15 +102,16 @@ export function layerBounds(layer: Layer): Bounds {
 }
 
 const isIdentity = (p: LayerPlacement | null | undefined): p is null | undefined =>
-  !p || (p.dx === 0 && p.dy === 0 && p.sx === 1 && p.sy === 1);
+  !p || (p.dx === 0 && p.dy === 0 && p.sx === 1 && p.sy === 1 && !p.rot);
 
 /** The matrix of a layer placement, for a layer whose bounds (before it) are `b`. */
 export function placementMatrix(b: Bounds, p: LayerPlacement): Matrix {
   const cx = (b.minX + b.maxX) / 2;
   const cy = (b.minY + b.maxY) / 2;
+  // Scale along the layer's own sides, then turn, around its center; then move.
   return multiply(
     translate(cx + p.dx, cy + p.dy),
-    multiply(scaleMatrix(p.sx, p.sy), translate(-cx, -cy)),
+    multiply(rotate(p.rot ?? 0), multiply(scaleMatrix(p.sx, p.sy), translate(-cx, -cy))),
   );
 }
 

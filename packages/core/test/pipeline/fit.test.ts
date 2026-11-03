@@ -9,6 +9,7 @@ import {
   marginBox,
   paperSize,
   processDocument,
+  type LayerPlacement,
   type PageSetup,
   type PlotDocument,
 } from '../../src';
@@ -221,7 +222,7 @@ describe('clipping (PAGE-3)', () => {
 
 describe('moving and resizing layers', () => {
   // Two layers: a 20 × 10 box at the top left and a dot far away, so the page fit is known.
-  const twoLayers = (placement?: { dx: number; dy: number; sx: number; sy: number }) => {
+  const twoLayers = (placement?: LayerPlacement) => {
     const a = createLayer('a', 'A');
     a.strokes.push({
       points: [
@@ -261,6 +262,18 @@ describe('moving and resizing layers', () => {
     // The other layer doesn't move.
     const b = r.placed.layers[1]!;
     expect(bounds({ ...r.placed, layers: [b] })).toEqual([x + 100, y + 100, x + 100, y + 100]);
+  });
+
+  it('turns a layer around its center, after scaling along its own sides', () => {
+    const r = processDocument({
+      doc: twoLayers({ dx: 0, dy: 0, sx: 2, sy: 1, rot: 90 }),
+      page: p,
+      bed: { width: 430, height: 297 },
+    });
+    const { x, y } = m;
+    // 20 × 10 → 40 × 10 → turned: 10 wide, 40 tall, same center (x + 10, y + 5).
+    const a = r.placed.layers.find((l) => l.id === 'a')!;
+    expect(bounds({ ...r.placed, layers: [a] })).toEqual([x + 5, y - 15, x + 15, y + 25]);
   });
 
   it('no placement leaves the layer exactly where the page setup put it', () => {

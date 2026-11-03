@@ -21,3 +21,9 @@ Design from the backlog (2026-11-02), with these choices made while building:
   lines; ⌘ turns it off. Proportional corners snap on one axis and keep the proportions.
 - **Numbers**: Position section in the Fill tab (Move X / Y mm, Size W / H %, Reset).
 - `lib/arrange.ts` holds the box maths, snapping and hit testing (pure, unit tested).
+- **Turning** (added 2026-11-02): `placement.rot` (degrees), applied after scaling and before
+  moving, around the layer's center. In the preview a selection is a "frame" (center, size along
+  its own sides, turn); the round handle above it turns it (snaps to quarter turns, ⇧ 15°
+  steps, ⌘ free), resize handles work along the turned sides, and only an unturned frame snaps
+  its size. All layers turn as a group around the group's center; a group with layers turned
+  off-axis only scales in proportion. Fills are made after turning, so hatching keeps its angle.

@@ -1231,6 +1231,23 @@ test('arrange: move and resize layers and the whole artwork by dragging', async 
   await page.keyboard.press('ArrowRight');
   await expect.poll(() => fillTabValue('Move X / Y')).toBeCloseTo(before + 1, 1);
 
+  // The round handle turns it: a quarter turn snaps to exactly 90°, and its box turns too.
+  const f0 = JSON.parse((await canvas.getAttribute('data-arrange-frame'))!);
+  const scaleNow = (await screen(0, 0)).scale;
+  const knob = await screen(f0.cx, f0.cy - f0.h / 2 - 24 / scaleNow);
+  const r = f0.h / 2 + 24 / scaleNow;
+  const right = await screen(f0.cx + r * 0.995, f0.cy + r * 0.05); // just short of 90°
+  await page.mouse.move(knob.x, knob.y);
+  await page.mouse.down();
+  await page.mouse.move(right.x, right.y, { steps: 10 });
+  await page.mouse.up();
+  await expect(page.getByText('Updating…')).toHaveCount(0);
+  expect(await fillTabValue('Rotation')).toBe(90);
+  const turnedBox = await box();
+  expect(turnedBox.maxX - turnedBox.minX).toBeCloseTo(f0.h, 0);
+  expect(turnedBox.maxY - turnedBox.minY).toBeCloseTo(f0.w, 0);
+  if (shots) await page.screenshot({ path: join(shots, 'arrange-rotate.png') });
+
   // Empty paper: all layers together. Each layer moves; the Page tab doesn't change.
   const outlinesY = await fillTabValue('Move X / Y', 1);
   const corner = await screen(205, 292);

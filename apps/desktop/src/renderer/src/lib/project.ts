@@ -186,6 +186,7 @@ function parseLayerSettings(v: unknown): Partial<LayerSettings> | undefined {
       // Never zero or negative: a layer can't be squashed flat or flipped by a damaged file.
       sx: Math.max(1e-3, pl['sx']),
       sy: Math.max(1e-3, pl['sy']),
+      ...(isNum(pl['rot']) && pl['rot'] !== 0 ? { rot: pl['rot'] } : {}),
     };
   return out;
 }

@@ -12,17 +12,22 @@ import {
 } from '@plotter-studio/core';
 import { beginGesture, endGesture } from '../lib/projectActions';
 import {
-  boxMatrix,
-  CURSORS,
-  dragBox,
-  handleAt,
-  handlePoints,
+  dragFrame,
+  frameBox,
+  frameCorners,
+  frameCursor,
+  frameHandleAt,
+  frameHandles,
+  frameMatrix,
+  frameOfBox,
   layerAt,
+  rotateHandle,
+  snapAngle,
   snapBox,
   snapTargets,
-  type Box,
+  type Frame,
+  type FrameHandle,
   type Guides,
-  type Handle,
 } from '../lib/arrange';
 import { arrangeData, commitArrange, type ArrangeData } from '../lib/arrangeActions';
 import { useProcessed, useProfile, type Processed } from '../lib/useProcessed';
@@ -39,14 +44,18 @@ type ViewTransform = { scale: number; x: number; y: number }; // screen = mm * s
  */
 type LiveArrange = {
   target: string | null;
-  from: Box;
-  box: Box;
+  from: Frame;
+  frame: Frame;
   guides: Guides;
   committed: boolean;
+  /** Turning: show the angle by the handle. */
+  turning?: boolean;
 };
 /** Screen px within which handles and lines can be grabbed, and snapping happens. */
 const GRAB_PX = 6;
 const SNAP_PX = 6;
+/** Screen px from the top of the box to the rotate handle. */
+const STALK_PX = 24;
 
 const MIN_SCALE = 0.2;
 const MAX_SCALE = 400;
@@ -142,14 +151,15 @@ export function Preview() {
       canvas.dataset['view'] = `${v.scale},${v.x},${v.y}`;
       const a = inputs.current.arrange;
       const l = inputs.current.live.current;
-      const box =
+      const frame =
         a &&
         (l && l.target === a.target
-          ? l.box
+          ? l.frame
           : a.target === null
             ? a.data.art
-            : a.data.boxes[a.target]);
-      canvas.dataset['arrangeBox'] = box ? JSON.stringify(box) : '';
+            : a.data.frames[a.target]);
+      canvas.dataset['arrangeBox'] = frame ? JSON.stringify(frameBox(frame)) : '';
+      canvas.dataset['arrangeFrame'] = frame ? JSON.stringify(frame) : '';
     });
   }, []);
 
@@ -253,7 +263,7 @@ export function Preview() {
         draw();
       }
     };
-    type ArrangeDrag = { handle: Handle; start: Box; target: string | null; p0: Vec2 };
+    type ArrangeDrag = { handle: FrameHandle; start: Frame; target: string | null; p0: Vec2 };
     let drag: { x: number; y: number; adjust: boolean; arrange?: ArrangeDrag } | null = null;
     let space = false;
     const onKey = (e: KeyboardEvent) => {
@@ -276,15 +286,16 @@ export function Preview() {
       if (!a || !processed || e.button !== 0 || space) return null;
       const p = toPaper(e);
       const tol = GRAB_PX / view.current.scale;
-      const box = (t: string | null) => (t === null ? a.data.art : a.data.boxes[t]) ?? null;
-      const current = box(a.target);
-      const h = current ? handleAt(current, p, tol) : null;
+      const stalk = STALK_PX / view.current.scale;
+      const frame = (t: string | null) => (t === null ? a.data.art : a.data.frames[t]) ?? null;
+      const current = frame(a.target);
+      const h = current ? frameHandleAt(current, p, tol, stalk) : null;
       if (current && h && h !== 'move')
         return { handle: h, start: current, target: a.target, p0: p };
       const hit = layerAt(processed.placed.layers, a.data.boxes, p, tol);
-      if (hit) {
+      if (hit && a.data.frames[hit]) {
         if (hit !== a.target) useStore.getState().setArrangeTarget(hit);
-        return { handle: 'move', start: a.data.boxes[hit]!, target: hit, p0: p };
+        return { handle: 'move', start: a.data.frames[hit], target: hit, p0: p };
       }
       if (current && h === 'move')
         return { handle: 'move', start: current, target: a.target, p0: p };
@@ -293,7 +304,7 @@ export function Preview() {
       if (art && p.x >= 0 && p.y >= 0 && p.x <= paper.width && p.y <= paper.height) {
         // Empty paper, with more than one layer: all of them together.
         useStore.getState().setArrangeTarget(null);
-        if (handleAt(art, p, tol) === 'move')
+        if (frameHandleAt(art, p, tol, stalk) === 'move')
           return { handle: 'move', start: art, target: null, p0: p };
       }
       return null;
@@ -310,34 +321,55 @@ export function Preview() {
         // Arrange mode: show what a press would do.
         const a = inputs.current.arrange;
         if (!a) return;
-        const current = a.target === null ? a.data.art : a.data.boxes[a.target];
-        const h = current ? handleAt(current, toPaper(e), GRAB_PX / view.current.scale) : null;
-        canvas.style.cursor = h ? CURSORS[h] : '';
+        const current = a.target === null ? a.data.art : a.data.frames[a.target];
+        const k = view.current.scale;
+        const h = current ? frameHandleAt(current, toPaper(e), GRAB_PX / k, STALK_PX / k) : null;
+        canvas.style.cursor = current && h ? frameCursor(current, h) : '';
         return;
       }
       if (drag.arrange) {
         const { handle, start, target, p0 } = drag.arrange;
         const p = toPaper(e);
-        const o = { keepRatio: !e.shiftKey, fromCenter: e.altKey };
-        let box = dragBox(start, handle, p.x - p0.x, p.y - p0.y, o);
-        let guides: Guides = { xs: [], ys: [] };
         const a = inputs.current.arrange;
-        if (!e.metaKey && a) {
+        // A group with layers turned off-axis can only be scaled in proportion.
+        const free = e.shiftKey && !(target === null && a?.data.offAxis);
+        const o = { keepRatio: !free, fromCenter: e.altKey };
+        let frame = dragFrame(start, handle, p0, p, o);
+        let guides: Guides = { xs: [], ys: [] };
+        if (handle === 'rotate') {
+          frame = { ...frame, rot: snapAngle(frame.rot, { step15: e.shiftKey, off: e.metaKey }) };
+        } else if (!e.metaKey && a && (handle === 'move' || Math.abs(frame.rot) < 1e-9)) {
+          // Snap the box it takes up on the paper (resizing only when it isn't turned).
           const others = Object.entries(a.data.boxes)
             .filter(([id]) => target !== null && id !== target)
             .map(([, b]) => b);
+          const box = frameBox(frame);
           const snapped = snapBox(
             box,
-            start,
+            frameBox(start),
             handle,
             snapTargets(inputs.current.page, others),
             SNAP_PX / view.current.scale,
             o,
           );
-          box = snapped.box;
+          frame =
+            handle === 'move'
+              ? {
+                  ...frame,
+                  cx: frame.cx + snapped.box.minX - box.minX,
+                  cy: frame.cy + snapped.box.minY - box.minY,
+                }
+              : frameOfBox(snapped.box);
           guides = snapped.guides;
         }
-        live.current = { target, from: start, box, guides, committed: false };
+        live.current = {
+          target,
+          from: start,
+          frame,
+          guides,
+          committed: false,
+          turning: handle === 'rotate',
+        };
         draw();
         return;
       }
@@ -375,8 +407,8 @@ export function Preview() {
       const l = live.current;
       const processed = inputs.current.processed;
       if (drag?.arrange && l && !l.committed && processed) {
-        if (commitArrange(processed, l.target, l.from, l.box))
-          live.current = { ...l, guides: { xs: [], ys: [] }, committed: true };
+        if (commitArrange(processed, l.target, l.from, l.frame))
+          live.current = { ...l, guides: { xs: [], ys: [] }, committed: true, turning: false };
         else live.current = null;
         draw();
       }
@@ -429,21 +461,18 @@ export function Preview() {
       if (!dir || !a || !processed || typing) return;
       e.preventDefault();
       const l = live.current;
-      const from = l?.target === a.target && l.committed ? l.box : null;
-      const start = from ?? (a.target === null ? a.data.art : a.data.boxes[a.target]);
-      if (!start) return;
-      const step = e.shiftKey ? 10 : 1;
-      const box = dragBox(start, 'move', dir[0] * step, dir[1] * step, {
-        keepRatio: true,
-        fromCenter: false,
-      });
+      const pending = l?.target === a.target && l.committed ? l.frame : null;
       // Measured from what's drawn now (a nudge before the last one's result arrives adds up).
-      const base = a.target === null ? a.data.art : a.data.boxes[a.target];
-      if (base && commitArrange(processed, a.target, base, box)) {
+      const base = a.target === null ? a.data.art : a.data.frames[a.target];
+      const start = pending ?? base;
+      if (!start || !base) return;
+      const step = e.shiftKey ? 10 : 1;
+      const frame = { ...start, cx: start.cx + dir[0] * step, cy: start.cy + dir[1] * step };
+      if (commitArrange(processed, a.target, base, frame)) {
         live.current = {
           target: a.target,
           from: base,
-          box,
+          frame,
           guides: { xs: [], ys: [] },
           committed: true,
         };
@@ -568,14 +597,10 @@ function ArrangeBar() {
   return (
     <div className={`${styles.adjustBar} ${styles.arrangeBar}`} role="status">
       <span>
-        <strong>{name ?? 'All layers'}</strong> · drag to move, handles to resize (⇧ free, ⌥ from
-        the center) ·{' '}
-        {several
-          ? name
-            ? 'click empty paper for all layers · '
-            : 'click a layer for just that one · '
-          : ''}
-        arrows nudge · hold ⌘ to stop snapping
+        <strong>{name ?? 'All layers'}</strong> · drag to move · squares resize (⇧ free, ⌥ from
+        center) · circle turns (⇧ 15°) ·{' '}
+        {several ? (name ? 'paper: all layers · ' : 'click a layer for one · ') : ''}
+        arrows nudge · ⌘ no snapping
       </span>
       <button onClick={() => setArrange(false)}>Done</button>
     </div>
@@ -803,7 +828,7 @@ function render(
   ctx.globalCompositeOperation = 'multiply';
   // A drag in arrange mode moves what's drawn until the new result arrives.
   const drag = live.current;
-  const moved = drag && new DOMMatrix([...boxMatrix(drag.from, drag.box)]);
+  const moved = drag && new DOMMatrix([...frameMatrix(drag.from, drag.frame)]);
   if (playbackT === null) {
     for (const lt of processed.toolpath.layers) {
       const layer = visible.get(lt.layerId);
@@ -1024,7 +1049,7 @@ function addPath(ctx: CanvasPath, pts: { x: number; y: number }[], closed: boole
   if (closed) ctx.closePath();
 }
 
-/** Arrange mode: the selected box with its handles, and snap guides while dragging. */
+/** Arrange mode: the selected frame with its handles, and snap guides while dragging. */
 function drawArrange(
   ctx: CanvasRenderingContext2D,
   arrange: { target: string | null; data: ArrangeData },
@@ -1033,8 +1058,13 @@ function drawArrange(
   px: number,
 ) {
   const accent = cssVar('--accent');
-  const current = arrange.target === null ? arrange.data.art : arrange.data.boxes[arrange.target];
-  const box = drag && drag.target === arrange.target ? drag.box : current;
+  const outline = (f: Frame) => {
+    ctx.beginPath();
+    addPath(ctx, frameCorners(f), true);
+    ctx.stroke();
+  };
+  const current = arrange.target === null ? arrange.data.art : arrange.data.frames[arrange.target];
+  const frame = drag && drag.target === arrange.target ? drag.frame : current;
   ctx.save();
   // Other layers: faint outlines, so it's clear what can be picked.
   ctx.strokeStyle = accent;
@@ -1042,19 +1072,36 @@ function drawArrange(
   ctx.lineWidth = px;
   ctx.setLineDash([2 * px, 3 * px]);
   if (arrange.target !== null)
-    for (const [id, b] of Object.entries(arrange.data.boxes))
-      if (id !== arrange.target) ctx.strokeRect(b.minX, b.minY, b.maxX - b.minX, b.maxY - b.minY);
+    for (const [id, f] of Object.entries(arrange.data.frames))
+      if (id !== arrange.target) outline(f);
   ctx.globalAlpha = 1;
-  if (box) {
+  if (frame) {
     ctx.lineWidth = 1.5 * px;
     ctx.setLineDash([5 * px, 3 * px]);
-    ctx.strokeRect(box.minX, box.minY, box.maxX - box.minX, box.maxY - box.minY);
+    outline(frame);
     ctx.setLineDash([]);
+    // The rotate handle, on a stalk above the middle of the top side.
+    const top = frameHandles(frame).find((x) => x.handle === 'n')!.at;
+    const knob = rotateHandle(frame, STALK_PX * px);
+    ctx.beginPath();
+    ctx.moveTo(top.x, top.y);
+    ctx.lineTo(knob.x, knob.y);
+    ctx.stroke();
+    ctx.fillStyle = cssVar('--paper');
+    ctx.beginPath();
+    ctx.arc(knob.x, knob.y, 4.5 * px, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
     const s = 7 * px;
     ctx.fillStyle = cssVar('--paper');
-    for (const { at } of handlePoints(box)) {
+    for (const { at } of frameHandles(frame)) {
       ctx.fillRect(at.x - s / 2, at.y - s / 2, s, s);
       ctx.strokeRect(at.x - s / 2, at.y - s / 2, s, s);
+    }
+    if (drag?.turning) {
+      ctx.fillStyle = accent;
+      ctx.font = `${12 * px}px system-ui, sans-serif`;
+      ctx.fillText(`${Math.round(frame.rot * 10) / 10}°`, knob.x + 9 * px, knob.y - 6 * px);
     }
   }
   if (drag && !drag.committed) {

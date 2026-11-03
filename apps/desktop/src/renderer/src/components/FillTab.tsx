@@ -429,7 +429,7 @@ function PositionSection({
   const p = placement ?? { dx: 0, dy: 0, sx: 1, sy: 1 };
   const set = (patch: Partial<LayerPlacement>) =>
     setLayer(layerId, { settings: { placement: { ...p, ...patch } } });
-  const moved = p.dx !== 0 || p.dy !== 0 || p.sx !== 1 || p.sy !== 1;
+  const moved = p.dx !== 0 || p.dy !== 0 || p.sx !== 1 || p.sy !== 1 || !!p.rot;
   return (
     <Section title="Position" help="page-setup#moving-and-resizing-layers">
       <Row label="Move X / Y">
@@ -474,6 +474,19 @@ function PositionSection({
           suffix="%"
           title="Height"
           onChange={(v) => set({ sy: v / 100 })}
+        />
+      </Row>
+      <Row label="Rotation">
+        <NumberField
+          value={p.rot ?? 0}
+          min={-360}
+          max={360}
+          step={15}
+          width={62}
+          digits={1}
+          suffix="°"
+          title="Turn around its center, clockwise"
+          onChange={(rot) => set({ rot })}
         />
       </Row>
       <Row label="">

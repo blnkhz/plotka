@@ -2,9 +2,17 @@ import { describe, expect, it } from 'vitest';
 import { createLayer, defaultPageSetup, placementMatrix, applyToPoint } from '@plotter-studio/core';
 import {
   dragBox,
+  dragFrame,
+  frameCorners,
+  frameHandleAt,
+  frameMatrix,
+  frameOf,
+  frameOfBox,
+  groupFrames,
+  placementForFrame,
+  snapAngle,
   handleAt,
   layerAt,
-  placementFor,
   snapBox,
   snapTargets,
   type Box,
@@ -83,7 +91,7 @@ describe('arrange: back to settings', () => {
   it('a layer placement puts the layer exactly at the dragged box', () => {
     const base = box(10, 10, 30, 20);
     const target = box(50, 5, 110, 35);
-    const p = placementFor(base, target, null);
+    const p = placementForFrame(base, frameOfBox(target), null);
     const m = placementMatrix(base, p);
     expect(applyToPoint(m, 10, 10)).toEqual({ x: 50, y: 5 });
     const q = applyToPoint(m, 30, 20);
@@ -119,5 +127,81 @@ describe('arrange: picking a layer under the pointer', () => {
     expect(layerAt([a, b], boxes, { x: 50, y: 5 }, 1)).toBe('b');
     expect(layerAt([a, b], boxes, { x: 50, y: 0 }, 1)).toBe('b'); // both: the top one
     expect(layerAt([a, b], boxes, { x: 10, y: 5 }, 1)).toBeNull();
+  });
+});
+
+describe('arrange: turning (frames)', () => {
+  const near = (a: { x: number; y: number }, b: { x: number; y: number }) => {
+    expect(a.x).toBeCloseTo(b.x, 6);
+    expect(a.y).toBeCloseTo(b.y, 6);
+  };
+
+  it("a layer's frame is exactly where the core puts its corners, turned or not", () => {
+    const base = box(10, 10, 30, 20);
+    for (const p of [
+      { dx: 3, dy: -2, sx: 1.5, sy: 0.5 },
+      { dx: 0, dy: 5, sx: 2, sy: 1, rot: 30 },
+      { dx: -4, dy: 0, sx: 1, sy: 3, rot: -90 },
+    ]) {
+      const m = placementMatrix(base, p);
+      const corners = [
+        [10, 10],
+        [30, 10],
+        [30, 20],
+        [10, 20],
+      ].map(([x, y]) => applyToPoint(m, x!, y!));
+      frameCorners(frameOf(base, p)).forEach((c, i) => near(c, corners[i]!));
+      // And back: the frame gives the same placement.
+      const again = placementForFrame(base, frameOf(base, p), null);
+      expect(again).toEqual(p);
+    }
+  });
+
+  it('frameMatrix takes one frame onto another, corner to corner', () => {
+    const a = { cx: 10, cy: 20, w: 8, h: 4, rot: 15 };
+    const b = { cx: -5, cy: 7, w: 16, h: 2, rot: 100 };
+    const m = frameMatrix(a, b);
+    const ca = frameCorners(a);
+    frameCorners(b).forEach((c, i) => near(applyToPoint(m, ca[i]!.x, ca[i]!.y), c));
+  });
+
+  it('turning drags around the center; resizing a turned frame works along its own sides', () => {
+    const f = { cx: 0, cy: 0, w: 20, h: 10, rot: 0 };
+    // From straight right of the center to straight below it: a quarter turn clockwise.
+    expect(dragFrame(f, 'rotate', { x: 10, y: 0 }, { x: 0, y: 10 }, free).rot).toBeCloseTo(90);
+    // Turned 90°: its own right side faces down, so dragging the 'e' handle down widens it.
+    const t = { ...f, rot: 90 };
+    const r = dragFrame(t, 'e', { x: 0, y: 10 }, { x: 0, y: 16 }, free);
+    expect(r.w).toBeCloseTo(26);
+    expect(r.h).toBeCloseTo(10);
+    expect(r.cy).toBeCloseTo(3); // grew from its far side
+    expect(frameHandleAt(t, { x: 0, y: 10 }, 1, 5)).toBe('e');
+    expect(frameHandleAt(f, { x: 0, y: -10 }, 1, 5)).toBe('rotate');
+  });
+
+  it('angles snap to quarter turns, or 15° steps with Shift, or not at all with Cmd', () => {
+    expect(snapAngle(88, { step15: false, off: false })).toBe(90);
+    expect(snapAngle(80, { step15: false, off: false })).toBe(80);
+    expect(snapAngle(52, { step15: true, off: false })).toBe(45);
+    expect(snapAngle(89, { step15: false, off: true })).toBe(89);
+    expect(snapAngle(271, { step15: false, off: false })).toBe(-90);
+  });
+
+  it('a group turns and scales its layers together', () => {
+    const members = {
+      a: { cx: 10, cy: 0, w: 4, h: 2, rot: 0 },
+      b: { cx: -10, cy: 0, w: 2, h: 2, rot: 90 },
+    };
+    const group = { cx: 0, cy: 0, w: 24, h: 2, rot: 0 };
+    const turned = groupFrames(members, group, { ...group, rot: 90 });
+    near({ x: turned['a']!.cx, y: turned['a']!.cy }, { x: 0, y: 10 });
+    expect(turned['a']!.rot).toBeCloseTo(90);
+    expect(turned['b']!.rot).toBeCloseTo(180);
+    // Twice as wide, same height: layer a (level) gets wider; b (turned 90°) gets taller.
+    const wider = groupFrames(members, group, { ...group, w: 48 });
+    expect(wider['a']!.w).toBeCloseTo(8);
+    expect(wider['a']!.cx).toBeCloseTo(20);
+    expect(wider['b']!.h).toBeCloseTo(4);
+    expect(wider['b']!.w).toBeCloseTo(2);
   });
 });

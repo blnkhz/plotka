@@ -48,18 +48,6 @@ export function handleAt(b: Box, p: Vec2, tol: number): Handle | null {
     : null;
 }
 
-export const CURSORS: Record<Handle, string> = {
-  move: 'move',
-  n: 'ns-resize',
-  s: 'ns-resize',
-  e: 'ew-resize',
-  w: 'ew-resize',
-  ne: 'nesw-resize',
-  sw: 'nesw-resize',
-  nw: 'nwse-resize',
-  se: 'nwse-resize',
-};
-
 export type DragOptions = {
   /** Corners keep the proportions (Shift frees them). Edges always stretch one way. */
   keepRatio: boolean;
@@ -205,31 +193,6 @@ export function snapBox(
   return { box: out, guides: { xs: sx ? [sx.at] : [], ys: sy ? [sy.at] : [] } };
 }
 
-// --- from a box back to settings ---
-
-/** The matrix taking box `from` onto box `to` (for drawing a drag before it's committed). */
-export function boxMatrix(from: Box, to: Box): Matrix {
-  const sx = w(from) > 0 ? w(to) / w(from) : 1;
-  const sy = h(from) > 0 ? h(to) / h(from) : 1;
-  const a = boxCenter(from);
-  const b = boxCenter(to);
-  return [sx, 0, 0, sy, b.x - sx * a.x, b.y - sy * a.y];
-}
-
-/** The layer placement that puts a layer (bounds `base` before placement) at `box`. */
-export function placementFor(
-  base: Box,
-  box: Box,
-  current: LayerPlacement | null | undefined,
-): LayerPlacement {
-  const sx = w(base) > 0 ? w(box) / w(base) : (current?.sx ?? 1);
-  const sy = h(base) > 0 ? h(box) / h(base) : (current?.sy ?? 1);
-  const a = boxCenter(base);
-  const b = boxCenter(box);
-  const r = (v: number, d = 1000) => Math.round(v * d) / d;
-  return { dx: r(b.x - a.x), dy: r(b.y - a.y), sx: r(sx, 1e5), sy: r(sy, 1e5) };
-}
-
 // --- hit testing ---
 
 function segDist(p: Vec2, a: Vec2, b: Vec2): number {
@@ -282,4 +245,203 @@ export function layerAt(
     if (d <= tol && (!best || d <= best.d)) best = { id: l.id, d };
   }
   return best?.id ?? null;
+}
+
+// --- turned boxes ("frames") ---
+
+/**
+ * A selection that can be turned: its center, its size along its own sides, and its turn in
+ * degrees (clockwise on the paper). A layer's frame is its placement applied to its bounds.
+ */
+export type Frame = { cx: number; cy: number; w: number; h: number; rot: number };
+export type FrameHandle = Handle | 'rotate';
+
+const rad = (deg: number) => (deg * Math.PI) / 180;
+const turn = (v: Vec2, deg: number): Vec2 => {
+  const c = Math.cos(rad(deg));
+  const s = Math.sin(rad(deg));
+  return { x: v.x * c - v.y * s, y: v.x * s + v.y * c };
+};
+
+export const frameOfBox = (b: Box): Frame => ({
+  cx: (b.minX + b.maxX) / 2,
+  cy: (b.minY + b.maxY) / 2,
+  w: w(b),
+  h: h(b),
+  rot: 0,
+});
+
+/** Paper point → the frame's own coordinates (origin at its center, along its sides). */
+export const toFrame = (f: Frame, p: Vec2): Vec2 => turn({ x: p.x - f.cx, y: p.y - f.cy }, -f.rot);
+export const fromFrame = (f: Frame, q: Vec2): Vec2 => {
+  const v = turn(q, f.rot);
+  return { x: f.cx + v.x, y: f.cy + v.y };
+};
+const localBox = (f: Frame): Box => ({
+  minX: -f.w / 2,
+  minY: -f.h / 2,
+  maxX: f.w / 2,
+  maxY: f.h / 2,
+});
+
+export const frameCorners = (f: Frame): Vec2[] =>
+  [
+    { x: -f.w / 2, y: -f.h / 2 },
+    { x: f.w / 2, y: -f.h / 2 },
+    { x: f.w / 2, y: f.h / 2 },
+    { x: -f.w / 2, y: f.h / 2 },
+  ].map((q) => fromFrame(f, q));
+
+/** The box around a frame (as it lies on the paper). */
+export function frameBox(f: Frame): Box {
+  const c = frameCorners(f);
+  return {
+    minX: Math.min(...c.map((p) => p.x)),
+    minY: Math.min(...c.map((p) => p.y)),
+    maxX: Math.max(...c.map((p) => p.x)),
+    maxY: Math.max(...c.map((p) => p.y)),
+  };
+}
+
+/** The rotate handle: `stalk` mm above the middle of the top side. */
+export const rotateHandle = (f: Frame, stalk: number): Vec2 =>
+  fromFrame(f, { x: 0, y: -f.h / 2 - stalk });
+
+export function frameHandles(f: Frame): { handle: Exclude<Handle, 'move'>; at: Vec2 }[] {
+  return handlePoints(localBox(f)).map(({ handle, at }) => ({ handle, at: fromFrame(f, at) }));
+}
+
+export function frameHandleAt(f: Frame, p: Vec2, tol: number, stalk: number): FrameHandle | null {
+  const r = rotateHandle(f, stalk);
+  if (Math.hypot(p.x - r.x, p.y - r.y) <= tol * 1.5) return 'rotate';
+  return handleAt(localBox(f), toFrame(f, p), tol);
+}
+
+/** The resize cursor for a handle of a turned frame (the nearest of the four directions). */
+export function frameCursor(f: Frame, handle: FrameHandle): string {
+  if (handle === 'move') return 'move';
+  if (handle === 'rotate') return 'grab';
+  const dir = {
+    x: handle.includes('e') ? 1 : handle.includes('w') ? -1 : 0,
+    y: handle.includes('s') ? 1 : handle.includes('n') ? -1 : 0,
+  };
+  const v = turn(dir, f.rot);
+  const a = ((Math.atan2(v.y, v.x) * 180) / Math.PI + 180) % 180; // 0..180
+  return a < 22.5 || a >= 157.5
+    ? 'ew-resize'
+    : a < 67.5
+      ? 'nwse-resize'
+      : a < 112.5
+        ? 'ns-resize'
+        : 'nesw-resize';
+}
+
+/** Turns snap to quarter turns within a few degrees; ⇧ gives 15° steps; ⌘ turns it off. */
+export function snapAngle(deg: number, o: { step15: boolean; off: boolean }): number {
+  const norm = (a: number) => ((((a + 180) % 360) + 360) % 360) - 180;
+  if (o.off) return norm(deg);
+  if (o.step15) return norm(Math.round(deg / 15) * 15);
+  const q = Math.round(deg / 90) * 90;
+  return norm(Math.abs(deg - q) <= 3 ? q : deg);
+}
+
+/**
+ * The frame after dragging `handle` from p0 to p (paper mm). Resizing works along the frame's
+ * own sides; turning goes around its center.
+ */
+export function dragFrame(
+  start: Frame,
+  handle: FrameHandle,
+  p0: Vec2,
+  p: Vec2,
+  o: DragOptions,
+): Frame {
+  if (handle === 'move') return { ...start, cx: start.cx + p.x - p0.x, cy: start.cy + p.y - p0.y };
+  if (handle === 'rotate') {
+    const a0 = Math.atan2(p0.y - start.cy, p0.x - start.cx);
+    const a1 = Math.atan2(p.y - start.cy, p.x - start.cx);
+    return { ...start, rot: start.rot + ((a1 - a0) * 180) / Math.PI };
+  }
+  const d = turn({ x: p.x - p0.x, y: p.y - p0.y }, -start.rot);
+  const nb = dragBox(localBox(start), handle, d.x, d.y, o);
+  const c = fromFrame(start, boxCenter(nb));
+  return { cx: c.x, cy: c.y, w: w(nb), h: h(nb), rot: start.rot };
+}
+
+/** The matrix taking frame `a` onto frame `b` (what's drawn in a moves to b). */
+export function frameMatrix(a: Frame, b: Frame): Matrix {
+  const kx = a.w > 0 ? b.w / a.w : 1;
+  const ky = a.h > 0 ? b.h / a.h : 1;
+  // T(b) · R(b.rot) · S(kx, ky) · R(−a.rot) · T(−a)
+  const r1 = turn({ x: 1, y: 0 }, -a.rot);
+  const r2 = turn({ x: 0, y: 1 }, -a.rot);
+  // Columns of S·R(−a.rot), then R(b.rot) on them.
+  const c1 = turn({ x: kx * r1.x, y: ky * r1.y }, b.rot);
+  const c2 = turn({ x: kx * r2.x, y: ky * r2.y }, b.rot);
+  return [
+    c1.x,
+    c1.y,
+    c2.x,
+    c2.y,
+    b.cx - c1.x * a.cx - c2.x * a.cy,
+    b.cy - c1.y * a.cx - c2.y * a.cy,
+  ];
+}
+
+/** A layer's frame: its placement applied to its bounds (before placement). */
+export function frameOf(base: Box, p: LayerPlacement | null | undefined): Frame {
+  const c = boxCenter(base);
+  return {
+    cx: c.x + (p?.dx ?? 0),
+    cy: c.y + (p?.dy ?? 0),
+    w: w(base) * (p?.sx ?? 1),
+    h: h(base) * (p?.sy ?? 1),
+    rot: p?.rot ?? 0,
+  };
+}
+
+/** The placement that puts a layer (bounds `base` before placement) at frame `f`. */
+export function placementForFrame(
+  base: Box,
+  f: Frame,
+  current: LayerPlacement | null | undefined,
+): LayerPlacement {
+  const r = (v: number, d = 1000) => Math.round(v * d) / d;
+  const c = boxCenter(base);
+  const rot = r(snapAngle(f.rot, { step15: false, off: true }), 100);
+  return {
+    dx: r(f.cx - c.x),
+    dy: r(f.cy - c.y),
+    sx: r(w(base) > 0 ? f.w / w(base) : (current?.sx ?? 1), 1e5),
+    sy: r(h(base) > 0 ? f.h / h(base) : (current?.sy ?? 1), 1e5),
+    ...(rot ? { rot } : {}),
+  };
+}
+
+/** True if a turn isn't a whole number of quarter turns (the layer's sides aren't level). */
+export const offAxis = (rot: number) => Math.abs(rot / 90 - Math.round(rot / 90)) > 1e-6;
+
+/**
+ * Moving, scaling or turning several layers as a group (the group's frame from → to): each
+ * layer's center follows the group, and each turns with it. Scaling stretches each layer along
+ * the paper's axes, so it has to be proportional (kx = ky) if any layer is turned off-axis.
+ */
+export function groupFrames(
+  members: Record<string, Frame>,
+  from: Frame,
+  to: Frame,
+): Record<string, Frame> {
+  const m = frameMatrix(from, to);
+  const turnBy = to.rot - from.rot;
+  const kx = from.w > 0 ? to.w / from.w : 1;
+  const ky = from.h > 0 ? to.h / from.h : 1;
+  const out: Record<string, Frame> = {};
+  for (const [id, f] of Object.entries(members)) {
+    const c = { x: m[0] * f.cx + m[2] * f.cy + m[4], y: m[1] * f.cx + m[3] * f.cy + m[5] };
+    // A layer turned a quarter (or three) has its width along the paper's height.
+    const sideways = Math.abs(Math.round(f.rot / 90)) % 2 === 1;
+    const [sw, sh] = sideways ? [ky, kx] : [kx, ky];
+    out[id] = { cx: c.x, cy: c.y, w: f.w * sw, h: f.h * sh, rot: f.rot + turnBy };
+  }
+  return out;
 }

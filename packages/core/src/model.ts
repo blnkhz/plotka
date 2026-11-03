@@ -93,10 +93,11 @@ export type LayerSettings = {
 };
 
 /**
- * Where a layer sits relative to where the page setup put it: scaled by (sx, sy) around the
- * center of its bounds, then moved by (dx, dy) mm on the paper.
+ * Where a layer sits relative to where the page setup put it: scaled by (sx, sy) and turned by
+ * `rot` degrees (clockwise on the paper) around the center of its bounds, then moved by (dx, dy)
+ * mm on the paper.
  */
-export type LayerPlacement = { dx: number; dy: number; sx: number; sy: number };
+export type LayerPlacement = { dx: number; dy: number; sx: number; sy: number; rot?: number };
 
 export type Layer = {
   id: string;

@@ -44,6 +44,9 @@ Click **✥ Arrange** above the preview to move and resize things by hand.
 - **Drag** inside the box to move it. **Drag a handle** to resize: corners keep the proportions
   (hold **⇧** to stretch freely), the side handles stretch one way, and **⌥** resizes around the
   center.
+- **Drag the round handle** above the box to turn it around its center. It snaps to 0°, 90°,
+  180° and 270°; hold **⇧** for 15° steps. A turned layer's box turns with it, and its handles
+  resize it along its own sides.
 - While dragging, edges and centers **snap** to the margins, the paper's edges and center, and
   other layers (a red line shows the match). Hold **⌘** to drag without snapping.
 - The **arrow keys** nudge by 1 mm (**⇧** for 10 mm).
@@ -54,7 +57,8 @@ Each drag is one undo step. Moving a layer is saved with the project; it's measu
 paper, after **Fit**, **Scale** and **Offset** above (which stay as they are), and fills, passes
 and clipping follow it. The **Position** section in the
 Fill tab has the exact numbers for the selected layer (**Move X / Y** in mm, **Size W / H** in
-%) and **Reset position**.
+%, **Rotation** in degrees) and **Reset position**. Fills are made after a layer is turned, so
+hatching keeps its own angle (and lines up with the other layers) rather than turning with it.
 
 ## The preview
 
