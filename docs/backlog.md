@@ -49,9 +49,6 @@ Waves and Noise are done. Still to consider, on the same global grid:
 ## Remaining spec stories (P2 and later)
 
 - PROJ-3 pen library (name, color, tip width, preferred speed, pen heights)
-- DRIVER-6 full support for the brushless pen-lift upgrade on AxiDraws (the NextDraw profiles
-  already send the servo pin; needs testing on hardware)
-- SETUP-6 Windows and Linux builds
 - LATER-1 to LATER-8: multi-pen plotting with pen-swap prompts, split by color, registration
   marks, single-stroke text, more import formats, a browser version, signed builds
 
@@ -65,5 +62,11 @@ Waves and Noise are done. Still to consider, on the same global grid:
 ## Needs a test on hardware
 
 - Dry run, continue after Stop, and the installed app (`pnpm build:mac`) on the AxiDraw
-- NextDraw and other AxiDraw profiles (calibration sheet in `docs/hardware-test.md`)
-- NextDraw 1117 travel (430 × 297 mm assumed)
+
+## Not planned for now (decided 2026-11-02)
+
+- **Other plotters**: only the AxiDraw V3/A3 is tested. The other AxiDraw and NextDraw profiles
+  (and the NextDraw 1117 travel, 430 × 297 mm assumed) stay marked untested until owners test
+  them and send a pull request. The same goes for DRIVER-6, the brushless pen-lift upgrade on
+  AxiDraws.
+- **SETUP-6 Windows and Linux builds**: macOS only.

@@ -33,11 +33,11 @@ The guide is in the app (**Help**, ⌘?) and in [docs/guide](docs/guide/01-getti
 
 ## Supported machines
 
-| Machine                             | Status           |
-| ----------------------------------- | ---------------- |
-| AxiDraw V3/A3 (standard servo lift) | Primary, tested  |
-| Other AxiDraw models                | Community tested |
-| Bantam Tools NextDraw               | Community tested |
+| Machine                             | Status                |
+| ----------------------------------- | --------------------- |
+| AxiDraw V3/A3 (standard servo lift) | Primary, tested       |
+| Other AxiDraw models                | Untested, PRs welcome |
+| Bantam Tools NextDraw               | Untested, PRs welcome |
 
 Any EiBotBoard (EBB) based plotter should work with a machine profile. See
 [CONTRIBUTING.md](CONTRIBUTING.md#adding-a-machine-profile).
@@ -45,7 +45,7 @@ Any EiBotBoard (EBB) based plotter should work with a machine profile. See
 ## Install
 
 Builds for macOS (Apple Silicon and Intel) will be attached to
-[GitHub releases](../../releases). Windows and Linux builds will come later.
+[GitHub releases](../../releases). Windows and Linux aren't planned for now.
 
 The app is not signed with an Apple Developer certificate yet, so macOS blocks it the first
 time. To open it:

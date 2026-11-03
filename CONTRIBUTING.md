@@ -41,6 +41,10 @@ Profiles are JSON files in `packages/plotter/profiles/`.
    documentation. Add the sources to `docs/hardware-notes.md`.
 3. Set `"tested": false` until someone has plotted with it, then open a PR.
 
+Only the AxiDraw V3/A3 has been tested by the maintainer. If you own one of the other models,
+run the checklist in `docs/hardware-test.md` and open a PR with the results (and any fixed
+values) to mark its profile `"tested": true`.
+
 ## Adding an importer
 
 Importers implement the `Importer` interface in `packages/core/src/importers/`.
