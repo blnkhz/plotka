@@ -21,8 +21,10 @@ Doodle…, and their output goes through the usual fills, transforms, optimisati
 
 ## Needs a decision
 
+- Final name (README still says "working name"), then rename the GitHub repo and the local folder
+  from `untitled-plotter-tool`: `gh repo rename <name>`, move the folder, `pnpm install`. Do it
+  before the repo goes public, while no one depends on the old URL.
 - Code of conduct contact method (`CODE_OF_CONDUCT.md`)
-- README screenshot
 - Whether to commit `specs.md` (e.g. as `docs/spec.md`)
 
 ## Needs a test on hardware

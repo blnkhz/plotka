@@ -1,12 +1,10 @@
 # Plotka
 
-> Working name. The final name is still to be decided.
-
 A desktop app for pen plotters. Load SVG artwork, set up the paper and fills, preview exactly
 what the pen will draw, and plot directly over USB, with no vendor software or Inkscape
 extension needed.
 
-![Screenshot placeholder](docs/screenshot.png)
+![Plotka welcome screen: an example plot and Open…, Doodle… and + Text](docs/screenshot.png)
 
 **Status:** in development, plotting on an AxiDraw V3/A3. No installable release yet.
 
