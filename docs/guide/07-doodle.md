@@ -23,7 +23,8 @@ Your strokes are kept as drawn, so you can change these at any time:
 - **Fill closed shapes**: closed shapes become filled. When you use the drawing they're hatched
   with lines (change the fill in the Fill tab).
 - **Keep outlines**: also draws the line around each filled shape. Untick it to plot only the
-  fill. Open strokes always keep their line.
+  fill. Open strokes always keep their line. Once the doodle is in, this is the layer's **Draw
+  outlines of filled shapes** in the Fill tab, so you can still change it there.
 - **Show what I drew**: shows your original strokes faintly under the result.
 
 The header shows how many strokes became how many curves or lines.

@@ -1,11 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { importSvg, TEXT_WARNING } from '../../src';
+import { applyFills, importSvg, TEXT_WARNING } from '../../src';
 import { bbox, roundLine } from '../helpers';
 
 const svg = (body: string, attrs = 'width="100mm" height="100mm" viewBox="0 0 100 100"') =>
   `<svg xmlns="http://www.w3.org/2000/svg" ${attrs}>${body}</svg>`;
 
 const firstStroke = (src: string) => roundLine(importSvg(src).layers[0]!.strokes[0]!);
+
+const doc0 = { width: 10, height: 10, layers: [], warnings: [] };
 
 describe('importSvg: size and units', () => {
   it('converts mm/cm/in/pt/px sizes to mm', () => {
@@ -269,11 +271,33 @@ describe('importSvg: fills (IMPORT-4)', () => {
     expect(layer.fills[0]!.outer).toHaveLength(2);
     expect(layer.fills[0]!.color).toBe('#ff0000');
   });
-  it('fill and stroke gives both', () => {
+  it("fill and stroke: the outline is the layer's outline setting, so it can be turned off", () => {
     const layer = importSvg(svg('<circle cx="5" cy="5" r="5" fill="red" stroke="black"/>'))
       .layers[0]!;
     expect(layer.fills).toHaveLength(1);
+    expect(layer.strokes).toHaveLength(0);
+    expect(layer.settings.drawOutline).toBe(true);
+    expect(layer.settings.fill).toBeNull(); // not empty, so no automatic fill
+    const drawn = (l: typeof layer) => applyFills({ ...doc0, layers: [l] }).layers[0]!.strokes;
+    expect(drawn(layer)).toHaveLength(1); // the outline, as in the file
+    expect(drawn({ ...layer, settings: { ...layer.settings, drawOutline: false } })).toHaveLength(
+      0,
+    );
+  });
+  it('a layer where only some filled shapes have outlines keeps them as lines', () => {
+    const layer = importSvg(
+      svg(
+        '<circle cx="5" cy="5" r="5" fill="red" stroke="black"/><rect x="20" width="5" height="5" fill="blue"/>',
+      ),
+    ).layers[0]!;
     expect(layer.strokes).toHaveLength(1);
+    expect(layer.settings.drawOutline).toBe(false);
+  });
+  it("a white shape's outline stays a line (white shapes are never drawn)", () => {
+    const layer = importSvg(svg('<rect width="10" height="10" fill="white" stroke="black"/>'))
+      .layers[0]!;
+    expect(layer.strokes).toHaveLength(1);
+    expect(layer.settings.drawOutline).toBe(false);
   });
   it('lines never fill', () => {
     const layer = importSvg(svg('<line x2="10" stroke="black" fill="red"/>')).layers[0]!;

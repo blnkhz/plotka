@@ -9,7 +9,8 @@ SVGs from Illustrator, Inkscape, Figma, Affinity Designer and code all work. Sha
 lines, curves and arcs are converted to lines the pen can follow, accurately enough that you
 can't see the difference.
 
-- **Strokes** (outlines) are drawn as lines.
+- **Strokes** (outlines) are drawn as lines. The outlines of filled shapes become the layer's
+  **Draw outlines of filled shapes**, so you can turn them off (see [Fills](04-fills.md)).
 - **Filled shapes** are hatched or filled with patterns (see [Fills](04-fills.md)). A layer
   with only filled shapes (no outlines), like most exported logos and icons, starts with a line
   fill so it plots straight away. In layers that also have outlines, fills are off until you

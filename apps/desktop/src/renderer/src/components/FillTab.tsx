@@ -239,7 +239,10 @@ export function FillTab() {
           </>
         )}
         <Row label="">
-          <label className={styles.check}>
+          <label
+            className={styles.check}
+            title="Draw the outline around each filled shape. Outlines that came with the file (or a doodle) are on this switch too."
+          >
             <input
               type="checkbox"
               checked={layer.settings.drawOutline}

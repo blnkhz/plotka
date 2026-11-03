@@ -56,7 +56,11 @@ const SHAPES = new Set(['path', 'rect', 'circle', 'ellipse', 'line', 'polyline',
 
 const MAX_USE_DEPTH = 32;
 
-type Item = { strokes: Polyline[]; fill: FillRegion | null; colorKey: string };
+/**
+ * One shape from the file. `outline`: its stroke when that's exactly the outline of its fill
+ * (closed rings), kept apart so the layer's "Draw outlines of filled shapes" can control it.
+ */
+type Item = { strokes: Polyline[]; outline: Polyline[]; fill: FillRegion | null; colorKey: string };
 
 type Bucket = { key: string; name: string; items: Item[] };
 
@@ -201,6 +205,7 @@ export function importSvg(source: string, opts: ImportOptions = {}): PlotDocumen
 
     const item: Item = {
       strokes: [],
+      outline: [],
       fill: null,
       colorKey: strokeColor ?? (knockout ? '' : fillColor) ?? '#000000',
     };
@@ -215,7 +220,18 @@ export function importSvg(source: string, opts: ImportOptions = {}): PlotDocumen
           ...(knockout ? { knockout: true } : {}),
         };
     }
-    if (item.strokes.length === 0 && item.fill === null) return;
+    // A drawn (not white) filled shape whose stroke is just its closed outline: keep the outline
+    // apart, so it's the layer's outline setting (see the layers below).
+    if (
+      item.fill &&
+      !item.fill.knockout &&
+      item.strokes.length &&
+      item.strokes.every((l) => l.closed && l.points.length >= 3)
+    ) {
+      item.outline = item.strokes;
+      item.strokes = [];
+    }
+    if (item.strokes.length === 0 && item.outline.length === 0 && item.fill === null) return;
 
     if (layerKey !== null) bucket(layerKey, '').items.push(item);
     else if (mode === 'byColor') bucket(`color:${item.colorKey}`, item.colorKey).items.push(item);
@@ -257,13 +273,25 @@ export function importSvg(source: string, opts: ImportOptions = {}): PlotDocumen
         b.name || `Layer ${i + 1}`,
         dominantColor(b.items),
       );
+      // If every drawn filled shape in the layer has its outline in the file, the outlines become
+      // the layer's "Draw outlines of filled shapes" (on), so that setting can turn them off and
+      // shapes on top hide them like the fills. If only some do, they stay plain lines, as in
+      // the file.
+      const filled = b.items.filter((it) => it.fill && !it.fill.knockout);
+      const outlined = filled.length > 0 && filled.every((it) => it.outline.length > 0);
+      if (outlined) layer.settings.drawOutline = true;
       for (const it of b.items) {
         append(layer.strokes, it.strokes);
+        if (!outlined) append(layer.strokes, it.outline);
         if (it.fill) layer.fills.push(it.fill);
       }
       // A layer of only filled shapes (no outlines) would plot nothing until a fill is chosen,
       // which looks like the file didn't load. Start it with the default line fill.
-      if (layer.strokes.length === 0 && layer.fills.some((f) => !f.knockout))
+      if (
+        layer.strokes.length === 0 &&
+        !layer.settings.drawOutline &&
+        layer.fills.some((f) => !f.knockout)
+      )
         layer.settings.fill = { ...(opts.defaultFill ?? defaultFillSettings()) };
       return layer;
     });

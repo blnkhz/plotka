@@ -324,7 +324,7 @@ export function DoodlePad() {
             <Row label="">
               <label
                 className={`${styles.check} ${styles.indent}`}
-                title="Also draw the outline around each filled shape. Off: only the fill is plotted."
+                title="Also draw the outline around each filled shape. Off: only the fill is plotted. You can change it later with Draw outlines of filled shapes in the Fill tab."
               >
                 <input
                   type="checkbox"

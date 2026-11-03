@@ -178,8 +178,10 @@ describe('doodleToSvg', () => {
     expect(curves).toContain('width="100mm"');
     const doc = importSvg(curves);
     expect(doc.width).toBeCloseTo(100);
-    expect(doc.layers[0]!.strokes.length).toBe(2);
+    // The open line; the closed one is filled, its outline drawn by the layer's outline setting.
+    expect(doc.layers[0]!.strokes.length).toBe(1);
     expect(doc.layers[0]!.fills.length).toBe(1);
+    expect(doc.layers[0]!.settings.drawOutline).toBe(true);
 
     const lines = doodleToSvg(strokes, settings({ style: 'lines' }), { width: 100, height: 100 });
     expect(lines).not.toMatch(/C\d/);
@@ -197,12 +199,13 @@ describe('doodleToSvg: fill without outlines', () => {
       ],
     },
   ];
-  it('keeps outlines by default', () => {
+  it("keeps outlines by default, as the layer's outline setting (so it can be turned off)", () => {
     const doc = importSvg(
       doodleToSvg(strokes, settings({ fillClosed: true }), { width: 100, height: 100 }),
     );
-    expect(doc.layers[0]!.strokes).toHaveLength(2);
+    expect(doc.layers[0]!.strokes).toHaveLength(1); // the open line
     expect(doc.layers[0]!.fills).toHaveLength(1);
+    expect(doc.layers[0]!.settings.drawOutline).toBe(true);
   });
   it('with keepOutlines off, filled shapes have no outline; open lines keep theirs', () => {
     const svgText = doodleToSvg(strokes, settings({ fillClosed: true, keepOutlines: false }), {

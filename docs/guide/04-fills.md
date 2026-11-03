@@ -43,7 +43,10 @@ layers** copies them (and the layer's speeds) to the others.
 - **Keep pen down between lines**: joins neighboring lines end to end (a zigzag), or rings,
   without lifting the pen, where the join stays inside the shape. Faster, and fewer pen lifts.
   Turn it off for separate strokes, with the pen lifted after each line.
-- **Draw outlines of filled shapes**: also draws each shape's outline.
+- **Draw outlines of filled shapes**: also draws each shape's outline. When every filled shape
+  in a layer has an outline in the file (or a doodle kept its outlines), those outlines are this
+  setting, already on, so unticking it removes them. If only some shapes had outlines, they're
+  kept as ordinary lines, as in the file.
 - **Hide parts covered by shapes on top**: where shapes overlap, only the top one is filled and
   outlined, as in the file. Turn it off to fill every shape completely.
 

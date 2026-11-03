@@ -1291,3 +1291,37 @@ test('arrange with one layer: always that layer, never a separate "all layers" b
   await expect(bar.getByText(/click empty paper/)).toHaveCount(0);
   await app.close();
 });
+
+test('doodle with outlines kept: the Fill tab can still turn the outlines off', async () => {
+  const app = await launch();
+  const page = await app.firstWindow();
+  await page.setViewportSize({ width: 1400, height: 900 });
+  await page.locator('#root > div').waitFor();
+  await page.getByRole('button', { name: 'Doodle…' }).click();
+  const box = (await page.getByTestId('doodle-canvas').boundingBox())!;
+  const cx = box.x + box.width / 2;
+  const cy = box.y + box.height / 2;
+  await page.mouse.move(cx + 120, cy);
+  await page.mouse.down();
+  for (let i = 1; i <= 120; i++) {
+    const a = (i / 120) * Math.PI * 2;
+    await page.mouse.move(cx + 120 * Math.cos(a), cy + 120 * Math.sin(a));
+  }
+  await page.mouse.up();
+  await page.getByLabel('Fill closed shapes').check();
+  await expect(page.getByLabel('Keep outlines')).toBeChecked();
+  await page.getByRole('button', { name: 'Use drawing' }).click();
+
+  const draw = async () =>
+    (await page.getByText(/\d+ paths · draw/).textContent())!.match(/draw ([\d.]+ m?m)/)![1]!;
+  await page.getByRole('tab', { name: 'Fill' }).click();
+  const outlines = page.getByLabel('Draw outlines of filled shapes');
+  await expect(outlines).toBeChecked();
+  await expect(page.getByText(/\d+ paths · draw/)).toBeVisible();
+  const withOutline = await draw();
+  await outlines.uncheck();
+  await expect.poll(draw).not.toBe(withOutline); // the outline is gone from the plot
+  await outlines.check();
+  await expect.poll(draw).toBe(withOutline);
+  await app.close();
+});
