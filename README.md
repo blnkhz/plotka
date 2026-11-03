@@ -81,7 +81,8 @@ Any EiBotBoard (EBB) based plotter should work with a machine profile. See
 ## Install
 
 Download the `.dmg` from the [latest release](../../releases/latest). It runs on macOS, on
-Apple Silicon and Intel. Windows and Linux aren't planned for now.
+Apple Silicon and Intel. Windows and Linux aren't planned for now, but pull requests that add
+them are welcome.
 
 The app is not signed with an Apple Developer certificate yet, so macOS blocks it the first
 time. To open it:
