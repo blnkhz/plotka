@@ -222,7 +222,8 @@ export async function openProject(
       doodle: {
         ...s.doodle,
         open: false,
-        undone: [],
+        past: [],
+        future: [],
         ...(d.doodle ?? { strokes: [] }),
       },
       view: { ...s.view, penWidth: d.view.penWidth },

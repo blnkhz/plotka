@@ -6,8 +6,27 @@ Draw something by hand and turn it into clean vectors. Click **Doodle…** at th
 
 - **Draw**: drag on the white artboard. A mouse, trackpad or drawing tablet all work.
 - **Erase**: drag over strokes to remove them.
-- **Undo** / **Redo** (⌘Z / ⇧⌘Z) and **Clear**.
+- **Select**: click closed shapes to combine them (see below).
+- **Undo** / **Redo** (⌘Z / ⇧⌘Z) and **Clear**. Every change can be undone: strokes, erasing,
+  clearing and combining.
 - **Artboard**: the size of the drawing area in mm.
+
+## Combining shapes
+
+Closed shapes that overlap can be combined, like the shape tools in drawing apps. Pick
+**Select**, click a shape, and ⇧-click the others (click empty paper to start over). Then:
+
+- **Merge**: joins them into one shape.
+- **Cut out**: cuts the shapes you drew later out of the one you drew first. Cutting a small
+  shape out of the middle of a big one leaves a hole, and fills leave the hole empty.
+- **Keep overlap**: keeps only the part where they all overlap.
+- **Remove overlap**: keeps everything except where they overlap.
+- **Separate**: splits a combined shape back into its pieces.
+
+Only closed shapes can be combined: a stroke is closed when it ends near where it started (with
+**Close shapes when the ends meet** on). A combined shape can be combined again, and it still
+follows **Style**, **Smoothing** and **Keep sharp corners**. The eraser removes a combined shape
+as a whole.
 
 ## Turning strokes into vectors
 

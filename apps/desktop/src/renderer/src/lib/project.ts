@@ -6,7 +6,8 @@ import {
   defaultPassSettings,
   SUPPORTED_FILL_TYPES,
   type DoodleSettings,
-  type DoodleStroke,
+  type BooleanOp,
+  type DoodleItem,
   type FillSettings,
   type LayerMode,
   type LayerSettings,
@@ -41,7 +42,7 @@ export type ProjectData = {
   profileId: string;
   pipeline: PipelineStep[];
   doodle: {
-    strokes: DoodleStroke[];
+    strokes: DoodleItem[];
     settings: DoodleSettings;
     size: { width: number; height: number };
   } | null;
@@ -238,19 +239,25 @@ function parsePipeline(v: unknown): PipelineStep[] {
   return steps;
 }
 
-function parseStrokes(v: unknown): DoodleStroke[] {
-  if (!Array.isArray(v)) return [];
+const BOOLEAN_OPS: readonly BooleanOp[] = ['union', 'subtract', 'intersect', 'exclude'];
+
+/** Doodle strokes and combined shapes (a tree of them); damaged entries are left out. */
+function parseStrokes(v: unknown, depth = 0): DoodleItem[] {
+  if (!Array.isArray(v) || depth > 50) return [];
   return v
-    .map((s) =>
-      isObj(s) && Array.isArray(s['points'])
-        ? {
-            points: s['points']
-              .filter((p): p is Obj => isObj(p) && isNum(p['x']) && isNum(p['y']))
-              .map((p) => ({ x: p['x'] as number, y: p['y'] as number })),
-          }
-        : null,
-    )
-    .filter((s): s is DoodleStroke => !!s && s.points.length > 0);
+    .map((s): DoodleItem | null => {
+      if (!isObj(s)) return null;
+      if (BOOLEAN_OPS.includes(s['op'] as BooleanOp)) {
+        const items = parseStrokes(s['items'], depth + 1);
+        return items.length ? { op: s['op'] as BooleanOp, items } : null;
+      }
+      if (!Array.isArray(s['points'])) return null;
+      const points = s['points']
+        .filter((p): p is Obj => isObj(p) && isNum(p['x']) && isNum(p['y']))
+        .map((p) => ({ x: p['x'] as number, y: p['y'] as number }));
+      return points.length ? { points } : null;
+    })
+    .filter((s): s is DoodleItem => !!s);
 }
 
 /** Reads a project file. Throws ProjectError with a plain message if it can't be used. */

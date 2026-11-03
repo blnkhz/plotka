@@ -48,6 +48,18 @@ export function intersectShapes(a: Shape, b: Shape): Shape {
   return fromPaths(Clipper.intersect(toPaths(a), toPaths(b), FillRule.NonZero));
 }
 
+/** The parts covered by exactly one of the two shapes (exclusive or). */
+export function xorShapes(a: Shape, b: Shape): Shape {
+  if (!a.length) return b;
+  if (!b.length) return a;
+  return fromPaths(Clipper.xor(toPaths(a), toPaths(b), FillRule.NonZero));
+}
+
+/** One ring or several, possibly self-crossing, as clean nonzero rings. */
+export function normalizeShape(rings: Vec2[][]): Shape {
+  return fromPaths(Clipper.union(toPaths(rings), FillRule.NonZero));
+}
+
 /** Grows (positive) or shrinks (negative) a shape by `delta` mm with round corners. */
 export function offsetShape(shape: Shape, delta: number, arcTolerance = 0.01): Shape {
   if (delta === 0 || !shape.length) return shape;

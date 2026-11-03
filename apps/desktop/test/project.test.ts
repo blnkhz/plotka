@@ -55,6 +55,14 @@ const sample = (): ProjectData => ({
           { x: 3, y: 4 },
         ],
       },
+      // A combined shape, nested: kept as its pieces.
+      {
+        op: 'subtract',
+        items: [
+          { op: 'union', items: [{ points: [{ x: 5, y: 5 }] }, { points: [{ x: 6, y: 6 }] }] },
+          { points: [{ x: 7, y: 7 }] },
+        ],
+      },
     ],
     settings: { ...defaultDoodleSettings(), style: 'lines' },
     size: { width: 120, height: 80 },
@@ -130,6 +138,23 @@ describe('project files (PROJ-1)', () => {
     expect(p.source).toBeNull();
     expect(p.doodle).toBeNull();
     expect(p.optimize).toEqual(defaultOptimizeSettings());
+  });
+
+  it('leaves out damaged doodle entries (unknown operations, empty shapes)', () => {
+    const text = JSON.stringify({
+      format: PROJECT_FORMAT,
+      version: 1,
+      doodle: {
+        strokes: [
+          { op: 'melt', items: [{ points: [{ x: 1, y: 1 }] }] },
+          { op: 'union', items: [] },
+          { op: 'union', items: [{ points: [{ x: 'a', y: 1 }] }, { points: [{ x: 2, y: 2 }] }] },
+        ],
+      },
+    });
+    expect(parseProject(text).doodle?.strokes).toEqual([
+      { op: 'union', items: [{ points: [{ x: 2, y: 2 }] }] },
+    ]);
   });
 
   it('refuses other files, damaged files and newer versions with plain messages', () => {

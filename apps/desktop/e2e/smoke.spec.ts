@@ -1560,3 +1560,61 @@ test('splash screen: start from it, open a recent file, turn it off', async () =
   await expect(splash(page)).toHaveCount(0);
   await app.close();
 });
+
+test('doodle: combine overlapping shapes (merge, cut out, separate, undo)', async () => {
+  const app = await launch();
+  const page = await app.firstWindow();
+  await page.setViewportSize({ width: 1400, height: 860 });
+  await page.locator('#root > div').waitFor();
+  await page.getByRole('button', { name: 'Doodle…' }).click();
+  const box = (await page.getByTestId('doodle-canvas').boundingBox())!;
+  const cx = box.x + box.width / 2;
+  const cy = box.y + box.height / 2;
+  // Two closed loops that overlap in the middle.
+  for (const ox of [-50, 50]) {
+    await page.mouse.move(cx + ox + 80, cy);
+    await page.mouse.down();
+    for (let i = 1; i <= 90; i++) {
+      const a = (i / 90) * Math.PI * 2 * 0.99;
+      await page.mouse.move(cx + ox + 80 * Math.cos(a), cy + 80 * Math.sin(a));
+    }
+    await page.mouse.up();
+  }
+  await page.getByLabel('Fill closed shapes').check();
+  const merge = page.getByRole('button', { name: 'Merge' });
+  const separate = page.getByRole('button', { name: 'Separate' });
+  await expect(merge).toBeDisabled();
+
+  // Select both (⇧ adds), then merge.
+  await page.getByRole('button', { name: 'Select', exact: true }).click();
+  await page.mouse.click(cx - 100, cy);
+  await expect(page.getByText('1 shape selected.')).toBeVisible();
+  await page.keyboard.down('Shift');
+  await page.mouse.click(cx + 100, cy);
+  await page.keyboard.up('Shift');
+  await expect(page.getByText('2 shapes selected.')).toBeVisible();
+  await merge.click();
+  await expect(separate).toBeEnabled();
+  await expect(page.getByText(/2 strokes → \d+ /)).toBeVisible();
+  if (shots) await page.screenshot({ path: join(shots, 'doodle-merge.png') });
+
+  // Undo brings the two shapes back; redo merges again; Separate splits it.
+  const pad = page.getByRole('dialog', { name: 'Doodle' });
+  await pad.getByRole('button', { name: 'Undo' }).click();
+  await expect(separate).toBeDisabled();
+  await pad.getByRole('button', { name: 'Redo' }).click();
+  await page.mouse.click(cx, cy);
+  await separate.click();
+  await expect(page.getByText('2 shapes selected.')).toBeVisible();
+
+  // Cut the right one out of the left: one crescent.
+  await page.getByRole('button', { name: 'Cut out' }).click();
+  await expect(separate).toBeEnabled();
+  await expect(page.getByText('A combined shape is selected.')).toBeVisible();
+  if (shots) await page.screenshot({ path: join(shots, 'doodle-cut.png') });
+  await page.getByRole('button', { name: 'Use drawing' }).click();
+  await expect(page.getByText('Doodle.svg')).toBeVisible();
+  // One filled shape (not two).
+  await expect(page.getByTitle('Strokes / filled shapes')).toHaveText('0/1');
+  await app.close();
+});

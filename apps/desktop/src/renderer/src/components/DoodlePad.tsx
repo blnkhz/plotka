@@ -1,11 +1,33 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useThemeKey } from '../lib/useThemeKey';
-import { processStroke, type DoodlePath, type DoodleStroke, type Vec2 } from '@plotter-studio/core';
+import {
+  isDoodleShape,
+  itemShape,
+  itemStrokes,
+  processItem,
+  shapeContains,
+  type BooleanOp,
+  type DoodleItem,
+  type DoodlePath,
+  type Vec2,
+} from '@plotter-studio/core';
 import { doodleSvg, useStore } from '../store';
 import { NumberField, Row, Section, Segmented } from './controls';
 import styles from './DoodlePad.module.css';
 
-type Tool = 'draw' | 'erase';
+type Tool = 'draw' | 'erase' | 'select';
+
+/** The shape operations, in the order of their buttons. */
+const OPS: { op: BooleanOp; label: string; title: string }[] = [
+  { op: 'union', label: 'Merge', title: 'Join the selected shapes into one' },
+  {
+    op: 'subtract',
+    label: 'Cut out',
+    title: 'Cut the shapes drawn later out of the one drawn first',
+  },
+  { op: 'intersect', label: 'Keep overlap', title: 'Keep only where all of them overlap' },
+  { op: 'exclude', label: 'Remove overlap', title: 'Keep everything except where they overlap' },
+];
 /** Eraser reach, mm. */
 const ERASE_RADIUS = 2;
 /** Grid spacing on the artboard, mm. */
@@ -17,7 +39,7 @@ export function DoodlePad() {
   const setDoodle = useStore((s) => s.setDoodle);
   const setDoodleSettings = useStore((s) => s.setDoodleSettings);
   const applyDoodle = useStore((s) => s.applyDoodle);
-  const { strokes, undone, settings, size } = doodle;
+  const { strokes, past, future, settings, size } = doodle;
   const [tool, setTool] = useState<Tool>('draw');
   const [showRaw, setShowRaw] = useState(true);
   const [saved, setSaved] = useState<string | null>(null);
@@ -29,19 +51,38 @@ export function DoodlePad() {
   const activePointer = useRef<number | null>(null);
   const view = useRef({ scale: 1, x: 0, y: 0 });
 
+  // One entry per item (null if nothing is left of it), so indices match `strokes`.
   const processed = useMemo(
-    () => strokes.map((s) => processStroke(s, settings)).filter((p): p is DoodlePath => !!p),
+    () => strokes.map((s) => processItem(s, settings)),
     [strokes, settings],
   );
+  const shapes = useMemo(() => strokes.map((s) => itemShape(s, settings)), [strokes, settings]);
   const segmentCount = processed.reduce(
-    (n, p) => n + (p.kind === 'curves' ? p.curves.length : p.points.length - 1),
+    (n, p) =>
+      n +
+      (!p
+        ? 0
+        : p.kind === 'curves'
+          ? p.curves.length
+          : p.kind === 'shape'
+            ? p.rings.reduce((m, r) => m + r.length, 0)
+            : p.points.length - 1),
     0,
   );
 
-  const setStrokes = useCallback(
-    (next: DoodleStroke[]) => setDoodle({ strokes: next, undone: [] }),
-    [setDoodle],
+  const setStrokes = useStore((s) => s.setDoodleItems);
+  // Selected items (indices), for the version of the doodle they were picked in: any other
+  // change (a stroke, undo...) clears the selection.
+  const [selection, setSelection] = useState<{ items: DoodleItem[]; ids: number[] }>({
+    items: strokes,
+    ids: [],
+  });
+  const selected = useMemo(
+    () => (selection.items === strokes ? selection.ids : []),
+    [selection, strokes],
   );
+  const select = (items: DoodleItem[], ids: number[]) => setSelection({ items, ids });
+  const [note, setNote] = useState<string | null>(null);
   // ⌘Z / ⇧⌘Z come through the app menu (Edit → Undo / Redo), which routes them here while
   // the pad is open.
   const undo = useStore((s) => s.doodleUndo);
@@ -93,28 +134,37 @@ export function DoodlePad() {
       ctx.strokeStyle = 'rgba(40,90,200,0.35)';
       ctx.lineWidth = 2 * px;
       ctx.beginPath();
-      for (const s of strokes) polyline(ctx, s.points);
+      for (const s of strokes.flatMap(itemStrokes)) polyline(ctx, s.points);
       ctx.stroke();
     }
     // Processed result: what will be plotted.
     ctx.strokeStyle = '#111';
     ctx.lineWidth = Math.max(0.4, 1.5 * px);
     for (const p of processed) {
+      if (!p) continue;
       ctx.beginPath();
-      if (p.kind === 'lines') polyline(ctx, p.points);
-      else {
-        const h = p.curves[0]![0];
-        ctx.moveTo(h.x, h.y);
-        for (const [, a, b, e] of p.curves) ctx.bezierCurveTo(a.x, a.y, b.x, b.y, e.x, e.y);
-      }
-      if (p.closed) ctx.closePath();
+      tracePath(ctx, p);
       const filled = p.closed && settings.fillClosed;
       if (filled) {
         ctx.fillStyle = 'rgba(0,0,0,0.12)';
-        ctx.fill();
+        ctx.fill('evenodd');
       }
       // A filled shape without its outline shows as the tint only.
       if (!filled || settings.keepOutlines) ctx.stroke();
+    }
+    // Selected shapes: outlined in the accent colour.
+    if (selected.length) {
+      ctx.strokeStyle = css.getPropertyValue('--accent-text').trim() || '#2f6fde';
+      ctx.lineWidth = 3 * px;
+      ctx.setLineDash([6 * px, 4 * px]);
+      for (const i of selected) {
+        const p = processed[i];
+        if (!p) continue;
+        ctx.beginPath();
+        tracePath(ctx, p);
+        ctx.stroke();
+      }
+      ctx.setLineDash([]);
     }
     if (live.current) {
       ctx.strokeStyle = '#111';
@@ -123,7 +173,7 @@ export function DoodlePad() {
       polyline(ctx, live.current);
       ctx.stroke();
     }
-  }, [processed, strokes, settings.fillClosed, settings.keepOutlines, showRaw, size]);
+  }, [processed, strokes, selected, settings.fillClosed, settings.keepOutlines, showRaw, size]);
 
   const themeKey = useThemeKey();
   useEffect(draw, [draw, themeKey]);
@@ -152,18 +202,79 @@ export function DoodlePad() {
   };
   const eraseAt = (p: Vec2) => {
     const { strokes } = useStore.getState().doodle;
+    // A combined shape goes as a whole when any of its strokes is touched.
     const keep = strokes.filter(
-      (s) => !s.points.some((q) => Math.hypot(q.x - p.x, q.y - p.y) <= ERASE_RADIUS),
+      (it) =>
+        !itemStrokes(it).some((s) =>
+          s.points.some((q) => Math.hypot(q.x - p.x, q.y - p.y) <= ERASE_RADIUS),
+        ),
     );
     if (keep.length !== strokes.length) setStrokes(keep);
   };
+
+  /** The topmost closed shape under the point. */
+  const shapeAt = (p: Vec2): number | null => {
+    for (let i = strokes.length - 1; i >= 0; i--) {
+      const sh = shapes[i];
+      if (sh?.length && shapeContains(sh, p)) return i;
+    }
+    return null;
+  };
+  const selectAt = (p: Vec2, add: boolean) => {
+    setNote(null);
+    const i = shapeAt(p);
+    if (i === null) return select(strokes, add ? selected : []);
+    if (!add) return select(strokes, [i]);
+    select(strokes, selected.includes(i) ? selected.filter((j) => j !== i) : [...selected, i]);
+  };
+  const combine = (op: BooleanOp) => {
+    const ids = [...selected].sort((a, b) => a - b);
+    const shape: DoodleItem = { op, items: ids.map((i) => strokes[i]!) };
+    if (!processItem(shape, settings)) {
+      setNote(
+        op === 'intersect' ? "These shapes don't overlap." : 'Nothing would be left of them.',
+      );
+      return;
+    }
+    setNote(null);
+    // The result takes the place of the bottom shape.
+    const next = strokes.filter((_, i) => !ids.includes(i));
+    next.splice(ids[0]!, 0, shape);
+    setStrokes(next);
+    select(next, [ids[0]!]);
+  };
+  const single = selected.length === 1 ? strokes[selected[0]!] : undefined;
+  const separate = () => {
+    if (!single || !isDoodleShape(single)) return;
+    const i = selected[0]!;
+    const next = [...strokes.slice(0, i), ...single.items, ...strokes.slice(i + 1)];
+    setStrokes(next);
+    select(
+      next,
+      single.items.map((_, k) => i + k),
+    );
+  };
+  const closedCount = shapes.filter((sh) => sh?.length).length;
+  const strokeCount = strokes.reduce((n, it) => n + itemStrokes(it).length, 0);
+  const shapesHint =
+    tool !== 'select'
+      ? 'Overlapping closed shapes can be combined: pick Select, then click them.'
+      : selected.length >= 2
+        ? `${selected.length} shapes selected.`
+        : single
+          ? isDoodleShape(single)
+            ? 'A combined shape is selected. ⇧-click to add more, or Separate it.'
+            : '1 shape selected. ⇧-click to add more.'
+          : closedCount < 2
+            ? 'Draw two closed shapes that overlap (end each where it started).'
+            : 'Click closed shapes to select them; ⇧-click to add more.';
 
   return (
     <div className={styles.overlay} role="dialog" aria-modal="true" aria-label="Doodle">
       <header className={styles.header}>
         <strong>Doodle</strong>
         <span className={styles.muted}>
-          {strokes.length} {strokes.length === 1 ? 'stroke' : 'strokes'} → {segmentCount}{' '}
+          {strokeCount} {strokeCount === 1 ? 'stroke' : 'strokes'} → {segmentCount}{' '}
           {settings.style === 'curves' ? 'curves' : 'lines'}
         </span>
         <span className={styles.spacer} />
@@ -196,7 +307,9 @@ export function DoodlePad() {
           <canvas
             ref={canvasRef}
             data-testid="doodle-canvas"
-            className={tool === 'erase' ? styles.erase : styles.draw}
+            className={
+              tool === 'erase' ? styles.erase : tool === 'select' ? styles.select : styles.draw
+            }
             onPointerDown={(e) => {
               if (e.button !== 0) return;
               activePointer.current = e.pointerId;
@@ -206,6 +319,11 @@ export function DoodlePad() {
                 e.currentTarget.setPointerCapture(e.pointerId);
               } catch {
                 // Not available: moves over the canvas still draw.
+              }
+              if (tool === 'select') {
+                activePointer.current = null;
+                selectAt(toMm(e), e.shiftKey);
+                return;
               }
               if (tool === 'erase') eraseAt(toMm(e));
               else live.current = [toMm(e)];
@@ -245,20 +363,56 @@ export function DoodlePad() {
               options={[
                 { value: 'draw', label: 'Draw' },
                 { value: 'erase', label: 'Erase', title: 'Drag over strokes to remove them' },
+                {
+                  value: 'select',
+                  label: 'Select',
+                  title: 'Click closed shapes to combine them; ⇧-click for more',
+                },
               ]}
-              onChange={setTool}
+              onChange={(t) => {
+                setTool(t);
+                setNote(null);
+                if (t !== 'select') select(strokes, []);
+              }}
             />
             <div className={styles.buttons}>
-              <button onClick={undo} disabled={!strokes.length} title="Undo (⌘Z)">
+              <button onClick={undo} disabled={!past.length} title="Undo (⌘Z)">
                 Undo
               </button>
-              <button onClick={redo} disabled={!undone.length} title="Redo (⇧⌘Z)">
+              <button onClick={redo} disabled={!future.length} title="Redo (⇧⌘Z)">
                 Redo
               </button>
               <button onClick={() => setStrokes([])} disabled={!strokes.length}>
                 Clear
               </button>
             </div>
+          </Section>
+          <Section title="Shapes" help="doodle#combining-shapes">
+            <p className={styles.hint}>{shapesHint}</p>
+            <div className={styles.ops}>
+              {OPS.map(({ op, label, title }) => (
+                <button
+                  key={op}
+                  title={title}
+                  disabled={selected.length < 2}
+                  onClick={() => combine(op)}
+                >
+                  {label}
+                </button>
+              ))}
+              <button
+                title="Split a combined shape back into its pieces"
+                disabled={!single || !isDoodleShape(single)}
+                onClick={separate}
+              >
+                Separate
+              </button>
+            </div>
+            {note && (
+              <p className={styles.note} role="status">
+                {note}
+              </p>
+            )}
           </Section>
           <Section title="Vectors" help="doodle#turning-strokes-into-vectors">
             <Row label="Style">
@@ -387,4 +541,22 @@ function artboardView(w: number, h: number, size: { width: number; height: numbe
   const pad = 24;
   const scale = Math.max(1e-6, Math.min((w - 2 * pad) / size.width, (h - 2 * pad) / size.height));
   return { scale, x: (w - size.width * scale) / 2, y: (h - size.height * scale) / 2 };
+}
+
+/** Adds a processed path (or a combined shape's rings) to the current canvas path. */
+function tracePath(ctx: CanvasRenderingContext2D, p: DoodlePath) {
+  if (p.kind === 'shape') {
+    for (const r of p.rings) {
+      polyline(ctx, r);
+      ctx.closePath();
+    }
+    return;
+  }
+  if (p.kind === 'lines') polyline(ctx, p.points);
+  else {
+    const h = p.curves[0]![0];
+    ctx.moveTo(h.x, h.y);
+    for (const [, a, b, e] of p.curves) ctx.bezierCurveTo(a.x, a.y, b.x, b.y, e.x, e.y);
+  }
+  if (p.closed) ctx.closePath();
 }

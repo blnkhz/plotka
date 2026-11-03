@@ -1,8 +1,31 @@
 import type { Vec2 } from '../geometry/vec2';
-import { fitCubics, simplifyLines, type Cubic } from './fit';
+import {
+  differenceShapes,
+  intersectShapes,
+  normalizeShape,
+  unionShapes,
+  xorShapes,
+  type Shape,
+} from '../geometry/polygon';
+import { bezierPoint, fitCubics, simplifyLines, type Cubic } from './fit';
 
 /** A freehand stroke as drawn, in mm on the doodle artboard. */
 export type DoodleStroke = { points: Vec2[] };
+
+/**
+ * How a combined shape is made from its items (bottom first): `union` merges them,
+ * `subtract` cuts the others out of the first, `intersect` keeps where all overlap, `exclude`
+ * keeps what's covered an odd number of times (removes the overlaps).
+ */
+export type BooleanOp = 'union' | 'subtract' | 'intersect' | 'exclude';
+
+/** Closed shapes combined with a boolean operation. Kept as its pieces, never baked. */
+export type DoodleShape = { op: BooleanOp; items: DoodleItem[] };
+
+/** What a doodle is made of: strokes as drawn, and combined shapes. */
+export type DoodleItem = DoodleStroke | DoodleShape;
+
+export const isDoodleShape = (item: DoodleItem): item is DoodleShape => 'op' in item;
 
 export type DoodleSettings = {
   /** 0 (as drawn) .. 100 (very smooth). */
@@ -31,7 +54,9 @@ export const defaultDoodleSettings = (): DoodleSettings => ({
 /** A processed stroke: straight segments or cubic curves through the smoothed path. */
 export type DoodlePath =
   | { kind: 'lines'; points: Vec2[]; closed: boolean }
-  | { kind: 'curves'; curves: Cubic[]; closed: boolean };
+  | { kind: 'curves'; curves: Cubic[]; closed: boolean }
+  /** A combined shape: outer rings and holes (evenodd). */
+  | { kind: 'shape'; rings: Vec2[][]; closed: true };
 
 /** Even spacing used before smoothing, mm. */
 const RESAMPLE = 0.25;
@@ -169,10 +194,86 @@ export function processStroke(stroke: DoodleStroke, s: DoodleSettings): DoodlePa
   return curves.length ? { kind: 'curves', curves, closed } : null;
 }
 
+/** Segment length used to turn curves into polygons for combining, mm. */
+const FLATTEN_STEP = 0.4;
+/** Simplification of combined outlines, mm (well under a pen width). */
+const SHAPE_TOLERANCE = 0.02;
+
+/** A closed processed path as polygon rings. */
+function rings(p: DoodlePath): Vec2[][] {
+  if (p.kind === 'shape') return p.rings;
+  if (p.kind === 'lines') return [p.points];
+  const pts: Vec2[] = [p.curves[0]![0]];
+  for (const c of p.curves) {
+    const hull =
+      Math.hypot(c[1].x - c[0].x, c[1].y - c[0].y) +
+      Math.hypot(c[2].x - c[1].x, c[2].y - c[1].y) +
+      Math.hypot(c[3].x - c[2].x, c[3].y - c[2].y);
+    const n = Math.max(2, Math.ceil(hull / FLATTEN_STEP));
+    for (let i = 1; i <= n; i++) pts.push(bezierPoint(c, i / n));
+  }
+  return [pts];
+}
+
+/** Combines shapes (bottom first) with a boolean operation. */
+export function combineShapes(op: BooleanOp, parts: Shape[]): Shape {
+  const [first, ...rest] = parts;
+  if (!first) return [];
+  switch (op) {
+    case 'union':
+      return rest.reduce(unionShapes, first);
+    case 'subtract':
+      return differenceShapes(first, rest.reduce(unionShapes, [] as Shape));
+    case 'intersect':
+      return rest.reduce(intersectShapes, first);
+    case 'exclude':
+      return rest.reduce(xorShapes, first);
+  }
+}
+
+/**
+ * The area a doodle item covers with these settings, or null for an open stroke. A combined
+ * shape whose piece is no longer closed (e.g. Close shapes turned off) leaves that piece out.
+ */
+export function itemShape(item: DoodleItem, s: DoodleSettings): Shape | null {
+  if (!isDoodleShape(item)) {
+    const p = processStroke(item, s);
+    return p?.closed ? normalizeShape(rings(p)) : null;
+  }
+  return combineShapes(
+    item.op,
+    item.items.map((i) => itemShape(i, s) ?? []),
+  );
+}
+
+/** Turns one doodle item into a clean vector path (null if nothing is left of it). */
+export function processItem(item: DoodleItem, s: DoodleSettings): DoodlePath | null {
+  if (!isDoodleShape(item)) return processStroke(item, s);
+  const out = (itemShape(item, s) ?? [])
+    .map((r) => {
+      const simple = simplifyLines([...r, r[0]!], SHAPE_TOLERANCE);
+      return simple.slice(0, -1);
+    })
+    .filter((r) => r.length >= 3);
+  return out.length ? { kind: 'shape', rings: out, closed: true } : null;
+}
+
+/** All the strokes an item is made of, as drawn. */
+export function itemStrokes(item: DoodleItem): DoodleStroke[] {
+  return isDoodleShape(item) ? item.items.flatMap(itemStrokes) : [item];
+}
+
 const f = (n: number) => String(Math.round(n * 1000) / 1000);
 
-/** SVG path data for a processed stroke. */
+const ringData = (r: Vec2[]) =>
+  `M${f(r[0]!.x)} ${f(r[0]!.y)}${r
+    .slice(1)
+    .map((q) => `L${f(q.x)} ${f(q.y)}`)
+    .join('')}Z`;
+
+/** SVG path data for a processed stroke or shape. */
 export function pathData(p: DoodlePath): string {
+  if (p.kind === 'shape') return p.rings.map(ringData).join('');
   if (p.kind === 'lines') {
     const [h, ...rest] = p.points;
     return `M${f(h!.x)} ${f(h!.y)}${rest.map((q) => `L${f(q.x)} ${f(q.y)}`).join('')}${p.closed ? 'Z' : ''}`;
@@ -186,17 +287,19 @@ export function pathData(p: DoodlePath): string {
 
 /** The doodle as an SVG document in mm, ready to import or save. */
 export function doodleToSvg(
-  strokes: DoodleStroke[],
+  items: DoodleItem[],
   s: DoodleSettings,
   size: { width: number; height: number },
 ): string {
-  const paths = strokes.map((st) => processStroke(st, s)).filter((p): p is DoodlePath => !!p);
+  const paths = items.map((it) => processItem(it, s)).filter((p): p is DoodlePath => !!p);
   const els = paths.map((p) => {
     const filled = p.closed && s.fillClosed;
     const fill = filled ? '#000000' : 'none';
     // Open strokes always keep their line; filled shapes only if outlines are wanted.
     const stroke = filled && !s.keepOutlines ? 'none' : '#000000';
-    return `  <path d="${pathData(p)}" fill="${fill}" stroke="${stroke}" stroke-width="0.4" stroke-linecap="round" stroke-linejoin="round"/>`;
+    // Combined shapes can have holes: evenodd keeps them open when filled.
+    const rule = p.kind === 'shape' ? ' fill-rule="evenodd"' : '';
+    return `  <path d="${pathData(p)}" fill="${fill}"${rule} stroke="${stroke}" stroke-width="0.4" stroke-linecap="round" stroke-linejoin="round"/>`;
   });
   return [
     '<?xml version="1.0" encoding="UTF-8"?>',

@@ -13,7 +13,7 @@ import {
   type DoodleSettings,
   type TextItem,
   type FillSettings,
-  type DoodleStroke,
+  type DoodleItem,
   type ParamValues,
   type PipelineStep,
   type Layer,
@@ -60,9 +60,11 @@ export const sameArtwork = (a: Source | null, b: Source | null) =>
 
 export type DoodleState = {
   open: boolean;
-  strokes: DoodleStroke[];
-  /** Strokes undone, for redo. */
-  undone: DoodleStroke[];
+  /** What the doodle is made of, in drawing order: strokes and combined shapes. */
+  strokes: DoodleItem[];
+  /** Earlier and undone versions of `strokes`, for undo / redo in the pad. */
+  past: DoodleItem[][];
+  future: DoodleItem[][];
   settings: DoodleSettings;
   /** Artboard size in mm. */
   size: { width: number; height: number };
@@ -178,7 +180,9 @@ type State = {
   /** Opens help, at a topic (and section) if given. */
   openHelp(topic?: string, anchor?: string): void;
   closeHelp(): void;
-  /** Undo / redo the last stroke in the doodle pad. */
+  /** Changes the doodle's strokes and shapes as one undoable step. */
+  setDoodleItems(next: DoodleItem[]): void;
+  /** Undo / redo the last change in the doodle pad (draw, erase, clear, combine...). */
   doodleUndo(): void;
   doodleRedo(): void;
   setPenHeights(h: { up: number; down: number }): void;
@@ -187,6 +191,8 @@ type State = {
   applyDoodle(): Promise<void>;
 };
 
+/** Doodle pad undo steps kept. */
+const DOODLE_HISTORY = 200;
 const PEN_HEIGHTS_KEY = 'penHeights';
 const DEFAULT_FILL_KEY = 'defaultFill';
 const PAGE_PRESETS_KEY = 'pagePresets';
@@ -430,7 +436,8 @@ export const useStore = create<State>()((set, get) => ({
   doodle: {
     open: false,
     strokes: [],
-    undone: [],
+    past: [],
+    future: [],
     settings: defaultDoodleSettings(),
     size: { width: 150, height: 150 },
   },
@@ -591,20 +598,43 @@ export const useStore = create<State>()((set, get) => ({
       },
     })),
   closeHelp: () => set((s) => ({ help: { ...s.help, open: false } })),
+  setDoodleItems: (next) =>
+    set((s) => ({
+      doodle: {
+        ...s.doodle,
+        strokes: next,
+        past: [...s.doodle.past, s.doodle.strokes].slice(-DOODLE_HISTORY),
+        future: [],
+      },
+    })),
   doodleUndo: () =>
     set((s) => {
-      const { strokes, undone } = s.doodle;
-      const last = strokes[strokes.length - 1];
-      return last
-        ? { doodle: { ...s.doodle, strokes: strokes.slice(0, -1), undone: [...undone, last] } }
+      const { strokes, past, future } = s.doodle;
+      const prev = past[past.length - 1];
+      return prev
+        ? {
+            doodle: {
+              ...s.doodle,
+              strokes: prev,
+              past: past.slice(0, -1),
+              future: [...future, strokes],
+            },
+          }
         : {};
     }),
   doodleRedo: () =>
     set((s) => {
-      const { strokes, undone } = s.doodle;
-      const next = undone[undone.length - 1];
+      const { strokes, past, future } = s.doodle;
+      const next = future[future.length - 1];
       return next
-        ? { doodle: { ...s.doodle, strokes: [...strokes, next], undone: undone.slice(0, -1) } }
+        ? {
+            doodle: {
+              ...s.doodle,
+              strokes: next,
+              past: [...past, strokes],
+              future: future.slice(0, -1),
+            },
+          }
         : {};
     }),
   setPenHeights: (penHeights) => {
