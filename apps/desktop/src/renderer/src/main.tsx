@@ -1,6 +1,10 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { App } from './App';
+// Bundled fonts (SIL Open Font License; see THIRD_PARTY_NOTICES.md): the interface, and numbers.
+import '@fontsource-variable/bricolage-grotesque/opsz.css';
+import '@fontsource/dm-mono/400.css';
+import '@fontsource/dm-mono/500.css';
 import './styles/global.css';
 import { APPEARANCES, themeAttr, type Appearance } from '@shared/themes';
 

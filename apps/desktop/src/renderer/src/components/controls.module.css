@@ -4,10 +4,11 @@
 }
 .sectionTitle {
   margin: 0 0 8px;
-  font-size: 11px;
-  font-weight: 600;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 500;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.1em;
   color: var(--muted);
 }
 .row {
@@ -46,12 +47,14 @@
 .segmented {
   display: inline-flex;
   border: 1px solid var(--border);
-  border-radius: 5px;
+  border-radius: 999px;
   overflow: hidden;
 }
 .segmented button {
   border: 0;
   border-radius: 0;
+  padding: 3px 9px;
+  white-space: nowrap;
   border-right: 1px solid var(--border);
   background: transparent;
 }
@@ -65,7 +68,7 @@
 .notice {
   margin: 8px 12px;
   padding: 6px 8px;
-  border-radius: 5px;
+  border-radius: 8px;
   border: 1px solid;
   line-height: 1.4;
 }

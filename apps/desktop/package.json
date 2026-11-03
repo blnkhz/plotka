@@ -18,6 +18,8 @@
     "serialport": "^13.0.0"
   },
   "devDependencies": {
+    "@fontsource-variable/bricolage-grotesque": "5.3.0",
+    "@fontsource/dm-mono": "5.3.0",
     "@playwright/test": "^1.64.1",
     "@plotter-studio/core": "workspace:*",
     "@plotter-studio/plotter": "workspace:*",

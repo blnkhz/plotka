@@ -75,6 +75,9 @@
   color: var(--on-pop);
   border-color: var(--pop);
 }
+.primary:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--pop) 88%, var(--text));
+}
 .primary:disabled {
   opacity: 0.5;
 }

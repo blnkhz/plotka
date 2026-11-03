@@ -8,6 +8,12 @@ files:
   - package.json
   # Only the macOS serialport binary is needed in a Mac build.
   - '!**/node_modules/@serialport/bindings-cpp/prebuilds/{android,linux,win32}-*/**'
+# The licence and third-party notices (fonts included) ship inside the app, in Resources.
+extraResources:
+  - from: ../../LICENSE
+    to: LICENSE
+  - from: ../../THIRD_PARTY_NOTICES.md
+    to: THIRD_PARTY_NOTICES.md
 asarUnpack:
   - '**/node_modules/@serialport/bindings-cpp/**'
 mac:
