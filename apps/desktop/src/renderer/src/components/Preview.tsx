@@ -518,7 +518,11 @@ export function Preview() {
           +
         </button>
       </div>
-      {!hasDoc && <div className={styles.empty}>Open or drop an SVG to start.</div>}
+      {!hasDoc && (
+        <div className={styles.empty}>
+          <span>Open or drop an SVG to start.</span>
+        </div>
+      )}
     </div>
   );
 }
