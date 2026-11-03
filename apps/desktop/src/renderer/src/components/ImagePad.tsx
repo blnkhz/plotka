@@ -1,7 +1,6 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ditherGrid,
-  ditherImage,
   ditherSvg,
   type DitherMethod,
   type DitherResult,
@@ -21,6 +20,9 @@ const SHAPES: { value: MarkShape; label: string }[] = [
   { value: 'x', label: '×' },
   { value: 'plus', label: '+' },
 ];
+
+/** Points per canvas stroke when drawing the marks. */
+const STROKE_BATCH = 20_000;
 
 const METHOD_HINTS: Record<DitherMethod, string> = {
   ordered: 'A tidy, regular pattern of marks.',
@@ -80,11 +82,56 @@ export function ImagePad() {
   const bitmap = decoded?.bytes === bytes ? decoded.bitmap : null;
   const error = failed === bytes && bytes ? `“${name}” can't be read as an image.` : null;
 
-  const result = useMemo<DitherResult | null>(() => {
-    if (!bitmap) return null;
+  // Dithering a big picture takes a while, so it runs in a worker: the pad stays live and shows
+  // that it's working. A change while a run is busy stops it and starts over with the latest.
+  type Run = { bitmap: ImageBitmap; settings: typeof settings };
+  type Done = Run & ({ result: DitherResult; error?: never } | { result?: never; error: string });
+  const [done, setDone] = useState<Done | null>(null);
+  const job = useRef<{ worker: Worker | null; busy: boolean; id: number; run: Run | null }>({
+    worker: null,
+    busy: false,
+    id: 0,
+    run: null,
+  });
+  useEffect(() => () => job.current.worker?.terminate(), []);
+  useEffect(() => {
+    if (!bitmap) return;
+    const j = job.current;
+    const id = ++j.id;
     const grid = ditherGrid(bitmap.width, bitmap.height, settings);
-    return ditherImage(sample(bitmap, grid.cols, grid.rows), grid, settings);
+    const pixels = sample(bitmap, grid.cols, grid.rows);
+    if (j.busy && j.worker) {
+      j.worker.terminate();
+      j.worker = null;
+    }
+    if (!j.worker) {
+      const w = new Worker(new URL('../workers/dither.worker.ts', import.meta.url), {
+        type: 'module',
+      });
+      w.onmessage = (e: MessageEvent<{ id: number; result?: DitherResult; error?: string }>) => {
+        j.busy = false;
+        if (e.data.id !== j.id || !j.run) return; // a newer run was started
+        const run = j.run;
+        if (e.data.result) setDone({ ...run, result: e.data.result });
+        else setDone({ ...run, error: `Dithering failed: ${e.data.error}` });
+      };
+      w.onerror = (e) => {
+        j.busy = false;
+        if (j.run) setDone({ ...j.run, error: `Dithering failed: ${e.message}` });
+      };
+      j.worker = w;
+    }
+    j.busy = true;
+    j.run = { bitmap, settings };
+    j.worker.postMessage({ id, pixels, grid, settings }, [pixels.buffer]);
   }, [bitmap, settings]);
+  // The last marks for this picture stay on screen (dimmed) while new ones are worked out.
+  const [shown, setShown] = useState<{ bitmap: ImageBitmap; result: DitherResult } | null>(null);
+  if (done?.result && shown?.result !== done.result)
+    setShown({ bitmap: done.bitmap, result: done.result });
+  const result = shown && shown.bitmap === bitmap ? shown.result : null;
+  const working = !!bitmap && (done?.bitmap !== bitmap || done.settings !== settings);
+  const ditherError = !working && done?.error ? done.error : null;
 
   const close = useCallback(() => setImage({ open: false }), [setImage]);
   useEffect(() => {
@@ -125,26 +172,39 @@ export function ImagePad() {
       ctx.drawImage(bitmap, 0, 0, width, height);
       ctx.globalAlpha = 1;
     }
-    const path = new Path2D();
-    for (const m of result.marks) {
-      path.moveTo(m.points[0]!.x, m.points[0]!.y);
-      for (let i = 1; i < m.points.length; i++) path.lineTo(m.points[i]!.x, m.points[i]!.y);
-      if (m.closed) path.closePath();
-    }
     ctx.strokeStyle = '#111';
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
     // A 0.3 mm pen, but never thinner than a screen pixel.
     ctx.lineWidth = Math.max(0.3, 1 / scale);
-    ctx.stroke(path);
+    // Stroked in batches: one path with millions of points takes the canvas minutes to draw.
+    let path = new Path2D();
+    let points = 0;
+    for (const m of result.marks) {
+      path.moveTo(m.points[0]!.x, m.points[0]!.y);
+      for (let i = 1; i < m.points.length; i++) path.lineTo(m.points[i]!.x, m.points[i]!.y);
+      if (m.closed) path.closePath();
+      points += m.points.length;
+      if (points >= STROKE_BATCH) {
+        ctx.stroke(path);
+        path = new Path2D();
+        points = 0;
+      }
+    }
+    if (points) ctx.stroke(path);
   }, [result, showPicture, bitmap]);
   const themeKey = useThemeKey();
   useEffect(draw, [draw, themeKey]);
+  // Redraw on resize with the latest draw, without re-observing (which draws again) on each change.
+  const drawRef = useRef(draw);
   useEffect(() => {
-    const ro = new ResizeObserver(draw);
+    drawRef.current = draw;
+  }, [draw]);
+  useEffect(() => {
+    const ro = new ResizeObserver(() => drawRef.current());
     if (wrapRef.current) ro.observe(wrapRef.current);
     return () => ro.disconnect();
-  }, [draw]);
+  }, []);
 
   const grid = result?.grid;
   const svg = () => (result ? ditherSvg(result, name) : '');
@@ -155,14 +215,22 @@ export function ImagePad() {
         <strong>Image</strong>
         <span className={styles.muted}>
           {error ??
+            ditherError ??
             (grid
               ? `${name} → ${result.marks.length.toLocaleString()} marks · ${grid.cols} × ${grid.rows} grid · ${grid.width.toFixed(0)} × ${grid.height.toFixed(0)} mm`
-              : 'Reading the image…')}
+              : bitmap
+                ? 'Dithering…'
+                : 'Reading the image…')}
         </span>
+        {working && grid && (
+          <span className={styles.working} role="status">
+            Dithering…
+          </span>
+        )}
         <span className={styles.spacer} />
         {saved && <span className={styles.muted}>Saved {saved}</span>}
         <button
-          disabled={!result}
+          disabled={!result || working}
           onClick={async () => {
             const base = name.replace(/\.[^.]+$/, '') || 'Image';
             const path = await window.api.invoke('file:saveText', `${base} (dithered).svg`, svg(), [
@@ -176,7 +244,7 @@ export function ImagePad() {
         <button onClick={close}>Cancel</button>
         <button
           className={styles.primary}
-          disabled={!result?.marks.length}
+          disabled={!result?.marks.length || working}
           onClick={() => void applyImage(svg())}
         >
           Use image
@@ -184,7 +252,17 @@ export function ImagePad() {
       </header>
       <div className={styles.body}>
         <div className={styles.stage} ref={wrapRef}>
-          <canvas ref={canvasRef} data-testid="image-canvas" />
+          <canvas
+            ref={canvasRef}
+            data-testid="image-canvas"
+            className={working ? styles.stale : undefined}
+          />
+          {(working || (!result && !error && !ditherError)) && (
+            <div className={styles.busy} aria-hidden="true">
+              <span className={styles.spinner} />
+              {bitmap ? 'Dithering…' : 'Reading the image…'}
+            </div>
+          )}
         </div>
         <aside className={styles.side}>
           <Section title="Size" help="opening-artwork#images">

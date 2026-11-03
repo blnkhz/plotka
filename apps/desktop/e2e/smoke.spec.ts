@@ -1727,6 +1727,10 @@ test('image dithering: open a picture, tune the marks, use it, edit it again', a
   await pad.getByLabel('Mark shape').selectOption('dot');
   if (shots) await page.screenshot({ path: join(shots, 'image-pad-dots.png') });
 
+  // Dithering runs in a worker; Use image waits until the marks match the settings.
+  await expect(pad.getByRole('status').filter({ hasText: 'Dithering…' })).toHaveCount(0);
+  await expect(pad.getByRole('button', { name: 'Use image' })).toBeEnabled();
+
   // Use it: it opens as artwork; Edit image… brings back the same settings.
   await pad.getByRole('button', { name: 'Use image' }).click();
   await expect(pad).toHaveCount(0);
