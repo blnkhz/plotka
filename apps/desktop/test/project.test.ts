@@ -159,7 +159,7 @@ describe('project files (PROJ-1)', () => {
 
   it('refuses other files, damaged files and newer versions with plain messages', () => {
     expect(() => parseProject('{not json')).toThrow(/damaged/);
-    expect(() => parseProject('{"hello":1}')).toThrow(/isn't a Plotter Studio project/);
+    expect(() => parseProject('{"hello":1}')).toThrow(/isn't a Plotka project/);
     expect(() => parseProject(JSON.stringify({ format: PROJECT_FORMAT, version: 99 }))).toThrow(
       /newer version/,
     );

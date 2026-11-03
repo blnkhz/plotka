@@ -64,5 +64,5 @@ jobs:
           if gh release view "$TAG" >/dev/null 2>&1; then
             gh release upload "$TAG" "${files[@]}" --clobber
           else
-            gh release create "$TAG" "${files[@]}" --draft --title "Plotter Studio $TAG" --generate-notes
+            gh release create "$TAG" "${files[@]}" --draft --title "Plotka $TAG" --generate-notes
           fi

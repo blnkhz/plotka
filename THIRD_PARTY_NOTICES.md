@@ -1,6 +1,6 @@
 # Third-party notices
 
-Plotter Studio bundles the following third-party code and fonts.
+Plotka bundles the following third-party code and fonts.
 
 ## Clipper2 (TypeScript port: @countertype/clipper2-ts)
 

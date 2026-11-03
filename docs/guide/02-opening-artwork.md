@@ -1,6 +1,6 @@
 # Opening artwork
 
-Click **Open…** (⌘O) or drop a file on the window. Plotter Studio opens **SVG** files and its own
+Click **Open…** (⌘O) or drop a file on the window. Plotka opens **SVG** files and its own
 **projects** (`.plot.json`).
 
 ## SVGs from design apps
@@ -75,7 +75,7 @@ Art made by a script can skip SVG: write the paths as JSON and open the `.json` 
 ## Auto-reload
 
 When you open an SVG file, **Auto-reload** appears in the toolbar (on by default). Edit and save
-the file in Illustrator, Inkscape or your code, and Plotter Studio reloads it within a moment,
+the file in Illustrator, Inkscape or your code, and Plotka reloads it within a moment,
 keeping all your settings (page, fills, passes, transforms). "Reloaded" flashes in the toolbar.
 Untick **Auto-reload** to keep the current version.
 

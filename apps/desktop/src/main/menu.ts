@@ -96,7 +96,7 @@ function build() {
     { role: 'windowMenu' },
     {
       role: 'help',
-      submenu: [item('help', 'Plotter Studio Help', 'CmdOrCtrl+Shift+/')],
+      submenu: [item('help', 'Plotka Help', 'CmdOrCtrl+Shift+/')],
     },
   ];
   Menu.setApplicationMenu(Menu.buildFromTemplate(template));

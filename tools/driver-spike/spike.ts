@@ -320,7 +320,7 @@ let ebb: Ebb | null = null;
 let link: Link | null = null;
 
 async function main() {
-  record('note', `Plotter Studio DRIVER-0 spike · ${new Date().toISOString()}`);
+  record('note', `Plotka DRIVER-0 spike · ${new Date().toISOString()}`);
   record(
     'note',
     `Node ${process.version} · ${os.platform()} ${os.release()} ${os.arch()}${simulate ? ' · SIMULATED' : ''}`,

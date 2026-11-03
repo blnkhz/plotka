@@ -1,6 +1,6 @@
 # Getting started
 
-Plotter Studio turns artwork into pen plots: open an SVG (or draw one), set up the paper and
+Plotka turns artwork into pen plots: open an SVG (or draw one), set up the paper and
 fills, check the preview, and plot over USB.
 
 ## When the app opens

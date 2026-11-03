@@ -1,4 +1,4 @@
-# Plotter Studio
+# Plotka
 
 > Working name. The final name is still to be decided.
 

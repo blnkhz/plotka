@@ -28,7 +28,7 @@ list when you pick it. You can also open SVGs and projects from Finder with **Op
 
 ## Autosave and recovery
 
-While you have unsaved changes, Plotter Studio keeps a copy of your work a few seconds after
+While you have unsaved changes, Plotka keeps a copy of your work a few seconds after
 each change. It's stored in the app's own data, never over your project file, so nothing is
 saved anywhere you didn't choose.
 

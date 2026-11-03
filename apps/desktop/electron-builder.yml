@@ -1,5 +1,5 @@
-appId: org.plotterstudio.app
-productName: Plotter Studio
+appId: org.plotka.app
+productName: Plotka
 directories:
   output: release
   buildResources: build

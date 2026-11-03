@@ -1,10 +1,10 @@
 {
   "name": "@plotter-studio/desktop",
-  "productName": "Plotter Studio",
+  "productName": "Plotka",
   "version": "0.1.0",
   "private": true,
   "license": "MIT",
-  "description": "Plotter Studio desktop app",
+  "description": "Plotka desktop app",
   "main": "./out/main/index.js",
   "scripts": {
     "dev": "electron-vite dev",

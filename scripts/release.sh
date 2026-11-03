@@ -27,6 +27,6 @@ node -e '
 ' "$version"
 git add package.json apps/desktop/package.json
 git commit -q -m "release: v$version"
-git tag -a "v$version" -m "Plotter Studio v$version"
+git tag -a "v$version" -m "Plotka v$version"
 echo "Tagged v$version. To build the draft release on GitHub, push it:"
 echo "  git push origin HEAD v$version"

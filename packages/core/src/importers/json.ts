@@ -11,7 +11,7 @@ import { ImportError, type Importer, type ImportOptions } from './types';
  *   { "units": "in", "paths": [ ... ] }      one layer
  *   [ [[0,0],[10,0]], ... ]                   one layer, millimetres
  *
- * Points are [x, y] (or {x, y}), y pointing down. Plotter Studio's own exported toolpath JSON
+ * Points are [x, y] (or {x, y}), y pointing down. Plotka's own exported toolpath JSON
  * imports too.
  */
 

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Plotter Studio hardware test: long plot. Fill with crosshatch 0.35 mm; see docs/hardware-test.md. -->
+<!-- Plotka hardware test: long plot. Fill with crosshatch 0.35 mm; see docs/hardware-test.md. -->
 <svg xmlns="http://www.w3.org/2000/svg" width="180mm" height="180mm" viewBox="0 0 180 180">
   <circle cx="90" cy="90" r="85" fill="#000"/>
   <rect x="40" y="40" width="100" height="100" fill="#fff"/>

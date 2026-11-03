@@ -13,7 +13,7 @@ export function RecoveryBanner() {
   return (
     <div className={styles.banner} role="alert">
       <span>
-        Plotter Studio closed with unsaved changes to <strong>{recovery.name}</strong> ({when}).
+        Plotka closed with unsaved changes to <strong>{recovery.name}</strong> ({when}).
       </span>
       <button className={styles.primary} onClick={() => void restoreRecovery()}>
         Restore

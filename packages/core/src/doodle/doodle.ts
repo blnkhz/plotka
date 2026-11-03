@@ -303,7 +303,7 @@ export function doodleToSvg(
   });
   return [
     '<?xml version="1.0" encoding="UTF-8"?>',
-    `<!-- Drawn in Plotter Studio -->`,
+    `<!-- Drawn in Plotka -->`,
     `<svg xmlns="http://www.w3.org/2000/svg" width="${f(size.width)}mm" height="${f(size.height)}mm" viewBox="0 0 ${f(size.width)} ${f(size.height)}">`,
     ...els,
     '</svg>',

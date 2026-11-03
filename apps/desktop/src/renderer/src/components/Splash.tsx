@@ -58,7 +58,7 @@ export function Splash({ onClose }: { onClose: () => void }) {
         className={styles.card}
         role="dialog"
         aria-modal="true"
-        aria-label="Welcome to Plotter Studio"
+        aria-label="Welcome to Plotka"
         onClick={(e) => e.stopPropagation()}
       >
         <div className={styles.art}>
@@ -82,7 +82,7 @@ export function Splash({ onClose }: { onClose: () => void }) {
           </button>
           <div className={styles.brand}>
             <img src={logoUrl} alt="" width={60} height={60} />
-            Plotter Studio
+            Plotka
           </div>
           <h1 className={styles.title}>
             Draw it.

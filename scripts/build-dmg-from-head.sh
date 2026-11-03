@@ -16,7 +16,7 @@ log="$cache/build.log"
 mkdir -p "$cache"
 
 notify() {
-  osascript -e "display notification \"$1\" with title \"Plotter Studio\"" >/dev/null 2>&1 || true
+  osascript -e "display notification \"$1\" with title \"Plotka\"" >/dev/null 2>&1 || true
 }
 
 # Another build running? Ask it to go again with the newest commit, and stop here.

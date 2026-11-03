@@ -301,7 +301,7 @@ test('save a project and open it again with all its settings (PROJ-1)', async ()
   await expect.poll(title).toContain('motif (edited)');
 
   await page.getByRole('button', { name: 'Save', exact: true }).click();
-  await expect.poll(title).toBe('My pattern — Plotter Studio');
+  await expect.poll(title).toBe('My pattern — Plotka');
   const saved = JSON.parse(readFileSync(file, 'utf8'));
   expect(saved.format).toBe('plotter-studio-project');
   expect(saved.source.name).toBe('motif.svg');
@@ -312,7 +312,7 @@ test('save a project and open it again with all its settings (PROJ-1)', async ()
   await expect(page.getByLabel('Pattern')).toHaveValue('p4g'); // transforms aren't per file
   await page.getByRole('button', { name: 'Open…' }).click();
   await expect(page.getByText('motif.svg')).toBeVisible();
-  await expect.poll(title).toBe('My pattern — Plotter Studio');
+  await expect.poll(title).toBe('My pattern — Plotka');
   await expect(page.getByLabel('Pattern')).toHaveValue('p4g');
   await page.getByRole('tab', { name: 'Fill' }).click();
   await expect(page.getByLabel('Fill type')).toHaveValue('dots');
@@ -1520,7 +1520,7 @@ test('splash screen: start from it, open a recent file, turn it off', async () =
   const motif = join(fixtures, 'motif.svg');
   writeFileSync(join(dataDir, 'recent.json'), JSON.stringify([{ path: motif, name: 'motif.svg' }]));
   const env = { PLOTTER_STUDIO_USER_DATA: dataDir, PLOTTER_STUDIO_NO_SPLASH: '' };
-  const splash = (page: Page) => page.getByRole('dialog', { name: 'Welcome to Plotter Studio' });
+  const splash = (page: Page) => page.getByRole('dialog', { name: 'Welcome to Plotka' });
 
   // Shown at start; Esc closes it.
   let app = await launch(env);

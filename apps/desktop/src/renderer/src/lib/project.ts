@@ -269,13 +269,13 @@ export function parseProject(text: string): ProjectData {
     throw new ProjectError("This project file is damaged (it isn't valid JSON).");
   }
   if (!isObj(raw) || raw['format'] !== PROJECT_FORMAT)
-    throw new ProjectError("This isn't a Plotter Studio project file.");
+    throw new ProjectError("This isn't a Plotka project file.");
   const version = raw['version'];
   if (!isNum(version) || version < 1)
     throw new ProjectError('This project file is damaged (it has no version).');
   if (version > PROJECT_VERSION)
     throw new ProjectError(
-      'This project was saved by a newer version of Plotter Studio. Update the app to open it.',
+      'This project was saved by a newer version of Plotka. Update the app to open it.',
     );
 
   let source: ProjectData['source'] = null;

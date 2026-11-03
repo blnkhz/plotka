@@ -7,11 +7,15 @@ import { project } from './project';
 import { clearRecovery } from './autosave';
 import { appearance, applyAppearance } from './appearance';
 import { isOpenable, openPath } from './openFile';
+import { migrateUserData, OLD_APP_NAME } from './migrate';
 
 // Automated tests run with their own data folder, so they never touch the user's settings,
 // saved pen heights, recent files or recovery file.
 if (process.env['PLOTTER_STUDIO_USER_DATA'])
   app.setPath('userData', process.env['PLOTTER_STUDIO_USER_DATA']);
+// The app used to be called Plotter Studio: bring its settings along (once, before Electron
+// creates the new folder).
+else migrateUserData(join(app.getPath('appData'), OLD_APP_NAME), app.getPath('userData'));
 
 const plotter = new PlotterService();
 
@@ -22,7 +26,7 @@ function createWindow(): BrowserWindow {
     minWidth: 900,
     minHeight: 600,
     show: false,
-    title: 'Plotter Studio',
+    title: 'Plotka',
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       contextIsolation: true,

@@ -20,7 +20,7 @@ export function projectName(path: string) {
 /** Window title and the macOS "edited" dot. */
 export function updateWindow(win: BrowserWindow | null) {
   if (!win || win.isDestroyed()) return;
-  win.setTitle(`${project.name}${project.dirty ? ' (edited)' : ''} — Plotter Studio`);
+  win.setTitle(`${project.name}${project.dirty ? ' (edited)' : ''} — Plotka`);
   win.setDocumentEdited(project.dirty);
   if (project.path) win.setRepresentedFilename(project.path);
   else win.setRepresentedFilename('');

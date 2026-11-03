@@ -70,7 +70,7 @@ export function registerIpcHandlers(
     if (!path) {
       const opts: Electron.SaveDialogOptions = {
         defaultPath: `${suggestedName}.plot.json`,
-        filters: [{ name: 'Plotter Studio project', extensions: ['json'] }],
+        filters: [{ name: 'Plotka project', extensions: ['json'] }],
       };
       const r = win ? await dialog.showSaveDialog(win, opts) : await dialog.showSaveDialog(opts);
       if (r.canceled || !r.filePath) return null;

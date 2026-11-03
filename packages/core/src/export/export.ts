@@ -40,7 +40,7 @@ export function toolpathToSvg(
   });
   return [
     '<?xml version="1.0" encoding="UTF-8"?>',
-    '<!-- Exported from Plotter Studio: the processed paths, as they will be plotted. -->',
+    '<!-- Exported from Plotka: the processed paths, as they will be plotted. -->',
     `<svg xmlns="http://www.w3.org/2000/svg" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape" width="${r(paper.width)}mm" height="${r(paper.height)}mm" viewBox="0 0 ${r(paper.width)} ${r(paper.height)}">`,
     ...groups,
     '</svg>',

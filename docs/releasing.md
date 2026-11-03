@@ -21,7 +21,7 @@ publish the draft.
    ```
 
 4. Watch it under the repo's **Actions** tab (about 10 minutes). When it's done, open
-   **Releases**: there's a draft "Plotter Studio v0.2.0" with the `.dmg` attached and notes
+   **Releases**: there's a draft "Plotka v0.2.0" with the `.dmg` attached and notes
    generated from the commits since the last release.
 5. Download the `.dmg` from the draft and try it (connect, plot something small).
 6. Edit the notes if needed and click **Publish release**.

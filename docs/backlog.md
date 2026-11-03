@@ -12,7 +12,6 @@ building. Each item gets a plan in `docs/plans/` when it's picked up.
 
 ## Needs a decision
 
-- Final project name (before the repo or a release goes public)
 - Code of conduct contact method (`CODE_OF_CONDUCT.md`)
 - README screenshot
 - Whether to commit `specs.md` (e.g. as `docs/spec.md`)
