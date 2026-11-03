@@ -33,6 +33,45 @@ Design notes:
 - **Tests**: core placement math; an app test that drags with the mouse and checks the new
   position, the time estimate updating, and undo.
 
+## Movable spiral fill center (new, requested 2026-11-02)
+
+The **Spiral** fill (Fill tab) currently starts at each shape's center (its area centroid). Let the
+user move it for more varied patterns:
+
+- **Center X / Y** offset fields (mm, relative to the shape's centroid, so the default stays
+  exactly as it is now), plus a **Reset**.
+- Optional: drag a small crosshair in the preview to place the center (needs the layer selection
+  from "Move and resize layers").
+- **Per-shape or shared center**: a "Same center for all shapes" option, so several shapes in a
+  layer spiral around one common point (gives a single continuous-looking spiral across shapes).
+- The center may sit outside the shape; the spiral is still clipped to it. Grow the spiral's
+  outer radius to the farthest vertex from the new center.
+
+## More fill types (new, requested 2026-11-02)
+
+New fill patterns, each with its own controls for size and amplitude, on the same global grid
+logic so neighboring shapes line up:
+
+- **Waves**: parallel lines bent into sine waves. Controls: spacing, angle, **wavelength**,
+  **amplitude**, phase shift per line (for interference patterns).
+- **Noise**: lines displaced by smooth noise (Perlin or simplex), for an organic, hand-drawn or
+  topographic look. Controls: spacing, angle, **noise scale** (feature size), **amplitude**,
+  **seed** (repeatable). Optional "flow" mode where lines follow the noise direction instead of
+  only being displaced.
+- **Further ideas** to consider at the same time:
+  - **Flow field**: short strokes following a noise field.
+  - **Ripples**: concentric circles around a movable point, clipped to the shape (like the
+    spiral, with a center).
+  - **Zigzag waves**: triangle and square waves with the same controls.
+  - **Hexagons and triangles**: grid fills.
+  - **Stippling by tone**: dots spaced by the source color, building on "spacing from fill
+    color".
+
+Notes: waves and noise must stay inside the shape and its inset (clip each displaced line to the
+inset area). They work with "Keep pen down between lines" where joins stay inside, and with
+"Spacing from fill color". Amplitude is limited so lines never cross unless the user asks.
+Previews and tests should check repeatability (same seed, same lines).
+
 ## Remaining spec stories (P2 and later)
 
 - GEN-1 kaleidoscope around a center (wedge of the source repeated and mirrored)
