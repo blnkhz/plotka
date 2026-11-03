@@ -1,12 +1,15 @@
 # Plotka
 
+[![Latest release](https://img.shields.io/github/v/release/blnkhz/plotka?label=release&color=6bb797)](https://github.com/blnkhz/plotka/releases/latest)
+
 A desktop app for pen plotters. Load SVG artwork, set up the paper and fills, preview exactly
 what the pen will draw, and plot directly over USB, with no vendor software or Inkscape
 extension needed.
 
 ![Plotka welcome screen: an example plot and Open…, Doodle… and + Text](docs/screenshots/welcome.png)
 
-**Status:** in development, plotting on an AxiDraw V3/A3. No installable release yet.
+**Status:** early releases for macOS, tested on an AxiDraw V3/A3. Download the app from
+[GitHub releases](../../releases/latest).
 
 ## Features
 
@@ -77,8 +80,8 @@ Any EiBotBoard (EBB) based plotter should work with a machine profile. See
 
 ## Install
 
-Builds for macOS (Apple Silicon and Intel) will be attached to
-[GitHub releases](../../releases). Windows and Linux aren't planned for now.
+Download the `.dmg` from the [latest release](../../releases/latest). It runs on macOS, on
+Apple Silicon and Intel. Windows and Linux aren't planned for now.
 
 The app is not signed with an Apple Developer certificate yet, so macOS blocks it the first
 time. To open it:
