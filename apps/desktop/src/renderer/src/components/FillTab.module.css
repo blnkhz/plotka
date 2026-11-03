@@ -26,3 +26,8 @@
   flex-wrap: wrap;
   gap: 6px;
 }
+.active {
+  background: var(--accent);
+  color: var(--on-accent);
+  border-color: var(--accent);
+}

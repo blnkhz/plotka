@@ -31,6 +31,10 @@ export function FillTab() {
   const setLayer = useStore((s) => s.setLayer);
   const defaultFill = useStore((s) => s.defaultFill);
   const setDefaultFill = useStore((s) => s.setDefaultFill);
+  const placing = useStore(
+    (s) => s.adjustSpiralId !== null && s.adjustSpiralId === s.selectedLayerId,
+  );
+  const setAdjustSpiral = useStore((s) => s.setAdjustSpiral);
   if (!doc) return <Notice kind="info">No file open.</Notice>;
   const layers = applyOverrides(doc, overrides).layers;
   const layer = layers.find((l) => l.id === selectedId);
@@ -93,6 +97,62 @@ export function FillTab() {
                   onChange={(angle) => setFill({ angle })}
                 />
               </Row>
+            )}
+            {type === 'spiral' && (
+              <>
+                <Row label="Center X / Y">
+                  <NumberField
+                    value={fill.centerX ?? 0}
+                    min={-1000}
+                    max={1000}
+                    step={1}
+                    width={52}
+                    title="Move where the spiral starts, in mm from the shape's center (right is +)"
+                    onChange={(centerX) => setFill({ centerX })}
+                  />
+                  <NumberField
+                    value={fill.centerY ?? 0}
+                    min={-1000}
+                    max={1000}
+                    step={1}
+                    width={52}
+                    suffix="mm"
+                    title="Down is +"
+                    onChange={(centerY) => setFill({ centerY })}
+                  />
+                  {fill.centerX || fill.centerY ? (
+                    <button
+                      onClick={() => setFill({ centerX: undefined, centerY: undefined })}
+                      title="Back to the shape's center"
+                    >
+                      Reset
+                    </button>
+                  ) : null}
+                </Row>
+                <Row label="">
+                  <button
+                    className={placing ? styles.active : undefined}
+                    aria-pressed={placing}
+                    onClick={() => setAdjustSpiral(placing ? null : layer.id)}
+                    title="Drag the spiral centers in the preview"
+                  >
+                    {placing ? 'Done placing' : 'Place in preview'}
+                  </button>
+                </Row>
+                <Row label="">
+                  <label
+                    className={styles.check}
+                    title="All shapes in the layer spiral around one point (the center of them all), so the turns continue from shape to shape"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={!!fill.sharedCenter}
+                      onChange={(e) => setFill({ sharedCenter: e.target.checked })}
+                    />
+                    Same center for all shapes
+                  </label>
+                </Row>
+              </>
             )}
             {type === 'dots' && (
               <Row label="Jitter">

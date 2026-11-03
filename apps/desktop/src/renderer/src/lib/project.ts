@@ -141,6 +141,9 @@ export function parseFill(v: unknown): FillSettings | null | undefined {
   if (isNum(v['crossAngle'])) f.crossAngle = v['crossAngle'];
   if (isNum(v['jitter'])) f.jitter = v['jitter'];
   if (typeof v['densityFromColor'] === 'boolean') f.densityFromColor = v['densityFromColor'];
+  if (isNum(v['centerX'])) f.centerX = v['centerX'];
+  if (isNum(v['centerY'])) f.centerY = v['centerY'];
+  if (typeof v['sharedCenter'] === 'boolean') f.sharedCenter = v['sharedCenter'];
   return f;
 }
 

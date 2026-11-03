@@ -21,6 +21,8 @@ export type PatternOptions = {
   connect: boolean;
   /** Dots: random offset as a fraction of spacing, 0..1. */
   jitter?: number;
+  /** Spiral: where it starts. Defaults to the area's centroid. */
+  center?: Vec2;
 };
 
 /** Safety cap on concentric rings / spiral turns, so a tiny spacing can't hang the app. */
@@ -30,7 +32,7 @@ const SPIRAL_TOLERANCE = 0.02;
 
 const dist = (a: Vec2, b: Vec2) => Math.hypot(a.x - b.x, a.y - b.y);
 
-const insetArea = (region: FillRegion, inset: number): Shape => {
+export const insetArea = (region: FillRegion, inset: number): Shape => {
   const base = regionShape(region);
   return inset > 0 ? offsetShape(base, -inset) : base;
 };
@@ -97,14 +99,15 @@ function segmentInside(a: Vec2, b: Vec2, tester: ShapeTester): boolean {
 }
 
 /**
- * HATCH-5: an Archimedean spiral (`spacing` between turns) from the area's centroid out to its
+ * HATCH-5: an Archimedean spiral (`spacing` between turns) from `center` (by default the area's
+ * centroid; it may be outside the area) out to its
  * farthest point, clipped to the inset area.
  */
 export function spiralFill(region: FillRegion, o: PatternOptions): Polyline[] {
   if (!(o.spacing > 0)) return [];
   const area = insetArea(region, o.inset);
-  const c = shapeCentroid(area);
-  if (!c) return [];
+  const c = o.center ?? shapeCentroid(area);
+  if (!c || !area.length) return [];
   let rmax = 0;
   for (const r of area) for (const p of r) rmax = Math.max(rmax, dist(p, c));
   const turns = Math.min(MAX_RINGS, rmax / o.spacing + 1);

@@ -1,18 +1,20 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import {
   getTransform,
   marginBox,
   paperSize,
+  spiralCenters,
   undrawnFillCount,
   type ParamValues,
   type Polyline,
   type StepGuide,
+  type Vec2,
 } from '@plotter-studio/core';
 import { beginGesture, endGesture } from '../lib/projectActions';
 import { useProcessed, useProfile, type Processed } from '../lib/useProcessed';
 import { completedCount, partialRoute, penAt } from '../lib/playback';
 import { PlaybackBar } from './PlaybackBar';
-import { useStore, type ViewOptions } from '../store';
+import { currentLayerSettings, useStore, type ViewOptions } from '../store';
 import styles from './Preview.module.css';
 
 type ViewTransform = { scale: number; x: number; y: number }; // screen = mm * scale + (x, y)
@@ -47,9 +49,32 @@ export function Preview() {
   const playbackT = playback.on ? playback.t : null;
   const adjustStepId = useStore((s) => s.adjustStepId);
   const guide = adjustStepId && processed?.guide?.stepId === adjustStepId ? processed.guide : null;
-  const inputs = useRef({ processed, page, options, bed: profile.bed, pen, playbackT, guide });
+  const adjustSpiralId = useStore((s) => s.adjustSpiralId);
+  const spiral = useMemo(() => {
+    const layer = adjustSpiralId && processed?.clipped.layers.find((l) => l.id === adjustSpiralId);
+    const centers = layer ? spiralCenters(layer) : null;
+    if (!layer || !centers) return null;
+    // Unique centers (a shared center is the same for every shape).
+    const seen = new Set<string>();
+    const unique = centers.filter((c): c is Vec2 => {
+      if (!c) return false;
+      const k = `${c.x.toFixed(3)},${c.y.toFixed(3)}`;
+      return !seen.has(k) && !!seen.add(k);
+    });
+    return { layerId: layer.id, centers: unique };
+  }, [adjustSpiralId, processed]);
+  const inputs = useRef({
+    processed,
+    page,
+    options,
+    bed: profile.bed,
+    pen,
+    playbackT,
+    guide,
+    spiral,
+  });
   useEffect(() => {
-    inputs.current = { processed, page, options, bed: profile.bed, pen, playbackT, guide };
+    inputs.current = { processed, page, options, bed: profile.bed, pen, playbackT, guide, spiral };
   });
 
   const draw = useCallback(() => {
@@ -90,6 +115,7 @@ export function Preview() {
     pen?.down,
     playbackT,
     guide,
+    spiral,
   ]);
   // Fit on request (file opened, F key, button) and when paper size changes.
   useEffect(fit, [
@@ -160,7 +186,7 @@ export function Preview() {
     };
     let drag: { x: number; y: number; adjust: boolean } | null = null;
     const onDown = (e: PointerEvent) => {
-      const adjust = inputs.current.guide !== null;
+      const adjust = inputs.current.guide !== null || inputs.current.spiral !== null;
       drag = { x: e.clientX, y: e.clientY, adjust };
       if (adjust) beginGesture();
       canvas.setPointerCapture(e.pointerId);
@@ -170,7 +196,12 @@ export function Preview() {
       const g = inputs.current.guide;
       const placement = inputs.current.processed?.placement;
       if (drag.adjust) {
-        if (g && placement) {
+        const sp = inputs.current.spiral;
+        if (sp) {
+          // Fills are made on the paper, so the drag in mm is the center's move.
+          const k = view.current.scale;
+          moveSpiralCenter(sp.layerId, (e.clientX - drag.x) / k, (e.clientY - drag.y) / k);
+        } else if (g && placement) {
           // Screen px → paper mm → the transform's own mm (undo the page placement's scale
           // and turn), then into the transform's params.
           const k = view.current.scale;
@@ -222,23 +253,31 @@ export function Preview() {
   };
 
   // Esc ends adjusting.
+  const adjusting = adjustStepId !== null || adjustSpiralId !== null;
   useEffect(() => {
-    if (!adjustStepId) return;
+    if (!adjusting) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') useStore.getState().setAdjustStep(null);
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [adjustStepId]);
+  }, [adjusting]);
 
   return (
     <div className={styles.wrap} ref={wrapRef}>
       <canvas
         ref={canvasRef}
-        className={`${styles.canvas} ${guide ? styles.adjusting : ''}`}
+        className={`${styles.canvas} ${guide || spiral ? styles.adjusting : ''}`}
         data-testid="preview"
       />
       {adjustStepId && <AdjustBar ready={guide !== null} />}
+      {adjustSpiralId && (
+        <AdjustBar
+          ready={spiral !== null}
+          text="Drag to move the spiral center"
+          notReady="Choose a Spiral fill for this layer to place its center."
+        />
+      )}
       <PlaybackBar />
       <ViewToggles />
       <div className={styles.zoom}>
@@ -285,18 +324,41 @@ function dragGuide(g: StepGuide, dx: number, dy: number) {
   }));
 }
 
+/** Moves a layer's spiral fill center by (dx, dy) mm. */
+function moveSpiralCenter(layerId: string, dx: number, dy: number) {
+  const fill = currentLayerSettings(layerId)?.fill;
+  if (fill?.type !== 'spiral') return;
+  const round = (v: number) => Math.round(v * 100) / 100;
+  useStore.getState().setLayer(layerId, {
+    settings: {
+      fill: {
+        ...fill,
+        centerX: round((fill.centerX ?? 0) + dx),
+        centerY: round((fill.centerY ?? 0) + dy),
+      },
+    },
+  });
+}
+
 function zoomGuide(g: StepGuide, factor: number) {
   setGuideParams(g.stepId, (p) => ({ [g.zoomKey]: Number(p[g.zoomKey]) * factor }));
 }
 
 /** Shown while a transform is adjusted in the preview. */
-function AdjustBar({ ready }: { ready: boolean }) {
+function AdjustBar({
+  ready,
+  text = 'Drag to move the artwork (shown in blue) under the outline · scroll or pinch to zoom it',
+  notReady = 'Turn the transform on and make it the last one to adjust it here.',
+}: {
+  ready: boolean;
+  text?: string;
+  notReady?: string;
+}) {
+  // Either kind of adjusting: setting one clears the other, so this ends both.
   const setAdjustStep = useStore((s) => s.setAdjustStep);
   return (
     <div className={styles.adjustBar} role="status">
-      {ready
-        ? 'Drag to move the artwork (shown in blue) under the outline · scroll or pinch to zoom it'
-        : 'Turn the transform on and make it the last one to adjust it here.'}
+      {ready ? text : notReady}
       <button onClick={() => setAdjustStep(null)}>Done</button>
     </div>
   );
@@ -361,6 +423,8 @@ function ViewToggles() {
 type RenderInput = {
   /** The transform being adjusted: its outline is drawn over everything. */
   guide: StepGuide | null;
+  /** The spiral centers being placed. */
+  spiral: { centers: Vec2[] } | null;
   processed: Processed | null;
   page: ReturnType<typeof useStore.getState>['page'];
   options: ViewOptions;
@@ -378,7 +442,7 @@ function cssVar(name: string): string {
 function render(
   canvas: HTMLCanvasElement,
   v: ViewTransform,
-  { processed, page, options, bed, pen, playbackT, guide }: RenderInput,
+  { processed, page, options, bed, pen, playbackT, guide, spiral }: RenderInput,
 ) {
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
@@ -558,6 +622,23 @@ function render(
     ctx.lineWidth = 1.5 * px;
     ctx.setLineDash([5 * px, 3 * px]);
     ctx.stroke();
+    ctx.restore();
+  }
+
+  if (spiral) {
+    ctx.save();
+    ctx.strokeStyle = cssVar('--accent');
+    ctx.lineWidth = 1.5 * px;
+    for (const c of spiral.centers) {
+      const r = 7 * px;
+      ctx.beginPath();
+      ctx.arc(c.x, c.y, r, 0, Math.PI * 2);
+      ctx.moveTo(c.x - 2 * r, c.y);
+      ctx.lineTo(c.x + 2 * r, c.y);
+      ctx.moveTo(c.x, c.y - 2 * r);
+      ctx.lineTo(c.x, c.y + 2 * r);
+      ctx.stroke();
+    }
     ctx.restore();
   }
 

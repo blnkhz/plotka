@@ -78,6 +78,8 @@ type State = {
   selectedLayerId: string | null;
   /** The transform step being adjusted by dragging in the preview, if any. */
   adjustStepId: string | null;
+  /** The layer whose spiral fill center is being placed in the preview, if any. */
+  adjustSpiralId: string | null;
   page: PageSetup;
   optimize: OptimizeSettings;
   profileId: string;
@@ -143,6 +145,7 @@ type State = {
   setLayer(id: string, patch: LayerOverride): void;
   selectLayer(id: string | null): void;
   setAdjustStep(id: string | null): void;
+  setAdjustSpiral(layerId: string | null): void;
   setView(patch: Partial<ViewOptions>): void;
   setTab(tab: Tab): void;
   requestFit(): void;
@@ -278,6 +281,7 @@ export const useStore = create<State>()((set, get) => ({
   overridesByMode: {},
   selectedLayerId: null,
   adjustStepId: null,
+  adjustSpiralId: null,
   page: defaultPageSetup(),
   optimize: defaultOptimizeSettings(),
   profileId: loadProfileId(),
@@ -438,8 +442,15 @@ export const useStore = create<State>()((set, get) => ({
       };
     }),
 
-  selectLayer: (selectedLayerId) => set({ selectedLayerId }),
-  setAdjustStep: (adjustStepId) => set({ adjustStepId }),
+  selectLayer: (selectedLayerId) =>
+    set((s) => ({
+      selectedLayerId,
+      // Placing a spiral center is for one layer: picking another ends it.
+      adjustSpiralId: s.adjustSpiralId === selectedLayerId ? s.adjustSpiralId : null,
+    })),
+  // One thing is adjusted in the preview at a time.
+  setAdjustStep: (adjustStepId) => set({ adjustStepId, adjustSpiralId: null }),
+  setAdjustSpiral: (adjustSpiralId) => set({ adjustSpiralId, adjustStepId: null }),
   setView: (patch) => set((s) => ({ view: { ...s.view, ...patch } })),
   setTab: (tab) => set({ tab }),
   requestFit: () => set((s) => ({ fitRequest: s.fitRequest + 1 })),

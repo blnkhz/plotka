@@ -38,6 +38,11 @@ export type FillSettings = {
   jitter?: number;
   /** Darker source colors get tighter spacing (spacing ÷ darkness). */
   densityFromColor?: boolean;
+  /** Spiral: where it starts, in mm from the shape's center (or the layer's, when shared). */
+  centerX?: number;
+  centerY?: number;
+  /** Spiral: one center for all the layer's shapes (the center of them all together). */
+  sharedCenter?: boolean;
 };
 
 /**

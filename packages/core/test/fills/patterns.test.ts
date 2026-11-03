@@ -8,6 +8,7 @@ import {
   layerFillPaths,
   regionSpacing,
   ShapeTester,
+  spiralCenters,
   spiralFill,
   undrawnFillCount,
   type FillRegion,
@@ -197,6 +198,40 @@ describe('spiral (HATCH-5)', () => {
       // The hole grown by the inset has round corners; stay clear of them.
       expect(inRect(p, 7.9, 2.9, 4.2, 4.2, 0)).toBe(false);
     }
+  });
+});
+
+describe('movable spiral center', () => {
+  /** Where the spiral starts: the first point of the first path (the innermost turn). */
+  const start = (l: Layer) => layerFillPaths(l)[0]!.points[0]!;
+
+  it('starts at the inset centroid by default, and moves by the offset', () => {
+    const sq = region([rect(0, 0, 20, 20)]);
+    expect(start(layerWith([sq], fill({ type: 'spiral' })))).toEqual({ x: 10, y: 10 });
+    const moved = start(layerWith([sq], fill({ type: 'spiral', centerX: 4, centerY: -3 })));
+    expect(moved.x).toBeCloseTo(14);
+    expect(moved.y).toBeCloseTo(7);
+  });
+
+  it('a center outside the shape still fills all of it, clipped to it', () => {
+    const l = layerWith([region([rect(0, 0, 20, 20)])], fill({ type: 'spiral', centerX: 25 }));
+    const p = pts(layerFillPaths(l));
+    for (const q of p) expect(inRect(q, 0, 0, 20, 20, 1e-3)).toBe(true);
+    // The far corner (35 mm from the center) is reached: turns cross the left edge's area.
+    expect(p.some((q) => q.x < 1)).toBe(true);
+  });
+
+  it('a shared center is the centroid of all the shapes together', () => {
+    const shapes = [region([rect(0, 0, 10, 10)]), region([rect(30, 0, 10, 10)])];
+    const own = spiralCenters(layerWith(shapes, fill({ type: 'spiral' })))!;
+    expect(own).toEqual([
+      { x: 5, y: 5 },
+      { x: 35, y: 5 },
+    ]);
+    const shared = spiralCenters(layerWith(shapes, fill({ type: 'spiral', sharedCenter: true })))!;
+    expect(shared[0]).toEqual({ x: 20, y: 5 });
+    expect(shared[1]).toEqual({ x: 20, y: 5 });
+    expect(spiralCenters(layerWith(shapes, fill({ type: 'lines' })))).toBeNull();
   });
 });
 

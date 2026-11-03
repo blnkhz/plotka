@@ -23,6 +23,12 @@ layers** copies them (and the layer's speeds) to the others.
   tip width gives an even tone.
 - **Angle**: the direction of the lines (the start direction for spirals, the grid angle for
   dots).
+- **Center X / Y** (spirals): moves where the spiral starts, in mm from the shape's center
+  (right and down are positive). The center can even sit outside the shape: the spiral still
+  covers all of it, cut to the shape. **Reset** puts it back in the middle. **Place in preview**
+  shows the centers as crosshairs; drag to move them, and press Esc or **Done** when finished.
+- **Same center for all shapes** (spirals): every shape in the layer spirals around one point,
+  the center of them all together, so the turns run on from shape to shape.
 - **Inset**: pulls the fill in from the outline, so it doesn't overrun a drawn outline.
 - **Spacing from fill color**: darker shapes get tighter spacing, lighter ones wider (up to 10×).
   Very light shapes are left empty. Turns grayscale art into tones.

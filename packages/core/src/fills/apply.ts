@@ -4,12 +4,15 @@ import {
   clipPolylinesToShape,
   differenceShapes,
   regionShape,
+  shapeArea,
+  shapeCentroid,
   shapeRegion,
   type Shape,
 } from '../geometry/polygon';
 import type { Bounds, FillRegion, FillSettings, Layer, PlotDocument, Polyline } from '../model';
+import type { Vec2 } from '../geometry/vec2';
 import { hatchRegion } from './hatch';
-import { concentricFill, dotFill, spiralFill } from './patterns';
+import { concentricFill, dotFill, insetArea, spiralFill } from './patterns';
 
 export const SUPPORTED_FILL_TYPES = [
   'none',
@@ -55,7 +58,7 @@ export function regionSpacing(f: FillSettings, region: FillRegion): number | nul
 }
 
 /** Fill polylines for one region (already reduced to its visible area). */
-export function fillRegion(region: FillRegion, f: FillSettings): Polyline[] {
+export function fillRegion(region: FillRegion, f: FillSettings, center?: Vec2): Polyline[] {
   if (f.type === 'none' || !(f.spacing > 0)) return [];
   const spacing = regionSpacing(f, region);
   if (spacing === null) return [];
@@ -73,10 +76,44 @@ export function fillRegion(region: FillRegion, f: FillSettings): Polyline[] {
     case 'concentric':
       return concentricFill(region, base);
     case 'spiral':
-      return spiralFill(region, base);
+      return spiralFill(region, center ? { ...base, center } : base);
     case 'dots':
       return dotFill(region, { ...base, jitter: f.jitter });
   }
+}
+
+/**
+ * Where each region's spiral starts (spiral fills only, else null): the centroid of its inset
+ * area, or with `sharedCenter` of all the layer's drawn regions together, moved by the center
+ * offset. Uses whole regions (not what's left visible), so covered parts don't shift it.
+ */
+export function spiralCenters(layer: Layer): (Vec2 | null)[] | null {
+  const f = layer.settings.fill;
+  if (f?.type !== 'spiral') return null;
+  const dx = f.centerX ?? 0;
+  const dy = f.centerY ?? 0;
+  // The inset area's centroid, as the spiral always used, so no offset changes nothing.
+  const areas = layer.fills.map((r) => (r.knockout ? [] : insetArea(r, f.inset)));
+  const own = areas.map((a) => (a.length ? shapeCentroid(a) : null));
+  let shared: Vec2 | null = null;
+  if (f.sharedCenter) {
+    let a = 0;
+    let x = 0;
+    let y = 0;
+    layer.fills.forEach((r, i) => {
+      const c = own[i];
+      if (!c) return;
+      const w = Math.abs(shapeArea(areas[i]!));
+      a += w;
+      x += c.x * w;
+      y += c.y * w;
+    });
+    shared = a > 0 ? { x: x / a, y: y / a } : null;
+  }
+  return own.map((c) => {
+    const base = f.sharedCenter ? shared : c;
+    return base && { x: base.x + dx, y: base.y + dy };
+  });
 }
 
 const regionBounds = (r: FillRegion): Bounds => {
@@ -110,9 +147,11 @@ export function layerFillPaths(layer: Layer): Polyline[] {
     return s;
   };
 
+  const centers = spiralCenters(layer);
   const out: Polyline[] = [];
   regions.forEach((region, i) => {
     if (region.knockout) return;
+    const center = centers?.[i] ?? undefined;
     // Shapes painted later that overlap this one.
     const above: Shape = [];
     if (hide)
@@ -120,13 +159,13 @@ export function layerFillPaths(layer: Layer): Polyline[] {
         if (overlaps(bounds[i]!, bounds[j]!)) append(above, shapeOf(j));
     if (!above.length) {
       if (outlines) append(out, outlineOf(region));
-      if (filling) append(out, fillRegion(region, f!));
+      if (filling) append(out, fillRegion(region, f!, center));
       return;
     }
     if (outlines) append(out, clipPolylinesToShape(outlineOf(region), above, 'outside'));
     if (filling) {
       const visible = differenceShapes(shapeOf(i), above);
-      if (visible.length) append(out, fillRegion(shapeRegion(visible, region.color), f!));
+      if (visible.length) append(out, fillRegion(shapeRegion(visible, region.color), f!, center));
     }
   });
   return out;

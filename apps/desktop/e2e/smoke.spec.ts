@@ -1033,3 +1033,41 @@ test('plot log: a finished plot is logged with a note, and opens with its settin
   await expect(page.getByText('Plots you make are listed here', { exact: false })).toBeVisible();
   await app.close();
 });
+
+test('spiral fill: move its center with the fields or by dragging in the preview', async () => {
+  const app = await launch();
+  const page = await app.firstWindow();
+  await page.setViewportSize({ width: 1400, height: 900 });
+  await dropFile(page, 'motif.svg');
+  await page.getByRole('tab', { name: 'Fill' }).click();
+  await page.getByLabel('Fill type').selectOption('spiral');
+  const x = page.getByRole('spinbutton', { name: 'Center X / Y' }).first();
+  await expect(x).toHaveValue('0');
+  await expect(page.getByRole('button', { name: 'Reset', exact: true })).toHaveCount(0);
+
+  await page.getByRole('button', { name: 'Place in preview' }).click();
+  await expect(page.getByText('Drag to move the spiral center')).toBeVisible();
+  const box = (await page.getByTestId('preview').boundingBox())!;
+  const cx = box.x + box.width / 2;
+  const cy = box.y + box.height / 2;
+  await page.mouse.move(cx, cy);
+  await page.mouse.down();
+  for (let i = 1; i <= 8; i++) await page.mouse.move(cx + i * 5, cy, { steps: 2 });
+  await page.mouse.up();
+  await expect.poll(async () => Number(await x.inputValue())).toBeGreaterThan(5);
+  await expect(page.getByText('Updating…')).toHaveCount(0);
+  if (shots) await page.screenshot({ path: join(shots, 'spiral-center.png') });
+
+  // One drag, one undo step; then Reset.
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('button', { name: 'Place in preview' })).toBeVisible();
+  await page.getByRole('button', { name: 'Undo' }).click();
+  await expect(x).toHaveValue('0');
+  await x.fill('12');
+  await x.press('Enter');
+  await page.getByRole('button', { name: 'Reset', exact: true }).click();
+  await expect(x).toHaveValue('0');
+  await page.getByLabel('Same center for all shapes').check();
+  await expect(page.getByLabel('Same center for all shapes')).toBeChecked();
+  await app.close();
+});
