@@ -10,27 +10,40 @@ export const isDot = (p: Polyline) =>
 
 /**
  * OPT-3: removes line segments (and dots) the pen has already drawn in this list, matching
- * endpoints to `tolerance` mm in either direction. Paths are cut where a duplicate segment is
+ * endpoints within `tolerance` mm in either direction. Paths are cut where a duplicate segment is
  * taken out; closed paths that lose a segment become open. Partly overlapping segments that don't
  * share both ends aren't detected.
  */
 export function removeDuplicateSegments(paths: Polyline[], tolerance = 0.01): Polyline[] {
-  const q = (v: number) => Math.round(v / tolerance);
-  const key = (p: Vec2) => `${q(p.x)},${q(p.y)}`;
-  const segKey = (a: Vec2, b: Vec2) => {
-    const ka = key(a);
-    const kb = key(b);
-    return ka < kb ? `${ka}|${kb}` : `${kb}|${ka}`;
+  // Seen segments, indexed under the grid cell of each end. A match is within one cell, so
+  // looking in the 3 × 3 cells around an end finds it even across a cell boundary.
+  const cell = (v: number) => Math.floor(v / tolerance);
+  const grid = new Map<string, [Vec2, Vec2][]>();
+  const add = (a: Vec2, b: Vec2) => {
+    for (const p of a === b ? [a] : [a, b]) {
+      const k = `${cell(p.x)},${cell(p.y)}`;
+      const list = grid.get(k);
+      if (list) list.push([a, b]);
+      else grid.set(k, [[a, b]]);
+    }
   };
-  const seen = new Set<string>();
+  const near = (p: Vec2, q: Vec2) => dist(p, q) <= tolerance;
+  const seenBefore = (a: Vec2, b: Vec2) => {
+    const cx = cell(a.x);
+    const cy = cell(a.y);
+    for (let dx = -1; dx <= 1; dx++)
+      for (let dy = -1; dy <= 1; dy++)
+        for (const [p, q] of grid.get(`${cx + dx},${cy + dy}`) ?? [])
+          if ((near(a, p) && near(b, q)) || (near(a, q) && near(b, p))) return true;
+    return false;
+  };
   const out: Polyline[] = [];
   for (const path of paths) {
     const pts = path.points;
     if (pts.length < 2) continue;
     if (isDot(path)) {
-      const k = segKey(pts[0]!, pts[0]!);
-      if (!seen.has(k)) {
-        seen.add(k);
+      if (!seenBefore(pts[0]!, pts[0]!)) {
+        add(pts[0]!, pts[0]!);
         out.push(path);
       }
       continue;
@@ -40,11 +53,10 @@ export function removeDuplicateSegments(paths: Polyline[], tolerance = 0.01): Po
     for (let i = 0; i < n; i++) {
       const a = pts[i]!;
       const b = pts[(i + 1) % pts.length]!;
-      const k = segKey(a, b);
       // A segment that collapses to a point within the tolerance adds nothing.
-      const dup = seen.has(k) || key(a) === key(b);
+      const dup = dist(a, b) < tolerance || seenBefore(a, b);
       keep.push(!dup);
-      if (!dup) seen.add(k);
+      if (!dup) add(a, b);
     }
     if (keep.every(Boolean)) {
       out.push(path);
