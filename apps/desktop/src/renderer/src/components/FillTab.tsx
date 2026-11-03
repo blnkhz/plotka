@@ -1,4 +1,5 @@
 import {
+  CENTERED_FILLS,
   maxWavyAmplitude,
   WAVY_DEFAULTS,
   type FillSettings,
@@ -67,7 +68,6 @@ const MIN_START_SPACING: Partial<Record<FillType, number>> = {
   triangles: 3,
   stipple: 1,
 };
-const CENTERED = new Set<FillType>(['spiral', 'ripples']);
 
 export function FillTab() {
   const doc = useStore((s) => s.doc);
@@ -151,7 +151,7 @@ export function FillTab() {
                     />
                   </Row>
                 )}
-                {CENTERED.has(type) && (
+                {CENTERED_FILLS.includes(type) && (
                   <>
                     <Row label="Center X / Y">
                       <NumberField

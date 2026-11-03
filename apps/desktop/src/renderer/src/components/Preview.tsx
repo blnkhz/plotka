@@ -4,6 +4,7 @@ import {
   getTransform,
   marginBox,
   paperSize,
+  CENTERED_FILLS,
   fillCenters,
   undrawnFillCount,
   type ParamValues,
@@ -383,7 +384,7 @@ export function Preview() {
         if (sp) {
           // Fills are made on the paper, so the drag in mm is the center's move.
           const k = view.current.scale;
-          moveSpiralCenter(sp.layerId, (e.clientX - drag.x) / k, (e.clientY - drag.y) / k);
+          moveFillCenter(sp.layerId, (e.clientX - drag.x) / k, (e.clientY - drag.y) / k);
         } else if (g && placement) {
           // Screen px → paper mm → the transform's own mm (undo the page placement's scale
           // and turn), then into the transform's params.
@@ -550,10 +551,10 @@ function dragGuide(g: StepGuide, dx: number, dy: number) {
   }));
 }
 
-/** Moves a layer's spiral fill center by (dx, dy) mm. */
-function moveSpiralCenter(layerId: string, dx: number, dy: number) {
+/** Moves the center of a layer's centered fill (spiral, ripples) by (dx, dy) mm. */
+function moveFillCenter(layerId: string, dx: number, dy: number) {
   const fill = currentLayerSettings(layerId)?.fill;
-  if (fill?.type !== 'spiral') return;
+  if (!fill || !CENTERED_FILLS.includes(fill.type)) return;
   const round = (v: number) => Math.round(v * 100) / 100;
   useStore.getState().setLayer(layerId, {
     settings: {

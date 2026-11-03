@@ -1042,6 +1042,27 @@ test('plot log: a finished plot is logged with a note, and opens with its settin
   await app.close();
 });
 
+test('ripples fill: drag its center in the preview', async () => {
+  const app = await launch();
+  const page = await app.firstWindow();
+  await page.setViewportSize({ width: 1400, height: 900 });
+  await dropFile(page, 'motif.svg');
+  await page.getByRole('tab', { name: 'Fill' }).click();
+  await page.getByLabel('Fill type').selectOption('ripples');
+  const x = page.getByRole('spinbutton', { name: 'Center X / Y' }).first();
+  await expect(x).toHaveValue('0');
+  await page.getByRole('button', { name: 'Place in preview' }).click();
+  const box = (await page.getByTestId('preview').boundingBox())!;
+  const cx = box.x + box.width / 2;
+  const cy = box.y + box.height / 2;
+  await page.mouse.move(cx, cy);
+  await page.mouse.down();
+  for (let i = 1; i <= 8; i++) await page.mouse.move(cx + i * 5, cy, { steps: 2 });
+  await page.mouse.up();
+  await expect.poll(async () => Number(await x.inputValue())).toBeGreaterThan(5);
+  await app.close();
+});
+
 test('spiral fill: move its center with the fields or by dragging in the preview', async () => {
   const app = await launch();
   const page = await app.firstWindow();
