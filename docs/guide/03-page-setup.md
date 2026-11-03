@@ -28,7 +28,8 @@ blocked. The dashed outline in the preview shows the machine's reach (turn it on
 - **Align**: where the artwork sits inside the margins (click one of the nine squares).
   **As in file** keeps it where the file's artboard puts it instead.
 - **Scale**: extra scaling in %, on top of the fit.
-- **Rotation**: turn the artwork by 90°, 180° or 270°, or type any angle.
+- **Rotation**: turn the artwork by 90°, 180° or 270°, or type any angle. Turning never changes
+  its size; if the turned artwork sticks out of the margins (shown in red), lower **Scale**.
 - **Offset X / Y**: nudge the artwork in mm.
 
 Anything outside the paper (or the plotter's reach) is cut off and shown in red, dashed.

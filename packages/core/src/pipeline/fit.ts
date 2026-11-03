@@ -27,6 +27,8 @@ const ANCHORS: Record<Exclude<Alignment, 'file'>, [number, number]> = {
 /**
  * The matrix that places the artwork on the paper (paper coordinates, mm, origin top left).
  * Order: rotate around the artwork center, scale (fit mode x manual %), align, offset.
+ * The fit scale comes from the artwork before it's turned, so turning it never changes its size
+ * (a turned artwork can stick out of the margins; that's shown, and Scale can bring it back in).
  */
 export function fitMatrix(doc: PlotDocument, page: PageSetup): Matrix {
   const box = marginBox(page);
@@ -49,8 +51,9 @@ export function fitMatrix(doc: PlotDocument, page: PageSetup): Matrix {
   const cy = (bounds.minY + bounds.maxY) / 2;
   const rot = page.rotation ? rotate(page.rotation, cx, cy) : IDENTITY;
   const rb = rotatedBounds(bounds, rot);
-  const w = rb.maxX - rb.minX;
-  const h = rb.maxY - rb.minY;
+  // Size from the unturned artwork, placement from the turned one.
+  const w = bounds.maxX - bounds.minX;
+  const h = bounds.maxY - bounds.minY;
 
   let s = 1;
   if (page.fit !== 'original' && w > 0 && h > 0) {
@@ -64,8 +67,10 @@ export function fitMatrix(doc: PlotDocument, page: PageSetup): Matrix {
   s *= page.scale / 100;
 
   const [ax, ay] = ANCHORS[page.align];
-  const tx = box.x + (box.width - w * s) * ax - rb.minX * s + page.offsetX;
-  const ty = box.y + (box.height - h * s) * ay - rb.minY * s + page.offsetY;
+  const rw = rb.maxX - rb.minX;
+  const rh = rb.maxY - rb.minY;
+  const tx = box.x + (box.width - rw * s) * ax - rb.minX * s + page.offsetX;
+  const ty = box.y + (box.height - rh * s) * ay - rb.minY * s + page.offsetY;
   return multiply(translate(tx, ty), multiply(scaleMatrix(s), rot));
 }
 

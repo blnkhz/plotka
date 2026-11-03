@@ -90,6 +90,32 @@ describe('fitToPage (PAGE-2)', () => {
     const out = fitToPage(wide, page({ ...box, fit: 'original', align: 'top-left', rotation: 90 }));
     expect(bounds(out)).toEqual([10, 10, 60, 110]);
   });
+  it('turning the artwork never changes its size, in fit mode too', () => {
+    const wide = doc([
+      [0, 0],
+      [100, 0],
+      [100, 50],
+      [0, 50],
+      [0, 0],
+    ]);
+    const p = { ...box, fit: 'fit' as const, align: 'center' as const };
+    const size = (rotation: number) => {
+      const [x0, y0, x1, y1] = bounds(fitToPage(wide, page({ ...p, rotation })));
+      return [r3(x1! - x0!), r3(y1! - y0!)];
+    };
+    const [w, h] = size(0);
+    expect(size(90)).toEqual([h, w]); // the same shape, just turned
+    expect(size(180)).toEqual([w, h]);
+    // 45°: the turned rectangle's sides keep their length.
+    const out = fitToPage(wide, page({ ...p, rotation: 45 }));
+    const s = out.layers[0]!.strokes[0]!.points;
+    expect(Math.hypot(s[1]!.x - s[0]!.x, s[1]!.y - s[0]!.y)).toBeCloseTo(w!, 3);
+    // Still centered in the margins.
+    const m = marginBox(page(p));
+    const [x0, y0, x1, y1] = bounds(fitToPage(wide, page({ ...p, rotation: 90 })));
+    expect((x0! + x1!) / 2).toBeCloseTo(m.x + m.width / 2, 3);
+    expect((y0! + y1!) / 2).toBeCloseTo(m.y + m.height / 2, 3);
+  });
   it('fill: covers the box and crops the overflow', () => {
     const wide = doc([
       [0, 0],
