@@ -8,7 +8,7 @@ import {
   layerFillPaths,
   regionSpacing,
   ShapeTester,
-  spiralCenters,
+  fillCenters,
   spiralFill,
   undrawnFillCount,
   type FillRegion,
@@ -223,15 +223,15 @@ describe('movable spiral center', () => {
 
   it('a shared center is the centroid of all the shapes together', () => {
     const shapes = [region([rect(0, 0, 10, 10)]), region([rect(30, 0, 10, 10)])];
-    const own = spiralCenters(layerWith(shapes, fill({ type: 'spiral' })))!;
+    const own = fillCenters(layerWith(shapes, fill({ type: 'spiral' })))!;
     expect(own).toEqual([
       { x: 5, y: 5 },
       { x: 35, y: 5 },
     ]);
-    const shared = spiralCenters(layerWith(shapes, fill({ type: 'spiral', sharedCenter: true })))!;
+    const shared = fillCenters(layerWith(shapes, fill({ type: 'spiral', sharedCenter: true })))!;
     expect(shared[0]).toEqual({ x: 20, y: 5 });
     expect(shared[1]).toEqual({ x: 20, y: 5 });
-    expect(spiralCenters(layerWith(shapes, fill({ type: 'lines' })))).toBeNull();
+    expect(fillCenters(layerWith(shapes, fill({ type: 'lines' })))).toBeNull();
   });
 });
 

@@ -10,6 +10,8 @@ import { insetArea } from './patterns';
  * (k + ½) · spacing across the angle, anchored at the paper origin, so neighboring shapes line
  * up), displaced sideways by a sine wave or smooth noise, then clipped to the inset area.
  */
+export type WaveShape = 'sine' | 'triangle' | 'square';
+
 export type WavyOptions = {
   kind: 'waves' | 'noise';
   spacing: number;
@@ -23,6 +25,8 @@ export type WavyOptions = {
   wavelength: number;
   /** Waves: degrees the wave shifts from one line to the next. */
   phase: number;
+  /** Waves: smooth, zigzag or square. */
+  shape?: WaveShape;
   /** Noise: mm, the size of the bumps. */
   noiseScale: number;
   seed: number;
@@ -42,11 +46,22 @@ const MAX_ROWS = 5000;
  * spacing. Noise: the offset between two lines changes at most by A · slope · spacing / scale.
  */
 export function maxWavyAmplitude(
-  o: Pick<WavyOptions, 'kind' | 'spacing' | 'phase' | 'noiseScale'>,
+  o: Pick<WavyOptions, 'kind' | 'spacing' | 'phase' | 'noiseScale' | 'shape'>,
 ): number {
   if (o.kind === 'waves') {
-    const s = Math.abs(Math.sin((o.phase * Math.PI) / 360));
-    return s < 1e-9 ? Infinity : o.spacing / (2 * s);
+    // How far apart two waves a phase φ apart get, per unit of amplitude: sine 2·sin(φ/2),
+    // zigzag 2φ/π (it rises at 2/π per radian). Square: 2 always, since even in step its
+    // upright steps (2A tall, at the same x on every line) would overlap the next line's.
+    // The shift between neighboring lines, the short way round: 0..π.
+    const d = ((((o.phase * Math.PI) / 180) % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+    const shift = Math.min(d, 2 * Math.PI - d);
+    const gap =
+      o.shape === 'square'
+        ? 2
+        : o.shape === 'triangle'
+          ? (2 * shift) / Math.PI
+          : 2 * Math.sin(shift / 2);
+    return gap < 1e-9 ? Infinity : o.spacing / gap;
   }
   return Math.max(0, o.noiseScale) / NOISE_MAX_SLOPE;
 }
@@ -96,11 +111,18 @@ export function wavyFill(region: FillRegion, o: WavyOptions): Polyline[] {
       ? amp * noise(x / Math.max(o.noiseScale, 1e-3), y / Math.max(o.noiseScale, 1e-3))
       : amp * Math.sin(k * x + (row * o.phase * Math.PI) / 180);
 
+  const shape = o.kind === 'waves' ? (o.shape ?? 'sine') : 'sine';
   const rows: Polyline[][] = [];
   for (let row = k0; row <= k1; row++) {
     const y = (row + 0.5) * o.spacing;
-    const pts: Vec2[] = [];
-    for (let x = x0; x <= maxX + step; x += step) pts.push(toWorld(x, y + offset(x, y, row)));
+    const pts: Vec2[] =
+      shape === 'sine'
+        ? []
+        : sharpWave(shape, x0, maxX + step, k, (row * o.phase * Math.PI) / 180, amp).map((p) =>
+            toWorld(p.x, y + p.y),
+          );
+    if (shape === 'sine')
+      for (let x = x0; x <= maxX + step; x += step) pts.push(toWorld(x, y + offset(x, y, row)));
     // Pieces left to right (Clipper may return them either way).
     const pieces = clipPolylinesToShape([{ points: pts, closed: false }], area, 'inside')
       .map((p) => {
@@ -112,6 +134,45 @@ export function wavyFill(region: FillRegion, o: WavyOptions): Polyline[] {
     rows.push(pieces);
   }
   return o.connect ? connect(rows, area, o.spacing) : serpentine(rows);
+}
+
+/**
+ * A zigzag or square wave from x0 to x1, exactly: only its corners (a square wave's steps are
+ * two points at the same x). Waves go through phase 0 rising, like the sine.
+ */
+function sharpWave(
+  shape: 'triangle' | 'square',
+  x0: number,
+  x1: number,
+  k: number,
+  phase: number,
+  amp: number,
+): Vec2[] {
+  const at = (x: number) => {
+    const t = k * x + phase;
+    return shape === 'triangle'
+      ? ((2 * amp) / Math.PI) * Math.asin(Math.sin(t))
+      : Math.sin(t) >= 0
+        ? amp
+        : -amp;
+  };
+  // Corners: zigzag peaks at t = π/2 + nπ, square steps at t = nπ.
+  const first = shape === 'triangle' ? Math.PI / 2 : 0;
+  const n0 = Math.ceil((k * x0 + phase - first) / Math.PI);
+  const n1 = Math.floor((k * x1 + phase - first) / Math.PI);
+  const pts: Vec2[] = [{ x: x0, y: at(x0) }];
+  for (let n = n0; n <= n1 && pts.length < 20000; n++) {
+    const x = (first + n * Math.PI - phase) / k;
+    if (x <= x0 || x >= x1) continue;
+    if (shape === 'triangle') pts.push({ x, y: n % 2 === 0 ? amp : -amp });
+    else {
+      // Going up at even n (sin turns positive), down at odd n.
+      const up = n % 2 === 0;
+      pts.push({ x, y: up ? -amp : amp }, { x, y: up ? amp : -amp });
+    }
+  }
+  pts.push({ x: x1, y: at(x1) });
+  return pts;
 }
 
 /** Every other row runs backwards, so the pen zigzags even with lifts. */

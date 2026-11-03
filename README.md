@@ -15,7 +15,8 @@ extension needed.
 - Open SVGs from Illustrator, Inkscape, Figma, Affinity Designer and code, or draw a doodle and
   turn it into clean curves or straight lines
 - Paper presets, margins, fit and alignment
-- Fills: lines (or a zigzag), crosshatch, waves, noise, concentric, spiral and dots, with spacing from the fill color;
+- Fills: lines (or a zigzag), crosshatch, triangles, hexagons, waves (smooth, zigzag, square),
+  noise, flow, concentric, spiral, ripples, dots and stipple, with spacing from the fill color;
   shapes on top hide the ones underneath, like in the file
 - Passes: plot a layer several times with slight shifts in different colors, for gradients and
   moiré

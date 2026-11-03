@@ -1054,7 +1054,7 @@ test('spiral fill: move its center with the fields or by dragging in the preview
   await expect(page.getByRole('button', { name: 'Reset', exact: true })).toHaveCount(0);
 
   await page.getByRole('button', { name: 'Place in preview' }).click();
-  await expect(page.getByText('Drag to move the spiral center')).toBeVisible();
+  await expect(page.getByText('Drag to move the center')).toBeVisible();
   const box = (await page.getByTestId('preview').boundingBox())!;
   const cx = box.x + box.width / 2;
   const cy = box.y + box.height / 2;
@@ -1323,5 +1323,55 @@ test('doodle with outlines kept: the Fill tab can still turn the outlines off', 
   await expect.poll(draw).not.toBe(withOutline); // the outline is gone from the plot
   await outlines.check();
   await expect.poll(draw).toBe(withOutline);
+  await app.close();
+});
+
+test('more fills: triangles, hexagons, wave shapes, flow, ripples, stipple', async () => {
+  const app = await launch();
+  const page = await app.firstWindow();
+  await page.setViewportSize({ width: 1400, height: 900 });
+  await dropFile(page, 'fill-only.svg');
+  const paths = async () =>
+    Number((await page.getByText(/\d+ paths · draw/).textContent())!.match(/(\d+) paths/)![1]);
+  const settle = () => expect(page.getByText('Updating…')).toHaveCount(0);
+  await page.getByRole('tab', { name: 'Fill' }).click();
+  const type = page.getByLabel('Fill type');
+  const spacing = (name: string) => page.getByRole('spinbutton', { name, exact: true });
+
+  // Smallest first: switching only ever raises the spacing.
+  for (const [t, min] of [
+    ['stipple', 1],
+    ['triangles', 3],
+    ['hexagons', 4],
+  ] as const) {
+    await type.selectOption(t);
+    // Sparser fills start at a sensible spacing instead of the 0.6 mm of line hatching.
+    const label = t === 'hexagons' ? 'Cell size' : t === 'stipple' ? 'Dot spacing' : 'Spacing';
+    await expect(spacing(label)).toHaveValue(String(min));
+    await expect.poll(paths).toBeGreaterThan(2);
+    if (t === 'stipple') await expect(page.getByText(/stipple by tone/)).toBeVisible();
+    await settle();
+    if (shots) await page.screenshot({ path: join(shots, `fill-${t}.png`) });
+  }
+  await type.selectOption('waves');
+  for (const shape of ['triangle', 'square'] as const) {
+    await page.getByLabel('Wave shape').selectOption(shape);
+    await settle();
+    if (shots) await page.screenshot({ path: join(shots, `fill-waves-${shape}.png`) });
+  }
+
+  await type.selectOption('flow');
+  await expect(spacing('Stroke length')).toHaveValue('0');
+  await settle();
+  if (shots) await page.screenshot({ path: join(shots, 'fill-flow.png') });
+  await spacing('Stroke length').fill('4');
+  await spacing('Stroke length').press('Enter');
+  await settle();
+  if (shots) await page.screenshot({ path: join(shots, 'fill-flow-short.png') });
+
+  await type.selectOption('ripples');
+  await expect(page.getByRole('button', { name: 'Place in preview' })).toBeVisible();
+  await settle();
+  if (shots) await page.screenshot({ path: join(shots, 'fill-ripples.png') });
   await app.close();
 });

@@ -20,7 +20,19 @@ export type FillRegion = {
 };
 
 export type FillType =
-  'none' | 'lines' | 'crosshatch' | 'waves' | 'noise' | 'concentric' | 'spiral' | 'dots';
+  | 'none'
+  | 'lines'
+  | 'crosshatch'
+  | 'waves'
+  | 'noise'
+  | 'flow'
+  | 'triangles'
+  | 'hexagons'
+  | 'concentric'
+  | 'spiral'
+  | 'ripples'
+  | 'dots'
+  | 'stipple';
 
 export type FillSettings = {
   type: FillType;
@@ -38,10 +50,10 @@ export type FillSettings = {
   jitter?: number;
   /** Darker source colors get tighter spacing (spacing ÷ darkness). */
   densityFromColor?: boolean;
-  /** Spiral: where it starts, in mm from the shape's center (or the layer's, when shared). */
+  /** Spiral and ripples: their center, in mm from the shape's center (or the layer's, when shared). */
   centerX?: number;
   centerY?: number;
-  /** Spiral: one center for all the layer's shapes (the center of them all together). */
+  /** Spiral and ripples: one center for all the layer's shapes (the center of them all). */
   sharedCenter?: boolean;
   /** Waves and noise: mm, the most a line moves sideways (see WAVY_DEFAULTS). */
   amplitude?: number;
@@ -49,12 +61,16 @@ export type FillSettings = {
   wavelength?: number;
   /** Waves: degrees the wave shifts from one line to the next. */
   phase?: number;
-  /** Noise: mm, the size of the bumps. */
+  /** Waves: smooth (sine), zigzag (triangle) or square. */
+  waveShape?: 'sine' | 'triangle' | 'square';
+  /** Noise and flow: mm, the size of the bumps. */
   noiseScale?: number;
-  /** Noise: picks the pattern; the same seed always gives the same lines. */
+  /** Noise, flow and stipple: picks the pattern; the same seed always gives the same result. */
   seed?: number;
   /** Waves and noise: allow amplitudes that make neighboring lines cross. */
   allowCross?: boolean;
+  /** Flow: mm each line runs at most; 0 = as long as it can. */
+  strokeLength?: number;
 };
 
 /**

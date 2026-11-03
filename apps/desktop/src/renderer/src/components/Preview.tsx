@@ -3,7 +3,7 @@ import {
   getTransform,
   marginBox,
   paperSize,
-  spiralCenters,
+  fillCenters,
   undrawnFillCount,
   type ParamValues,
   type Polyline,
@@ -90,7 +90,7 @@ export function Preview() {
   const adjustSpiralId = useStore((s) => s.adjustSpiralId);
   const spiral = useMemo(() => {
     const layer = adjustSpiralId && processed?.clipped.layers.find((l) => l.id === adjustSpiralId);
-    const centers = layer ? spiralCenters(layer) : null;
+    const centers = layer ? fillCenters(layer) : null;
     if (!layer || !centers) return null;
     // Unique centers (a shared center is the same for every shape).
     const seen = new Set<string>();
@@ -497,8 +497,8 @@ export function Preview() {
       {adjustSpiralId && (
         <AdjustBar
           ready={spiral !== null}
-          text="Drag to move the spiral center"
-          notReady="Choose a Spiral fill for this layer to place its center."
+          text="Drag to move the center"
+          notReady="Choose a Spiral or Ripples fill for this layer to place its center."
         />
       )}
       <PlaybackBar />

@@ -9,10 +9,20 @@ import {
   shapeRegion,
   type Shape,
 } from '../geometry/polygon';
-import type { Bounds, FillRegion, FillSettings, Layer, PlotDocument, Polyline } from '../model';
+import type {
+  Bounds,
+  FillRegion,
+  FillSettings,
+  FillType,
+  Layer,
+  PlotDocument,
+  Polyline,
+} from '../model';
 import type { Vec2 } from '../geometry/vec2';
 import { hatchRegion } from './hatch';
-import { concentricFill, dotFill, insetArea, spiralFill } from './patterns';
+import { hexagonFill, triangleFill } from './grids';
+import { flowFill, stippleFill } from './organic';
+import { concentricFill, dotFill, insetArea, rippleFill, spiralFill } from './patterns';
 import { wavyFill } from './wavy';
 
 export const SUPPORTED_FILL_TYPES = [
@@ -21,9 +31,14 @@ export const SUPPORTED_FILL_TYPES = [
   'crosshatch',
   'waves',
   'noise',
+  'flow',
+  'triangles',
+  'hexagons',
   'concentric',
   'spiral',
+  'ripples',
   'dots',
+  'stipple',
 ] as const;
 
 /** Waves and noise settings when a fill doesn't have them yet. */
@@ -90,6 +105,7 @@ export function fillRegion(region: FillRegion, f: FillSettings, center?: Vec2): 
         amplitude: f.amplitude ?? WAVY_DEFAULTS.amplitude,
         wavelength: f.wavelength ?? WAVY_DEFAULTS.wavelength,
         phase: f.phase ?? WAVY_DEFAULTS.phase,
+        shape: f.waveShape ?? 'sine',
         noiseScale: f.noiseScale ?? WAVY_DEFAULTS.noiseScale,
         seed: f.seed ?? WAVY_DEFAULTS.seed,
         allowCross: !!f.allowCross,
@@ -98,19 +114,39 @@ export function fillRegion(region: FillRegion, f: FillSettings, center?: Vec2): 
       return concentricFill(region, base);
     case 'spiral':
       return spiralFill(region, center ? { ...base, center } : base);
+    case 'ripples':
+      return rippleFill(region, center ? { ...base, center } : base);
+    case 'triangles':
+      return triangleFill(region, base);
+    case 'hexagons':
+      return hexagonFill(region, base);
+    case 'stipple':
+      return stippleFill(region, { spacing, inset: f.inset, seed: f.seed ?? WAVY_DEFAULTS.seed });
+    case 'flow':
+      return flowFill(region, {
+        spacing,
+        angle: f.angle,
+        inset: f.inset,
+        noiseScale: f.noiseScale ?? WAVY_DEFAULTS.noiseScale,
+        strokeLength: f.strokeLength ?? 0,
+        seed: f.seed ?? WAVY_DEFAULTS.seed,
+      });
     case 'dots':
       return dotFill(region, { ...base, jitter: f.jitter });
   }
 }
 
 /**
- * Where each region's spiral starts (spiral fills only, else null): the centroid of its inset
+ * Where each region's spiral or ripples center (centered fills only, else null): the centroid of its inset
  * area, or with `sharedCenter` of all the layer's drawn regions together, moved by the center
  * offset. Uses whole regions (not what's left visible), so covered parts don't shift it.
  */
-export function spiralCenters(layer: Layer): (Vec2 | null)[] | null {
+/** Fill types that grow from a movable center. */
+export const CENTERED_FILLS: readonly FillType[] = ['spiral', 'ripples'];
+
+export function fillCenters(layer: Layer): (Vec2 | null)[] | null {
   const f = layer.settings.fill;
-  if (f?.type !== 'spiral') return null;
+  if (!f || !CENTERED_FILLS.includes(f.type)) return null;
   const dx = f.centerX ?? 0;
   const dy = f.centerY ?? 0;
   // The inset area's centroid, as the spiral always used, so no offset changes nothing.
@@ -168,7 +204,7 @@ export function layerFillPaths(layer: Layer): Polyline[] {
     return s;
   };
 
-  const centers = spiralCenters(layer);
+  const centers = fillCenters(layer);
   const out: Polyline[] = [];
   regions.forEach((region, i) => {
     if (region.knockout) return;

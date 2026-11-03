@@ -211,3 +211,30 @@ export function dotFill(region: FillRegion, o: PatternOptions): Polyline[] {
     }
   return out;
 }
+
+/**
+ * Ripples: circles `spacing` apart around `center` (by default the area's centroid; it may be
+ * outside the area), out to the farthest corner, cut to the area.
+ */
+export function rippleFill(region: FillRegion, o: PatternOptions): Polyline[] {
+  if (!(o.spacing > 0)) return [];
+  const area = insetArea(region, o.inset);
+  const c = o.center ?? shapeCentroid(area);
+  if (!c || !area.length) return [];
+  let rmax = 0;
+  for (const r of area) for (const p of r) rmax = Math.max(rmax, dist(p, c));
+  const rings: Polyline[] = [];
+  for (let k = 0; k < MAX_RINGS; k++) {
+    const r = (k + 0.5) * o.spacing;
+    if (r > rmax) break;
+    // Enough sides that no chord strays more than the tolerance from the circle.
+    const n = Math.max(12, Math.ceil((2 * Math.PI) / Math.sqrt((8 * SPIRAL_TOLERANCE) / r)));
+    const pts: Vec2[] = [];
+    for (let i = 0; i < n; i++) {
+      const a = (i / n) * 2 * Math.PI + (o.angle * Math.PI) / 180;
+      pts.push({ x: c.x + r * Math.cos(a), y: c.y + r * Math.sin(a) });
+    }
+    rings.push({ points: pts, closed: true });
+  }
+  return clipPolylinesToShape(rings, area, 'inside');
+}

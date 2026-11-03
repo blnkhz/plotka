@@ -19,6 +19,8 @@ export * from './optimize/order';
 export * from './geometry/polygon';
 export * from './fills/patterns';
 export * from './fills/wavy';
+export * from './fills/grids';
+export * from './fills/organic';
 export * from './pipeline/passes';
 export * from './transforms';
 export * from './doodle/doodle';

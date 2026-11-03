@@ -131,3 +131,60 @@ describe('waves and noise fills', () => {
     expect(layerHatches(l).length).toBeGreaterThan(5);
   });
 });
+
+describe('wave shapes', () => {
+  const row = (ls: Polyline[], y: number) =>
+    ls
+      .filter((l) => Math.abs(l.points.reduce((s, p) => s + p.y, 0) / l.points.length - y) < 0.6)
+      .sort((a, b) => b.points.length - a.points.length)[0]!;
+
+  it('zigzag: straight lines between sharp corners at ± the amplitude', () => {
+    const r = row(wavyFill(rect(0, -10, 40, 40), opts({ shape: 'triangle', amplitude: 1.5 })), 9);
+    const ys = r.points.slice(1, -1).map((p) => Math.round((p.y - 9) * 1e6) / 1e6);
+    expect(new Set(ys)).toEqual(new Set([1.5, -1.5])); // only corners inside the shape
+    // Corners every half wavelength (5 mm).
+    const xs = r.points.slice(1, -1).map((p) => p.x);
+    for (let i = 1; i < xs.length; i++) expect(xs[i]! - xs[i - 1]!).toBeCloseTo(5);
+  });
+
+  it('square: flat runs and upright steps', () => {
+    const r = row(wavyFill(rect(0, -10, 40, 40), opts({ shape: 'square', amplitude: 0.8 })), 9);
+    for (const p of r.points) expect(Math.abs(Math.abs(p.y - 9) - 0.8)).toBeLessThan(1e-6);
+    // Each step is two points at the same x.
+    const steps = r.points.filter((p, i) => i > 0 && Math.abs(p.x - r.points[i - 1]!.x) < 1e-9);
+    expect(steps.length).toBeGreaterThan(5);
+  });
+
+  it('caps the amplitude per shape so shifted lines never cross', () => {
+    const base = { kind: 'waves' as const, spacing: 2, noiseScale: 1 };
+    expect(maxWavyAmplitude({ ...base, phase: 180, shape: 'triangle' })).toBeCloseTo(1);
+    expect(maxWavyAmplitude({ ...base, phase: 90, shape: 'triangle' })).toBeCloseTo(2);
+    expect(maxWavyAmplitude({ ...base, phase: 10, shape: 'square' })).toBeCloseTo(1);
+    // In step, square waves' upright steps would still overlap the next line's.
+    expect(maxWavyAmplitude({ ...base, phase: 0, shape: 'square' })).toBeCloseTo(1);
+    expect(maxWavyAmplitude({ ...base, phase: 0, shape: 'triangle' })).toBe(Infinity);
+    expect(maxWavyAmplitude({ ...base, phase: 350, shape: 'sine' })).toBeCloseTo(
+      2 / (2 * Math.sin(Math.PI / 36)),
+    );
+    // At the cap, neighbors stay apart everywhere.
+    for (const shape of ['sine', 'triangle', 'square'] as const) {
+      const lines = wavyFill(rect(0, -20, 30, 60), opts({ shape, phase: 120, amplitude: 50 }));
+      const a = row(lines, 9);
+      const b = row(lines, 11);
+      const yAt = (l: Polyline, x: number) => {
+        for (let i = 1; i < l.points.length; i++) {
+          const p = l.points[i - 1]!;
+          const q = l.points[i]!;
+          if (x >= Math.min(p.x, q.x) && x <= Math.max(p.x, q.x) && q.x !== p.x)
+            return p.y + ((x - p.x) / (q.x - p.x)) * (q.y - p.y);
+        }
+        return NaN;
+      };
+      for (let x = 1; x < 29; x += 0.25) {
+        const ya = yAt(a, x);
+        const yb = yAt(b, x);
+        if (Number.isFinite(ya) && Number.isFinite(yb)) expect(yb).toBeGreaterThan(ya);
+      }
+    }
+  });
+});

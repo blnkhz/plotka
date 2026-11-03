@@ -15,21 +15,57 @@ const TYPES: { value: FillType; label: string }[] = [
   { value: 'none', label: 'None' },
   { value: 'lines', label: 'Lines' },
   { value: 'crosshatch', label: 'Crosshatch' },
+  { value: 'triangles', label: 'Triangles' },
+  { value: 'hexagons', label: 'Hexagons' },
   { value: 'waves', label: 'Waves' },
   { value: 'noise', label: 'Noise' },
+  { value: 'flow', label: 'Flow' },
   { value: 'concentric', label: 'Concentric' },
   { value: 'spiral', label: 'Spiral' },
+  { value: 'ripples', label: 'Ripples' },
   { value: 'dots', label: 'Dots' },
+  { value: 'stipple', label: 'Stipple' },
 ];
 
 /** Which controls apply to each fill type. */
-const USES_ANGLE = new Set<FillType>(['lines', 'crosshatch', 'waves', 'noise', 'spiral', 'dots']);
-const USES_CONNECT = new Set<FillType>(['lines', 'crosshatch', 'waves', 'noise', 'concentric']);
+const USES_ANGLE = new Set<FillType>([
+  'lines',
+  'crosshatch',
+  'triangles',
+  'hexagons',
+  'waves',
+  'noise',
+  'flow',
+  'spiral',
+  'dots',
+]);
+const USES_CONNECT = new Set<FillType>([
+  'lines',
+  'crosshatch',
+  'triangles',
+  'waves',
+  'noise',
+  'concentric',
+]);
 const SPACING_LABEL: Partial<Record<FillType, string>> = {
   concentric: 'Ring spacing',
+  ripples: 'Ring spacing',
   spiral: 'Turn spacing',
   dots: 'Dot spacing',
+  stipple: 'Dot spacing',
+  hexagons: 'Cell size',
+  flow: 'Line spacing',
 };
+/**
+ * Fill types that look best a bit sparser than line hatching: switching to them raises the
+ * spacing to this if it's lower (0.6 mm hexagons or stipple would be nearly solid black).
+ */
+const MIN_START_SPACING: Partial<Record<FillType, number>> = {
+  hexagons: 4,
+  triangles: 3,
+  stipple: 1,
+};
+const CENTERED = new Set<FillType>(['spiral', 'ripples']);
 
 export function FillTab() {
   const doc = useStore((s) => s.doc);
@@ -68,7 +104,11 @@ export function FillTab() {
             onChange={(e) => {
               const t = e.target.value as FillType;
               if (t === 'none') setLayer(layer.id, { settings: { fill: null } });
-              else setFill({ type: t });
+              else {
+                const start = MIN_START_SPACING[t];
+                const spacing = fill?.spacing ?? useStore.getState().defaultFill.spacing;
+                setFill(start && spacing < start ? { type: t, spacing: start } : { type: t });
+              }
             }}
           >
             {TYPES.map((t) => (
@@ -105,7 +145,7 @@ export function FillTab() {
                 />
               </Row>
             )}
-            {type === 'spiral' && (
+            {CENTERED.has(type) && (
               <>
                 <Row label="Center X / Y">
                   <NumberField
@@ -114,7 +154,7 @@ export function FillTab() {
                     max={1000}
                     step={1}
                     width={52}
-                    title="Move where the spiral starts, in mm from the shape's center (right is +)"
+                    title="Move the center, in mm from the shape's center (right is +)"
                     onChange={(centerX) => setFill({ centerX })}
                   />
                   <NumberField
@@ -141,7 +181,7 @@ export function FillTab() {
                     className={placing ? styles.active : undefined}
                     aria-pressed={placing}
                     onClick={() => setAdjustSpiral(placing ? null : layer.id)}
-                    title="Drag the spiral centers in the preview"
+                    title="Drag the centers in the preview"
                   >
                     {placing ? 'Done placing' : 'Place in preview'}
                   </button>
@@ -149,7 +189,7 @@ export function FillTab() {
                 <Row label="">
                   <label
                     className={styles.check}
-                    title="All shapes in the layer spiral around one point (the center of them all), so the turns continue from shape to shape"
+                    title="All shapes in the layer share one center (the center of them all), so the pattern continues from shape to shape"
                   >
                     <input
                       type="checkbox"
@@ -163,6 +203,18 @@ export function FillTab() {
             )}
             {(type === 'waves' || type === 'noise') && (
               <WavyFields fill={fill} type={type} setFill={setFill} />
+            )}
+            {type === 'flow' && <FlowFields fill={fill} setFill={setFill} />}
+            {type === 'stipple' && (
+              <>
+                <SeedField fill={fill} setFill={setFill} />
+                {!fill.densityFromColor && (
+                  <p className={styles.muted}>
+                    Tick Spacing from fill color below to stipple by tone: darker shapes get more
+                    dots.
+                  </p>
+                )}
+              </>
             )}
             {type === 'dots' && (
               <Row label="Jitter">
@@ -331,12 +383,25 @@ function WavyFields({
   setFill: (patch: Partial<FillSettings>) => void;
 }) {
   const v = { ...WAVY_DEFAULTS, ...fill };
-  const limit = maxWavyAmplitude({ ...v, kind: type });
+  const limit = maxWavyAmplitude({ ...v, kind: type, shape: fill.waveShape ?? 'sine' });
   const limited = !fill.allowCross && v.amplitude > limit * 0.95;
   return (
     <>
       {type === 'waves' ? (
         <>
+          <Row label="Shape">
+            <select
+              aria-label="Wave shape"
+              value={fill.waveShape ?? 'sine'}
+              onChange={(e) =>
+                setFill({ waveShape: e.target.value as 'sine' | 'triangle' | 'square' })
+              }
+            >
+              <option value="sine">Smooth</option>
+              <option value="triangle">Zigzag</option>
+              <option value="square">Square</option>
+            </select>
+          </Row>
           <Row label="Wavelength">
             <NumberField
               value={v.wavelength}
@@ -503,5 +568,64 @@ function PositionSection({
         <span className={styles.muted}>Or drag it with ✥ Arrange.</span>
       </Row>
     </Section>
+  );
+}
+
+function SeedField({
+  fill,
+  setFill,
+}: {
+  fill: FillSettings;
+  setFill: (patch: Partial<FillSettings>) => void;
+}) {
+  return (
+    <Row label="Seed">
+      <NumberField
+        value={fill.seed ?? WAVY_DEFAULTS.seed}
+        min={0}
+        max={99999}
+        step={1}
+        digits={0}
+        title="Picks the pattern. The same seed always gives the same result."
+        onChange={(seed) => setFill({ seed: Math.round(seed) })}
+      />
+    </Row>
+  );
+}
+
+/** Flow: lines following smooth noise, kept a spacing apart. */
+function FlowFields({
+  fill,
+  setFill,
+}: {
+  fill: FillSettings;
+  setFill: (patch: Partial<FillSettings>) => void;
+}) {
+  return (
+    <>
+      <Row label="Bump size">
+        <NumberField
+          value={fill.noiseScale ?? WAVY_DEFAULTS.noiseScale}
+          min={0.5}
+          max={500}
+          step={0.5}
+          suffix="mm"
+          title="How big the bends are: small is busy and curly, large is gentle"
+          onChange={(noiseScale) => setFill({ noiseScale })}
+        />
+      </Row>
+      <Row label="Stroke length">
+        <NumberField
+          value={fill.strokeLength ?? 0}
+          min={0}
+          max={1000}
+          step={1}
+          suffix="mm"
+          title="Longest a line runs. 0: as long as it can, for long flowing lines; a few mm gives short strokes, like a field of hairs or grass."
+          onChange={(strokeLength) => setFill({ strokeLength })}
+        />
+      </Row>
+      <SeedField fill={fill} setFill={setFill} />
+    </>
   );
 }
