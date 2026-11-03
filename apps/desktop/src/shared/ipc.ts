@@ -128,6 +128,10 @@ export interface InvokeChannels {
   'app:rendererReady': { args: []; result: void };
   /** A file dropped on the window, for the recent files list (path from the preload). */
   'file:dropped': { args: [path: string]; result: void };
+  /** Recent files for the splash screen, newest first (`folder` with ~ for the home folder). */
+  'recent:list': { args: []; result: { path: string; name: string; folder: string }[] };
+  /** Opens a file from the recent list (only those) and sends it as 'file:opened'. */
+  'recent:open': { args: [path: string]; result: void };
   /** The renderer started a new, untitled project (e.g. a dropped SVG). */
   'project:forget': { args: []; result: void };
   /** Title and edited state for the window. */
@@ -185,6 +189,8 @@ export const INVOKE_CHANNELS = [
   'autosave:check',
   'autosave:read',
   'file:dropped',
+  'recent:list',
+  'recent:open',
   'app:rendererReady',
   'watch:start',
   'watch:stop',

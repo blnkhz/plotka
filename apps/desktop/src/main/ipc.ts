@@ -1,12 +1,13 @@
 import { readFile, writeFile } from 'node:fs/promises';
-import { basename } from 'node:path';
+import { basename, dirname } from 'node:path';
 import { app, BrowserWindow, dialog, ipcMain } from 'electron';
 import type { InvokeChannel, InvokeChannels } from '@shared/ipc';
 import type { PlotterService } from './plotter';
 import { isProjectPath, project, projectName, updateWindow } from './project';
 import { listPorts } from './serial';
 import { checkRecovery, clearRecovery, readRecovery, writeRecovery } from './autosave';
-import { addRecent } from './recent';
+import { addRecent, recentItems } from './recent';
+import { openPath } from './openFile';
 import { deletePlotLog, plotLogEntries, plotLogProject, setPlotLogNote } from './plotLog';
 import { allowWatch, allowWatchFromProject, startWatch, stopWatch } from './watch';
 import { existsSync } from 'node:fs';
@@ -87,6 +88,19 @@ export function registerIpcHandlers(
   });
 
   handle('app:rendererReady', () => onRendererReady());
+  handle('recent:list', () => {
+    const home = app.getPath('home');
+    return recentItems().map((r) => {
+      const folder = dirname(r.path);
+      return { ...r, folder: folder.startsWith(home) ? `~${folder.slice(home.length)}` : folder };
+    });
+  });
+  handle('recent:open', async (event, path) => {
+    // Only files already in the list: the page can't ask for any path it likes.
+    if (!recentItems().some((r) => r.path === path)) return;
+    const win = BrowserWindow.fromWebContents(event.sender);
+    if (win) await openPath(path, win);
+  });
   handle('watch:start', (event, path) => {
     const win = BrowserWindow.fromWebContents(event.sender);
     return win && typeof path === 'string' ? startWatch(win, path) : false;

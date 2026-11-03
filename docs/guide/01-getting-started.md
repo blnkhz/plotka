@@ -3,6 +3,12 @@
 Plotter Studio turns artwork into pen plots: open an SVG (or draw one), set up the paper and
 fills, check the preview, and plot over USB.
 
+## When the app opens
+
+A start screen shows an example plot and ways to begin: **Open…**, **Doodle…**, **+ Text**, or
+one of your recent files. Press Esc or click outside it to go straight to the app. Untick
+**Show at start** to skip it next time.
+
 ## The window
 
 - **Toolbar** (top): Open, Save, Undo / Redo, Help, the file name, and a summary of the

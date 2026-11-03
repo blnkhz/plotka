@@ -75,10 +75,12 @@ function createWindow(): BrowserWindow {
   });
 
   // The theme goes in the URL so the first paint already has its colours.
-  const query = { theme: appearance() };
+  // Automated tests skip the splash screen unless they're testing it.
+  const query: Record<string, string> = { theme: appearance() };
+  if (process.env['PLOTTER_STUDIO_NO_SPLASH']) query['splash'] = '0';
   if (!app.isPackaged && process.env['ELECTRON_RENDERER_URL']) {
     const url = new URL(process.env['ELECTRON_RENDERER_URL']);
-    url.searchParams.set('theme', query.theme);
+    for (const [k, v] of Object.entries(query)) url.searchParams.set(k, v);
     void win.loadURL(url.toString());
   } else {
     void win.loadFile(join(__dirname, '../renderer/index.html'), { query });

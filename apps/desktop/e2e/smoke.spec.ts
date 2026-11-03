@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { _electron as electron, expect, test, type Page } from '@playwright/test';
@@ -8,7 +8,8 @@ const shots = process.env['SCREENSHOT_DIR'];
 
 /**
  * Launches the app with a fresh, temporary data folder (never the user's own settings).
- * PLOTTER_STUDIO_E2E skips the "unsaved changes" question on close.
+ * PLOTTER_STUDIO_E2E skips the "unsaved changes" question on close; PLOTTER_STUDIO_NO_SPLASH
+ * skips the splash screen (the splash test turns it back on).
  */
 const launch = (env: Record<string, string> = {}) =>
   electron.launch({
@@ -16,6 +17,7 @@ const launch = (env: Record<string, string> = {}) =>
     env: {
       ...process.env,
       PLOTTER_STUDIO_E2E: '1',
+      PLOTTER_STUDIO_NO_SPLASH: '1',
       PLOTTER_STUDIO_USER_DATA: mkdtempSync(join(tmpdir(), 'plotter-studio-e2e-')),
       ...env,
     },
@@ -1509,5 +1511,52 @@ test('View > Appearance: light, dark and colour themes, kept after a restart', a
   await expect
     .poll(() => page.evaluate(() => document.documentElement.dataset['theme']))
     .toBe(undefined);
+  await app.close();
+});
+
+test('splash screen: start from it, open a recent file, turn it off', async () => {
+  const dataDir = mkdtempSync(join(tmpdir(), 'plotter-studio-e2e-'));
+  // One recent file, as the app would have saved it.
+  const motif = join(fixtures, 'motif.svg');
+  writeFileSync(join(dataDir, 'recent.json'), JSON.stringify([{ path: motif, name: 'motif.svg' }]));
+  const env = { PLOTTER_STUDIO_USER_DATA: dataDir, PLOTTER_STUDIO_NO_SPLASH: '' };
+  const splash = (page: Page) => page.getByRole('dialog', { name: 'Welcome to Plotter Studio' });
+
+  // Shown at start; Esc closes it.
+  let app = await launch(env);
+  let page = await app.firstWindow();
+  await page.setViewportSize({ width: 1400, height: 900 });
+  await expect(splash(page)).toBeVisible();
+  await expect(page.getByRole('img', { name: /Example plot/ })).toBeVisible();
+  await expect(splash(page).getByText(/Version \d/)).toBeVisible();
+  if (shots) await page.screenshot({ path: join(shots, 'splash.png') });
+  await page.keyboard.press('Escape');
+  await expect(splash(page)).toHaveCount(0);
+  await app.close();
+
+  // A recent file opens and closes it.
+  app = await launch(env);
+  page = await app.firstWindow();
+  await splash(page)
+    .getByRole('button', { name: /motif\.svg/ })
+    .click();
+  await expect(splash(page)).toHaveCount(0);
+  await expect(page.getByText('motif.svg', { exact: true })).toBeVisible();
+  await app.close();
+
+  // + Text starts a text layer; then turn the splash off for next time.
+  app = await launch(env);
+  page = await app.firstWindow();
+  await splash(page).getByLabel('Show at start').uncheck();
+  await splash(page).getByRole('button', { name: '+ Text' }).click();
+  await expect(splash(page)).toHaveCount(0);
+  await expect(page.getByLabel('Text', { exact: true })).toHaveValue('Text');
+  await app.close();
+
+  app = await launch(env);
+  page = await app.firstWindow();
+  await page.locator('#root > div').waitFor();
+  await expect(page.getByRole('button', { name: 'Doodle…' })).toBeVisible();
+  await expect(splash(page)).toHaveCount(0);
   await app.close();
 });

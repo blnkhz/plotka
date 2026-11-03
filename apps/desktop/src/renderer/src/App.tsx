@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { DoodlePad } from './components/DoodlePad';
 import { HelpPanel } from './components/HelpPanel';
+import { Splash, splashAtStart } from './components/Splash';
 import { AutoReload } from './components/AutoReload';
 import { startWatching } from './lib/watch';
 import { exportPlot } from './lib/exportPlot';
@@ -25,6 +26,15 @@ export function App() {
   const [dragging, setDragging] = useState(false);
   const doodleOpen = useStore((s) => s.doodle.open);
   const helpOpen = useStore((s) => s.help.open);
+  const [splash, setSplash] = useState(splashAtStart);
+  // Artwork arriving another way (Finder, a drop, a menu) closes it too.
+  useEffect(
+    () =>
+      useStore.subscribe((s, prev) => {
+        if (s.source && s.source !== prev.source) setSplash(false);
+      }),
+    [],
+  );
   useShortcuts();
   useEffect(() => subscribePlotter(), []);
   useEffect(() => trackProject(), []);
@@ -71,6 +81,7 @@ export function App() {
       {dragging && <div className={styles.dropHint}>Drop to open</div>}
       {doodleOpen && <DoodlePad />}
       {helpOpen && <HelpPanel />}
+      {splash && <Splash onClose={() => setSplash(false)} />}
     </div>
   );
 }
