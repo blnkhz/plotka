@@ -5,6 +5,7 @@ import { installMenu } from './menu';
 import { PlotterService } from './plotter';
 import { project } from './project';
 import { clearRecovery } from './autosave';
+import { applyAppearance } from './appearance';
 import { isOpenable, openPath } from './openFile';
 
 // Automated tests run with their own data folder, so they never touch the user's settings,
@@ -97,6 +98,7 @@ export function flushPendingOpens() {
 
 void app.whenReady().then(() => {
   registerIpcHandlers(plotter, flushPendingOpens);
+  applyAppearance();
   installMenu();
   createWindow();
   app.on('activate', () => {

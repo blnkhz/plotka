@@ -1,5 +1,6 @@
 import { app, BrowserWindow, Menu, type MenuItemConstructorOptions } from 'electron';
 import type { EventChannels } from '@shared/ipc';
+import { appearance, setAppearance } from './appearance';
 import { openPath } from './openFile';
 import { clearRecent, onRecentChange, recentItems } from './recent';
 
@@ -72,6 +73,23 @@ function build() {
     {
       label: 'View',
       submenu: [
+        {
+          label: 'Appearance',
+          submenu: (
+            [
+              ['system', 'Use System Setting'],
+              ['light', 'Light'],
+              ['dark', 'Dark'],
+            ] as const
+          ).map(([theme, label]): MenuItemConstructorOptions => ({
+            id: `appearance-${theme}`,
+            label,
+            type: 'radio',
+            checked: appearance() === theme,
+            click: () => setAppearance(theme),
+          })),
+        },
+        { type: 'separator' },
         { role: 'togglefullscreen' },
         // No reload item: reloading would throw away unsaved work.
         ...(app.isPackaged ? [] : [{ role: 'toggleDevTools' as const }]),

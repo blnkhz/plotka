@@ -1428,3 +1428,47 @@ test('text: type it in a single-stroke font, style it, delete and undo (LATER-6)
   await expect(page.getByTitle('“Hello”')).toHaveCount(0);
   await app.close();
 });
+
+test('View > Appearance switches light / dark and is kept after a restart', async () => {
+  const dataDir = mkdtempSync(join(tmpdir(), 'plotter-studio-e2e-'));
+  const env = { PLOTTER_STUDIO_USER_DATA: dataDir };
+  const bg = (page: Page) =>
+    page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--bg').trim());
+  // Playwright pins pages to light by default; let the app's own setting through.
+  const open = async (app: Awaited<ReturnType<typeof launch>>) => {
+    const page = await app.firstWindow();
+    await page.emulateMedia({ colorScheme: null });
+    await page.locator('#root > div').waitFor();
+    return page;
+  };
+  const pick = (app: Awaited<ReturnType<typeof launch>>, id: string) =>
+    app.evaluate(({ Menu }, id) => Menu.getApplicationMenu()!.getMenuItemById(id)!.click(), id);
+
+  let app = await launch(env);
+  let page = await open(app);
+  // The preview canvas redraws in the new colours (its top-left pixel is the --canvas grey).
+  const corner = () =>
+    page
+      .getByTestId('preview')
+      .evaluate((c: HTMLCanvasElement) =>
+        Array.from(c.getContext('2d')!.getImageData(0, 0, 1, 1).data.slice(0, 3)).join(','),
+      );
+  await pick(app, 'appearance-dark');
+  await expect.poll(() => bg(page)).toBe('#1b1b1d');
+  await expect.poll(corner).toBe('22,22,24'); // #161618
+  await pick(app, 'appearance-light');
+  await expect.poll(() => bg(page)).toBe('#f4f4f2');
+  await expect.poll(corner).toBe('228,228,224'); // #e4e4e0
+  await pick(app, 'appearance-dark');
+  await app.close();
+
+  // Kept for next time, and the menu shows it.
+  app = await launch(env);
+  page = await open(app);
+  await expect.poll(() => bg(page)).toBe('#1b1b1d');
+  const checked = await app.evaluate(
+    ({ Menu }) => Menu.getApplicationMenu()!.getMenuItemById('appearance-dark')!.checked,
+  );
+  expect(checked).toBe(true);
+  await app.close();
+});

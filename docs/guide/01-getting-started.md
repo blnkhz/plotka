@@ -14,6 +14,12 @@ fills, check the preview, and plot over USB.
   selected layer), **Machine** (connecting and moving the plotter) and **Plot** (starting a plot,
   stats and path optimization).
 
+## Light and dark
+
+The app follows the light or dark setting of macOS. To pick one for the app only, choose
+**View > Appearance > Light** or **Dark**; **Use System Setting** follows macOS again. The
+choice is kept for next time. The paper in the preview stays white either way.
+
 ## Your first plot
 
 1. **Open artwork**: click **Open…** (⌘O) or drop an SVG on the window. Or click **Doodle…**
