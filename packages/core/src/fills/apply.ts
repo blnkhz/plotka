@@ -121,7 +121,11 @@ export function fillRegion(region: FillRegion, f: FillSettings, center?: Vec2): 
     case 'hexagons':
       return hexagonFill(region, base);
     case 'stipple':
-      return stippleFill(region, { spacing, inset: f.inset, seed: f.seed ?? WAVY_DEFAULTS.seed });
+      return dashes(
+        stippleFill(region, { spacing, inset: f.inset, seed: f.seed ?? WAVY_DEFAULTS.seed }),
+        region,
+        f,
+      );
     case 'flow':
       return flowFill(region, {
         spacing,
@@ -132,8 +136,28 @@ export function fillRegion(region: FillRegion, f: FillSettings, center?: Vec2): 
         seed: f.seed ?? WAVY_DEFAULTS.seed,
       });
     case 'dots':
-      return dotFill(region, { ...base, jitter: f.jitter });
+      return dashes(dotFill(region, { ...base, jitter: f.jitter }), region, f);
   }
+}
+
+/**
+ * Dots and stipple with a dash length: each dot becomes a short line centered on it, pointing
+ * along the dash angle (the fill's angle by default), cut to the (inset) shape.
+ */
+function dashes(dots: Polyline[], region: FillRegion, f: FillSettings): Polyline[] {
+  const len = f.dashLength ?? 0;
+  if (!(len > 0) || !dots.length) return dots;
+  const a = ((f.dashAngle ?? f.angle) * Math.PI) / 180;
+  const hx = (Math.cos(a) * len) / 2;
+  const hy = (Math.sin(a) * len) / 2;
+  const lines = dots.map(({ points: [p] }) => ({
+    points: [
+      { x: p!.x - hx, y: p!.y - hy },
+      { x: p!.x + hx, y: p!.y + hy },
+    ],
+    closed: false,
+  }));
+  return clipPolylinesToShape(lines, insetArea(region, f.inset), 'inside');
 }
 
 /**

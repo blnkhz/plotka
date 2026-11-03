@@ -71,6 +71,10 @@ export type FillSettings = {
   allowCross?: boolean;
   /** Flow: mm each line runs at most; 0 = as long as it can. */
   strokeLength?: number;
+  /** Dots and stipple: draw each dot as a short line this long (mm); 0 = dots. */
+  dashLength?: number;
+  /** Dots and stipple: which way the dashes point, degrees; defaults to `angle`. */
+  dashAngle?: number;
 };
 
 /**

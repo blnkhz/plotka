@@ -153,6 +153,8 @@ export function parseFill(v: unknown): FillSettings | null | undefined {
     'noiseScale',
     'seed',
     'strokeLength',
+    'dashLength',
+    'dashAngle',
   ] as const)
     if (isNum(v[k])) f[k] = v[k];
   if (typeof v['allowCross'] === 'boolean') f.allowCross = v['allowCross'];

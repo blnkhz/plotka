@@ -38,6 +38,10 @@ layers** copies them (and the layer's speeds) to the others.
   placed by hand with no clumps or gaps. **Seed** picks the pattern. With **Spacing from fill
   color**, darker shapes get more dots: stippling by tone.
 
+  For dots and stipple, **Dash length** draws each dot as a short line that long instead
+  (0 keeps them dots), pointing along **Dash angle**. Dashes give a sketchy, hatched texture.
+  Each dash is still a pen lift, so they take a little longer to plot than dots.
+
 Hexagons, triangles and stipple look best sparser than line hatching, so switching to them
 raises the spacing to a starting value (4, 3 and 1 mm) if it's smaller.
 

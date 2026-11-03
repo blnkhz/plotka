@@ -205,6 +205,32 @@ export function FillTab() {
               <WavyFields fill={fill} type={type} setFill={setFill} />
             )}
             {type === 'flow' && <FlowFields fill={fill} setFill={setFill} />}
+            {(type === 'dots' || type === 'stipple') && (
+              <Row label="Dash length">
+                <NumberField
+                  value={fill.dashLength ?? 0}
+                  min={0}
+                  max={50}
+                  step={0.25}
+                  suffix="mm"
+                  title="Draw each dot as a short line this long, along the angle. 0: dots."
+                  onChange={(dashLength) => setFill({ dashLength })}
+                />
+              </Row>
+            )}
+            {(type === 'dots' || type === 'stipple') && (fill.dashLength ?? 0) > 0 && (
+              <Row label="Dash angle">
+                <NumberField
+                  value={fill.dashAngle ?? fill.angle}
+                  min={-360}
+                  max={360}
+                  step={5}
+                  suffix="°"
+                  title="Which way the dashes point"
+                  onChange={(dashAngle) => setFill({ dashAngle })}
+                />
+              </Row>
+            )}
             {type === 'stipple' && (
               <>
                 <SeedField fill={fill} setFill={setFill} />

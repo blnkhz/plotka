@@ -147,3 +147,34 @@ describe('flow', () => {
     expect(flow({ seed: 3 })).not.toEqual(flow({ seed: 4 }));
   });
 });
+
+describe('dashes instead of dots', () => {
+  const layer = (type: 'dots' | 'stipple', extra: object = {}) => {
+    const l = createLayer('a', 'A');
+    l.fills = [rect(0, 0, 20, 20)];
+    l.settings.fill = { type, spacing: 2, angle: 0, inset: 0, connect: false, ...extra };
+    return layerFillPaths(l);
+  };
+  const length = (l: Polyline) => {
+    const [a, b] = [l.points[0]!, l.points.at(-1)!];
+    return Math.hypot(b.x - a.x, b.y - a.y);
+  };
+  for (const type of ['dots', 'stipple'] as const)
+    it(`${type}: each dot becomes a short line of the dash length, at the dash angle`, () => {
+      const dots = layer(type);
+      const dashed = layer(type, { dashLength: 1.5, dashAngle: 90 });
+      expect(dashed.length).toBe(dots.length);
+      for (const l of dashed) {
+        expect(l.points[0]).not.toEqual(l.points[1]); // lines, not pen taps
+        for (const p of l.points) expect(inside(p, 0, 0, 20, 20)).toBe(true);
+        // Upright (90°), centered on the dot; shorter only where cut by the edge.
+        expect(Math.abs(l.points[0]!.x - l.points[1]!.x)).toBeLessThan(1e-9);
+        expect(length(l)).toBeLessThanOrEqual(1.5 + 1e-9);
+      }
+      const full = dashed.filter((l) => Math.abs(length(l) - 1.5) < 1e-6);
+      expect(full.length).toBeGreaterThan(dashed.length / 2);
+      // No dash angle: along the fill's angle.
+      const along = layer(type, { dashLength: 1, angle: 0 });
+      for (const l of along) expect(Math.abs(l.points[0]!.y - l.points[1]!.y)).toBeLessThan(1e-9);
+    });
+});

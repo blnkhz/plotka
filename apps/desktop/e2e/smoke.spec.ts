@@ -1349,7 +1349,20 @@ test('more fills: triangles, hexagons, wave shapes, flow, ripples, stipple', asy
     const label = t === 'hexagons' ? 'Cell size' : t === 'stipple' ? 'Dot spacing' : 'Spacing';
     await expect(spacing(label)).toHaveValue(String(min));
     await expect.poll(paths).toBeGreaterThan(2);
-    if (t === 'stipple') await expect(page.getByText(/stipple by tone/)).toBeVisible();
+    if (t === 'stipple') {
+      await expect(page.getByText(/stipple by tone/)).toBeVisible();
+      // Dashes instead of dots: the pen draws lines (dots draw 0 mm).
+      await expect(page.getByText(/paths · draw 0 mm/)).toBeVisible();
+      await expect(spacing('Dash angle')).toHaveCount(0);
+      await spacing('Dash length').fill('1.5');
+      await spacing('Dash length').press('Enter');
+      await expect(spacing('Dash angle')).toBeVisible();
+      await expect(page.getByText(/paths · draw [1-9][\d.]* m/)).toBeVisible();
+      await settle();
+      if (shots) await page.screenshot({ path: join(shots, 'fill-stipple-dashes.png') });
+      await spacing('Dash length').fill('0');
+      await spacing('Dash length').press('Enter');
+    }
     await settle();
     if (shots) await page.screenshot({ path: join(shots, `fill-${t}.png`) });
   }
