@@ -3,6 +3,8 @@ import { EXAMPLE_SIZE, exampleArt } from '../lib/exampleArt';
 import { openWithDialog } from '../lib/openFile';
 import { useStore } from '../store';
 import styles from './Splash.module.css';
+// The app icon is the logo (Matcha Mauve in every theme).
+import logoUrl from '../../../../build/icon.svg?url';
 
 const SHOW_KEY = 'plotter-studio.splash';
 
@@ -79,10 +81,7 @@ export function Splash({ onClose }: { onClose: () => void }) {
             ×
           </button>
           <div className={styles.brand}>
-            <svg width="24" height="24" viewBox="0 0 28 28" aria-hidden="true">
-              <path d="M4 20c4-10 8-10 10-4s6 6 10-8" />
-              <circle cx="24" cy="8" r="2.6" />
-            </svg>
+            <img src={logoUrl} alt="" width={40} height={40} />
             Plotter Studio
           </div>
           <h1 className={styles.title}>

@@ -97,16 +97,9 @@
   letter-spacing: 0.12em;
   text-transform: uppercase;
 }
-.brand path {
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 2.4;
-  stroke-linecap: round;
-}
-.brand circle {
-  fill: var(--accent);
-  stroke: currentColor;
-  stroke-width: 1.6;
+/* The icon has macOS's margin around its tile; pull the text in to meet the tile. */
+.brand img {
+  margin: -4px -2px -4px -4px;
 }
 .title {
   margin: 0;
