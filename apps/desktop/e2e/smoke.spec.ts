@@ -1054,6 +1054,8 @@ test('ripples fill: drag its center in the preview', async () => {
   const x = page.getByRole('spinbutton', { name: 'Center X / Y' }).first();
   await expect(x).toHaveValue('0');
   await page.getByRole('button', { name: 'Place in preview' }).click();
+  // The centers show once the ripples are worked out; a drag before that pans the view.
+  await expect(page.getByText('Drag to move the center')).toBeVisible();
   const box = (await page.getByTestId('preview').boundingBox())!;
   const cx = box.x + box.width / 2;
   const cy = box.y + box.height / 2;
