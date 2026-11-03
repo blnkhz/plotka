@@ -22,7 +22,6 @@ Doodle…, and their output goes through the usual fills, transforms, optimisati
 ## Needs a decision
 
 - Code of conduct contact method (`CODE_OF_CONDUCT.md`)
-- Whether to commit `specs.md` (e.g. as `docs/spec.md`)
 
 ## Needs a test on hardware
 
