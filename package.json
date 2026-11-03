@@ -20,10 +20,6 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test:e2e": "pnpm --filter @plotter-studio/desktop test:e2e",
-    "spike": "pnpm --filter @plotter-studio/driver-spike spike",
-    "build:mac:commit": "sh scripts/build-dmg-from-head.sh",
-    "hooks:on": "git config core.hooksPath .githooks",
-    "hooks:off": "git config --unset core.hooksPath",
     "release": "sh scripts/release.sh"
   },
   "devDependencies": {

@@ -273,12 +273,6 @@ importers:
         specifier: workspace:*
         version: link:../core
 
-  tools/driver-spike:
-    dependencies:
-      serialport:
-        specifier: ^13.0.0
-        version: 13.0.0(supports-color@7.2.0)
-
 packages:
 
   '@babel/code-frame@7.29.7':

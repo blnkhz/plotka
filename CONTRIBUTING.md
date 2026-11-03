@@ -81,16 +81,3 @@ and every "?" button points to a page and section that exist.
 
 The icon's source is `apps/desktop/build/icon.svg`. After editing it, run
 `apps/desktop/scripts/make-icon.sh` (macOS) to regenerate `build/icon.icns`.
-
-## Rebuilding the .dmg automatically (optional, macOS)
-
-`pnpm hooks:on` turns on a git post-commit hook that rebuilds the installable `.dmg` in the
-background after every commit, and shows a notification when it's ready (or failed). It builds
-exactly the committed code, in a separate checkout under
-`~/Library/Caches/plotter-studio-dmg-build/`, so uncommitted edits, `pnpm dev` and the tests are
-never affected; the result is copied to `apps/desktop/release/`. Commits made while a build is
-running are folded into one more build. The build log is in the same cache folder.
-
-- Skip it for one commit: `PLOTTER_NO_DMG_BUILD=1 git commit …`
-- Build the latest commit by hand: `pnpm build:mac:commit`
-- Turn it off: `pnpm hooks:off`
