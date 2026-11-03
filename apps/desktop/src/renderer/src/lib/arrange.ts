@@ -230,48 +230,6 @@ export function placementFor(
   return { dx: r(b.x - a.x), dy: r(b.y - a.y), sx: r(sx, 1e5), sy: r(sy, 1e5) };
 }
 
-const ANCHOR: Record<string, [number, number]> = {
-  'top-left': [0, 0],
-  top: [0.5, 0],
-  'top-right': [1, 0],
-  left: [0, 0.5],
-  center: [0.5, 0.5],
-  right: [1, 0.5],
-  'bottom-left': [0, 1],
-  bottom: [0.5, 1],
-  'bottom-right': [1, 1],
-};
-
-/**
- * The Page tab's scale and offset that move the whole artwork from `art` (its box now) to
- * `box` (same proportions). Follows how the page fit places it: aligned in the margins, or
- * from the paper's corner with "As in file".
- */
-export function pageFor(
-  page: PageSetup,
-  art: Box,
-  box: Box,
-): Pick<PageSetup, 'scale' | 'offsetX' | 'offsetY'> {
-  const k = w(art) > 0 ? w(box) / w(art) : h(art) > 0 ? h(box) / h(art) : 1;
-  const r = (v: number) => Math.round(v * 1000) / 1000;
-  if (page.align === 'file') {
-    // Every point is offset + scale · (…): scaling by k scales its distance from the offset.
-    return {
-      scale: r(page.scale * k),
-      offsetX: r(box.minX - k * (art.minX - page.offsetX)),
-      offsetY: r(box.minY - k * (art.minY - page.offsetY)),
-    };
-  }
-  const m = marginBox(page);
-  const [ax, ay] = ANCHOR[page.align] ?? [0.5, 0.5];
-  // minX = margin.x + (margin.width − width) · ax + offsetX, at any scale.
-  return {
-    scale: r(page.scale * k),
-    offsetX: r(box.minX - m.x - (m.width - w(art) * k) * ax),
-    offsetY: r(box.minY - m.y - (m.height - h(art) * k) * ay),
-  };
-}
-
 // --- hit testing ---
 
 function segDist(p: Vec2, a: Vec2, b: Vec2): number {

@@ -1,18 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import {
-  createLayer,
-  defaultPageSetup,
-  placeOnPage,
-  placementMatrix,
-  applyToPoint,
-  type PageSetup,
-  type PlotDocument,
-} from '@plotter-studio/core';
+import { createLayer, defaultPageSetup, placementMatrix, applyToPoint } from '@plotter-studio/core';
 import {
   dragBox,
   handleAt,
   layerAt,
-  pageFor,
   placementFor,
   snapBox,
   snapTargets,
@@ -99,41 +90,6 @@ describe('arrange: back to settings', () => {
     expect(q.x).toBeCloseTo(110);
     expect(q.y).toBeCloseTo(35);
   });
-
-  const art = (): PlotDocument => {
-    const l = createLayer('a', 'A');
-    l.strokes.push({
-      points: [
-        { x: 0, y: 0 },
-        { x: 40, y: 0 },
-        { x: 40, y: 30 },
-      ],
-      closed: false,
-    });
-    return { width: 40, height: 30, layers: [l], warnings: [] };
-  };
-  const cases: Partial<PageSetup>[] = [
-    { align: 'center', fit: 'fit' },
-    { align: 'top-left', fit: 'original' },
-    { align: 'bottom-right', fit: 'fit', offsetX: 3, offsetY: -4 },
-    { align: 'center', fit: 'fit', rotation: 90 },
-    { align: 'file', fit: 'original', scale: 150, offsetX: 7, offsetY: 2 },
-  ];
-  for (const c of cases)
-    it(`the whole artwork lands at the dragged box (${JSON.stringify(c)})`, () => {
-      const page = { ...defaultPageSetup(), ...c };
-      const now = placeOnPage(art(), page).artBounds;
-      const k = 0.6;
-      const width = (now.maxX - now.minX) * k;
-      const height = (now.maxY - now.minY) * k;
-      const target = box(30, 40, 30 + width, 40 + height);
-      const next = { ...page, ...pageFor(page, now, target) };
-      const got = placeOnPage(art(), next).artBounds;
-      expect(got.minX).toBeCloseTo(target.minX, 2);
-      expect(got.minY).toBeCloseTo(target.minY, 2);
-      expect(got.maxX).toBeCloseTo(target.maxX, 2);
-      expect(got.maxY).toBeCloseTo(target.maxY, 2);
-    });
 });
 
 describe('arrange: picking a layer under the pointer', () => {

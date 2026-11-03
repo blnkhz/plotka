@@ -39,8 +39,6 @@ export type ProcessResult = {
   placement: Matrix;
   /** Each layer's bounds on the paper before its own placement (for moving it in the preview). */
   layerBounds: Record<string, Bounds>;
-  /** The box the page setup fits, on the paper (for moving the whole artwork). */
-  artBounds: Bounds;
   /** The last transform's guide (for adjusting it in the preview), outline on the paper. */
   guide: StepGuide | null;
 };
@@ -59,7 +57,7 @@ export function processDocument({
   const { doc: art, guide } = transforms?.length
     ? applyTransformsWithGuide(doc, transforms)
     : { doc, guide: null };
-  const { doc: placed, matrix: placement, layerBounds, artBounds } = placeOnPage(art, page);
+  const { doc: placed, matrix: placement, layerBounds } = placeOnPage(art, page);
   const paper = paperSize(page);
   const printable = intersectRects(
     { x: 0, y: 0, width: paper.width, height: paper.height },
@@ -78,7 +76,6 @@ export function processDocument({
     paperExceedsBed: paper.width > bed.width + EPS || paper.height > bed.height + EPS,
     placement,
     layerBounds,
-    artBounds,
     guide: guide && {
       ...guide,
       outline: guide.outline.map((p) => applyToPoint(placement, p.x, p.y)),

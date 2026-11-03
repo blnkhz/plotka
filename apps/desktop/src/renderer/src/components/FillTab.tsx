@@ -438,7 +438,7 @@ function PositionSection({
           min={-2000}
           max={2000}
           step={1}
-          width={52}
+          width={62}
           title="mm to the right of where the page setup puts it"
           onChange={(dx) => set({ dx })}
         />
@@ -447,7 +447,7 @@ function PositionSection({
           min={-2000}
           max={2000}
           step={1}
-          width={52}
+          width={62}
           suffix="mm"
           title="mm down"
           onChange={(dy) => set({ dy })}
@@ -459,7 +459,7 @@ function PositionSection({
           min={1}
           max={2000}
           step={5}
-          width={52}
+          width={62}
           digits={1}
           title="Width, % of its size from the page setup"
           onChange={(v) => set({ sx: v / 100 })}
@@ -469,7 +469,7 @@ function PositionSection({
           min={1}
           max={2000}
           step={5}
-          width={52}
+          width={62}
           digits={1}
           suffix="%"
           title="Height"

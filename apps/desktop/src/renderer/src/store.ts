@@ -82,7 +82,7 @@ type State = {
   adjustSpiralId: string | null;
   /**
    * Arrange mode: moving and resizing in the preview. `target` is the layer being arranged, or
-   * null for the whole artwork.
+   * null for all layers together (only offered with more than one).
    */
   arrange: { on: boolean; target: string | null };
   page: PageSetup;
@@ -152,7 +152,7 @@ type State = {
   setAdjustStep(id: string | null): void;
   setAdjustSpiral(layerId: string | null): void;
   setArrange(on: boolean): void;
-  /** A layer id, or null for the whole artwork. */
+  /** A layer id, or null for all layers together. */
   setArrangeTarget(target: string | null): void;
   setView(patch: Partial<ViewOptions>): void;
   setTab(tab: Tab): void;
@@ -468,11 +468,8 @@ export const useStore = create<State>()((set, get) => ({
     set((s) => ({ adjustSpiralId, adjustStepId: null, arrange: { ...s.arrange, on: false } })),
   setArrange: (on) =>
     set((s) => ({
-      // Starts on the selected layer, or the whole artwork when there's only one layer.
-      arrange: {
-        on,
-        target: (s.doc?.layers.length ?? 0) > 1 ? s.selectedLayerId : null,
-      },
+      // Starts on the selected layer.
+      arrange: { on, target: s.selectedLayerId },
       ...(on ? { adjustStepId: null, adjustSpiralId: null } : {}),
     })),
   setArrangeTarget: (target) =>

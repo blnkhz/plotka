@@ -1,13 +1,6 @@
-import {
-  documentBounds,
-  emptyBounds,
-  extendBounds,
-  isEmptyBounds,
-  polylinesBounds,
-} from '../geometry/bounds';
+import { documentBounds, extendBounds, isEmptyBounds, polylinesBounds } from '../geometry/bounds';
 import { clipPolylines, clipRing } from '../geometry/clip';
 import {
-  applyToPoint,
   IDENTITY,
   multiply,
   rotate,
@@ -123,8 +116,6 @@ export type PagePlacement = {
   matrix: Matrix;
   /** Each layer's bounds on the paper before its own placement. */
   layerBounds: Record<string, Bounds>;
-  /** The box the page setup fits (the artwork's bounds, or its frame), on the paper. */
-  artBounds: Bounds;
 };
 
 /**
@@ -141,17 +132,6 @@ export function placeOnPage(doc: PlotDocument, page: PageSetup): PagePlacement {
     const p = l.settings.placement;
     return isIdentity(p) || isEmptyBounds(b) ? l : transformLayer(l, placementMatrix(b, p));
   });
-  const box = doc.frame ?? documentBounds(doc);
-  const corners = isEmptyBounds(box)
-    ? []
-    : [
-        [box.minX, box.minY],
-        [box.maxX, box.minY],
-        [box.maxX, box.maxY],
-        [box.minX, box.maxY],
-      ];
-  const artBounds = emptyBounds();
-  for (const [x, y] of corners) extendBounds(artBounds, applyToPoint(matrix, x!, y!));
   const { width, height } = paperSize(page);
   const out: PlotDocument = { ...fitted, layers, width, height, frame: undefined };
   return {
@@ -159,7 +139,6 @@ export function placeOnPage(doc: PlotDocument, page: PageSetup): PagePlacement {
       page.fit === 'fill' && page.align !== 'file' ? clipDocument(out, marginBox(page)).doc : out,
     matrix,
     layerBounds: bounds,
-    artBounds,
   };
 }
 

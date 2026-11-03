@@ -1231,25 +1231,46 @@ test('arrange: move and resize layers and the whole artwork by dragging', async 
   await page.keyboard.press('ArrowRight');
   await expect.poll(() => fillTabValue('Move X / Y')).toBeCloseTo(before + 1, 1);
 
-  // Empty paper: the whole artwork, which moves with the Page tab's offset.
+  // Empty paper: all layers together. Each layer moves; the Page tab doesn't change.
+  const outlinesY = await fillTabValue('Move X / Y', 1);
   const corner = await screen(205, 292);
   await page.mouse.click(corner.x, corner.y);
-  await expect(page.getByRole('status').getByText('Whole artwork')).toBeVisible();
+  await expect(page.getByRole('status').getByText('All layers')).toBeVisible();
   const art = await box();
   const mid = await screen((art.minX + art.maxX) / 2, (art.minY + art.maxY) / 2);
   await drag(mid, 0, 30, true);
-  await page.getByRole('tab', { name: 'Page' }).click();
-  await expect
-    .poll(async () =>
-      Number(await page.getByRole('spinbutton', { name: 'Offset X / Y' }).nth(1).inputValue()),
-    )
-    .toBeCloseTo(30 / mid.scale, 0);
+  await expect.poll(async () => (await box()).minY).toBeCloseTo(art.minY + 30 / mid.scale, 1);
   if (shots) await page.screenshot({ path: join(shots, 'arrange-whole.png') });
+  await page.getByTitle('Fills', { exact: true }).click();
+  await expect.poll(() => fillTabValue('Move X / Y', 1)).toBeCloseTo(30 / mid.scale, 1);
+  await page.getByTitle('Outlines', { exact: true }).click();
+  await expect.poll(() => fillTabValue('Move X / Y', 1)).toBeCloseTo(outlinesY + 30 / mid.scale, 1);
+  await page.getByRole('tab', { name: 'Page' }).click();
+  await expect(page.getByRole('spinbutton', { name: 'Offset X / Y' }).nth(1)).toHaveValue('0');
 
   await page.keyboard.press('Escape');
   await expect(page.getByRole('button', { name: '✥ Arrange' })).toHaveAttribute(
     'aria-pressed',
     'false',
   );
+  await app.close();
+});
+
+test('arrange with one layer: always that layer, never a separate "all layers" box', async () => {
+  const app = await launch();
+  const page = await app.firstWindow();
+  await page.setViewportSize({ width: 1400, height: 900 });
+  await dropFile(page, 'motif.svg');
+  const canvas = page.getByTestId('preview');
+  await page.getByRole('button', { name: '✥ Arrange' }).click();
+  const bar = page.getByRole('status');
+  await expect(bar.getByText('Layer 1', { exact: true })).toBeVisible();
+  // Clicking empty paper keeps the layer: there's nothing else to arrange.
+  const [s, vx, vy] = (await canvas.getAttribute('data-view'))!.split(',').map(Number);
+  const r = (await canvas.boundingBox())!;
+  await page.mouse.click(r.x + vx! + 205 * s!, r.y + vy! + 292 * s!);
+  await expect(bar.getByText('Layer 1', { exact: true })).toBeVisible();
+  await expect(bar.getByText('All layers')).toHaveCount(0);
+  await expect(bar.getByText(/click empty paper/)).toHaveCount(0);
   await app.close();
 });

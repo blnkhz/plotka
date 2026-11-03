@@ -269,7 +269,7 @@ export function Preview() {
         y: (e.clientY - rect.top - v.y) / v.scale,
       };
     };
-    /** What a press in arrange mode grabs: a handle, a layer, the whole artwork, or nothing. */
+    /** What a press in arrange mode grabs: a handle, a layer, all layers, or nothing. */
     const arrangeGrab = (e: PointerEvent): ArrangeDrag | null => {
       const a = inputs.current.arrange;
       const processed = inputs.current.processed;
@@ -279,9 +279,8 @@ export function Preview() {
       const box = (t: string | null) => (t === null ? a.data.art : a.data.boxes[t]) ?? null;
       const current = box(a.target);
       const h = current ? handleAt(current, p, tol) : null;
-      // The whole artwork scales with the page: corners only.
-      const resizable = h && h !== 'move' && (a.target !== null || h.length === 2);
-      if (current && resizable) return { handle: h, start: current, target: a.target, p0: p };
+      if (current && h && h !== 'move')
+        return { handle: h, start: current, target: a.target, p0: p };
       const hit = layerAt(processed.placed.layers, a.data.boxes, p, tol);
       if (hit) {
         if (hit !== a.target) useStore.getState().setArrangeTarget(hit);
@@ -290,11 +289,11 @@ export function Preview() {
       if (current && h === 'move')
         return { handle: 'move', start: current, target: a.target, p0: p };
       const paper = paperSize(inputs.current.page);
-      if (p.x >= 0 && p.y >= 0 && p.x <= paper.width && p.y <= paper.height) {
-        // Empty paper: the whole artwork.
+      const art = a.data.art;
+      if (art && p.x >= 0 && p.y >= 0 && p.x <= paper.width && p.y <= paper.height) {
+        // Empty paper, with more than one layer: all of them together.
         useStore.getState().setArrangeTarget(null);
-        const art = a.data.art;
-        if (art && handleAt(art, p, tol) === 'move')
+        if (handleAt(art, p, tol) === 'move')
           return { handle: 'move', start: art, target: null, p0: p };
       }
       return null;
@@ -313,14 +312,13 @@ export function Preview() {
         if (!a) return;
         const current = a.target === null ? a.data.art : a.data.boxes[a.target];
         const h = current ? handleAt(current, toPaper(e), GRAB_PX / view.current.scale) : null;
-        const ok = h && (h === 'move' || a.target !== null || h.length === 2);
-        canvas.style.cursor = ok ? CURSORS[h] : '';
+        canvas.style.cursor = h ? CURSORS[h] : '';
         return;
       }
       if (drag.arrange) {
         const { handle, start, target, p0 } = drag.arrange;
         const p = toPaper(e);
-        const o = { keepRatio: target === null || !e.shiftKey, fromCenter: e.altKey };
+        const o = { keepRatio: !e.shiftKey, fromCenter: e.altKey };
         let box = dragBox(start, handle, p.x - p0.x, p.y - p0.y, o);
         let guides: Guides = { xs: [], ys: [] };
         const a = inputs.current.arrange;
@@ -550,7 +548,7 @@ function ArrangeButton() {
       aria-pressed={on}
       disabled={!hasDoc}
       onClick={() => setArrange(!on)}
-      title="Move and resize layers (or the whole artwork) by dragging"
+      title="Move and resize layers by dragging"
     >
       ✥ Arrange
     </button>
@@ -564,14 +562,20 @@ function ArrangeBar() {
     target === null ? null : (s.doc?.layers.find((l) => l.id === target)?.name ?? null),
   );
   const setArrange = useStore((s) => s.setArrange);
+  const several = useStore(
+    (s) => (s.doc?.layers.filter((l) => !s.layerOverrides[l.id]?.removed).length ?? 0) > 1,
+  );
   return (
     <div className={`${styles.adjustBar} ${styles.arrangeBar}`} role="status">
       <span>
-        <strong>{name ?? 'Whole artwork'}</strong> ·{' '}
-        {name
-          ? 'drag to move, handles to resize (⇧ free, ⌥ from the center) · click another layer, or the paper for everything'
-          : 'drag to move, corners to resize (⌥ from the center) · click a layer to arrange just that'}{' '}
-        · arrows nudge · hold ⌘ to stop snapping
+        <strong>{name ?? 'All layers'}</strong> · drag to move, handles to resize (⇧ free, ⌥ from
+        the center) ·{' '}
+        {several
+          ? name
+            ? 'click empty paper for all layers · '
+            : 'click a layer for just that one · '
+          : ''}
+        arrows nudge · hold ⌘ to stop snapping
       </span>
       <button onClick={() => setArrange(false)}>Done</button>
     </div>
@@ -1048,9 +1052,7 @@ function drawArrange(
     ctx.setLineDash([]);
     const s = 7 * px;
     ctx.fillStyle = cssVar('--paper');
-    for (const { handle, at } of handlePoints(box)) {
-      // The whole artwork scales with the page: corners only.
-      if (arrange.target === null && handle.length === 1) continue;
+    for (const { at } of handlePoints(box)) {
       ctx.fillRect(at.x - s / 2, at.y - s / 2, s, s);
       ctx.strokeRect(at.x - s / 2, at.y - s / 2, s, s);
     }

@@ -232,10 +232,9 @@ describe('moving and resizing layers', () => {
     const a = r.placed.layers.find((l) => l.id === 'a')!;
     // Twice as wide (40), half as tall (5), around its center, then moved (5, -2).
     expect(bounds({ ...r.placed, layers: [a] })).toEqual([x - 5, y + 0.5, x + 35, y + 5.5]);
-    // The other layer and the whole-artwork box don't move.
+    // The other layer doesn't move.
     const b = r.placed.layers[1]!;
     expect(bounds({ ...r.placed, layers: [b] })).toEqual([x + 100, y + 100, x + 100, y + 100]);
-    expect(r.artBounds).toEqual({ minX: x, minY: y, maxX: x + 100, maxY: y + 100 });
   });
 
   it('no placement leaves the layer exactly where the page setup put it', () => {
