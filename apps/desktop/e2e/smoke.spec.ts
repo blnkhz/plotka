@@ -1162,3 +1162,94 @@ test('waves and noise fills, with the amplitude held back unless lines may cross
   if (shots) await page.screenshot({ path: join(shots, 'fill-noise.png') });
   await app.close();
 });
+
+test('arrange: move and resize layers and the whole artwork by dragging', async () => {
+  const app = await launch();
+  const page = await app.firstWindow();
+  await page.setViewportSize({ width: 1400, height: 900 });
+  await dropFile(page, 'inkscape.svg');
+  const canvas = page.getByTestId('preview');
+  type Box = { minX: number; minY: number; maxX: number; maxY: number };
+  const box = async (): Promise<Box> =>
+    JSON.parse((await canvas.getAttribute('data-arrange-box'))!);
+  /** Screen point of a paper point (mm). */
+  const screen = async (x: number, y: number) => {
+    const [s, vx, vy] = (await canvas.getAttribute('data-view'))!.split(',').map(Number);
+    const r = (await canvas.boundingBox())!;
+    return { x: r.x + vx! + x * s!, y: r.y + vy! + y * s!, scale: s! };
+  };
+  const drag = async (from: { x: number; y: number }, dx: number, dy: number, noSnap = false) => {
+    await page.mouse.move(from.x, from.y);
+    if (noSnap) await page.keyboard.down('Meta');
+    await page.mouse.down();
+    await page.mouse.move(from.x + dx, from.y + dy, { steps: 8 });
+    await page.mouse.up();
+    if (noSnap) await page.keyboard.up('Meta');
+    await expect(page.getByText('Updating…')).toHaveCount(0);
+  };
+  const fillTabValue = async (name: string, nth = 0) => {
+    await page.getByRole('tab', { name: 'Fill' }).click();
+    return Number(await page.getByRole('spinbutton', { name }).nth(nth).inputValue());
+  };
+
+  await page.getByRole('button', { name: '✥ Arrange' }).click();
+  await page.getByTitle('Outlines', { exact: true }).click();
+  await expect(page.getByRole('status').getByText('Outlines', { exact: true })).toBeVisible();
+  const b0 = await box();
+
+  // Move without snapping: 40 px right.
+  const c = await screen((b0.minX + b0.maxX) / 2, (b0.minY + b0.maxY) / 2);
+  await drag(c, 40, 0, true);
+  await expect.poll(async () => (await box()).minX).toBeCloseTo(b0.minX + 40 / c.scale, 1);
+  expect(await fillTabValue('Move X / Y')).toBeCloseTo(40 / c.scale, 1);
+  if (shots) await page.screenshot({ path: join(shots, 'arrange-layer.png') });
+
+  // One drag is one undo step.
+  await page.getByRole('button', { name: 'Undo' }).click();
+  await expect.poll(() => fillTabValue('Move X / Y')).toBe(0);
+
+  // Snapping: drop the left edge 0.8 mm right of the margin (15 mm): it lands on it.
+  const start = await screen((b0.minX + b0.maxX) / 2, (b0.minY + b0.maxY) / 2);
+  await drag(start, (15.8 - b0.minX) * start.scale, 0);
+  await expect.poll(async () => (await box()).minX).toBeCloseTo(15, 3);
+
+  // A corner keeps the proportions.
+  const b1 = await box();
+  const se = await screen(b1.maxX, b1.maxY);
+  await drag(se, 30, 4, true);
+  const b2 = await box();
+  expect(b2.maxX - b2.minX).toBeGreaterThan(b1.maxX - b1.minX);
+  expect((b2.maxX - b2.minX) / (b2.maxY - b2.minY)).toBeCloseTo(
+    (b1.maxX - b1.minX) / (b1.maxY - b1.minY),
+    2,
+  );
+  expect(await fillTabValue('Size W / H', 0)).toBeCloseTo(await fillTabValue('Size W / H', 1), 0);
+
+  // Arrow keys nudge by 1 mm.
+  const before = await fillTabValue('Move X / Y');
+  await canvas.focus();
+  await page.keyboard.press('ArrowRight');
+  await expect.poll(() => fillTabValue('Move X / Y')).toBeCloseTo(before + 1, 1);
+
+  // Empty paper: the whole artwork, which moves with the Page tab's offset.
+  const corner = await screen(205, 292);
+  await page.mouse.click(corner.x, corner.y);
+  await expect(page.getByRole('status').getByText('Whole artwork')).toBeVisible();
+  const art = await box();
+  const mid = await screen((art.minX + art.maxX) / 2, (art.minY + art.maxY) / 2);
+  await drag(mid, 0, 30, true);
+  await page.getByRole('tab', { name: 'Page' }).click();
+  await expect
+    .poll(async () =>
+      Number(await page.getByRole('spinbutton', { name: 'Offset X / Y' }).nth(1).inputValue()),
+    )
+    .toBeCloseTo(30 / mid.scale, 0);
+  if (shots) await page.screenshot({ path: join(shots, 'arrange-whole.png') });
+
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('button', { name: '✥ Arrange' })).toHaveAttribute(
+    'aria-pressed',
+    'false',
+  );
+  await app.close();
+});

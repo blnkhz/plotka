@@ -177,6 +177,16 @@ function parseLayerSettings(v: unknown): Partial<LayerSettings> | undefined {
     const p = parsePasses(v['passes']);
     if (p !== undefined) out.passes = p;
   }
+  const pl = v['placement'];
+  if (pl === null) out.placement = null;
+  else if (isObj(pl) && isNum(pl['dx']) && isNum(pl['dy']) && isNum(pl['sx']) && isNum(pl['sy']))
+    out.placement = {
+      dx: pl['dx'],
+      dy: pl['dy'],
+      // Never zero or negative: a layer can't be squashed flat or flipped by a damaged file.
+      sx: Math.max(1e-3, pl['sx']),
+      sy: Math.max(1e-3, pl['sy']),
+    };
   return out;
 }
 

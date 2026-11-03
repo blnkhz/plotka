@@ -3,6 +3,7 @@ import {
   WAVY_DEFAULTS,
   type FillSettings,
   type FillType,
+  type LayerPlacement,
 } from '@plotter-studio/core';
 import { applyOverrides, currentLayerSettings, useStore } from '../store';
 import { Notice, NumberField, Row, Section } from './controls';
@@ -267,6 +268,7 @@ export function FillTab() {
           </p>
         )}
       </Section>
+      <PositionSection layerId={layer.id} placement={layer.settings.placement ?? null} />
       <PassesSection layer={layer} />
       <SpeedSection layer={layer} />
       <Section title="Defaults" help="fills#your-default-fill">
@@ -412,5 +414,78 @@ function WavyFields({
         </p>
       )}
     </>
+  );
+}
+
+/** Where the layer sits, relative to where the page setup put it (set by dragging in Arrange). */
+function PositionSection({
+  layerId,
+  placement,
+}: {
+  layerId: string;
+  placement: LayerPlacement | null;
+}) {
+  const setLayer = useStore((s) => s.setLayer);
+  const p = placement ?? { dx: 0, dy: 0, sx: 1, sy: 1 };
+  const set = (patch: Partial<LayerPlacement>) =>
+    setLayer(layerId, { settings: { placement: { ...p, ...patch } } });
+  const moved = p.dx !== 0 || p.dy !== 0 || p.sx !== 1 || p.sy !== 1;
+  return (
+    <Section title="Position" help="page-setup#moving-and-resizing-layers">
+      <Row label="Move X / Y">
+        <NumberField
+          value={p.dx}
+          min={-2000}
+          max={2000}
+          step={1}
+          width={52}
+          title="mm to the right of where the page setup puts it"
+          onChange={(dx) => set({ dx })}
+        />
+        <NumberField
+          value={p.dy}
+          min={-2000}
+          max={2000}
+          step={1}
+          width={52}
+          suffix="mm"
+          title="mm down"
+          onChange={(dy) => set({ dy })}
+        />
+      </Row>
+      <Row label="Size W / H">
+        <NumberField
+          value={p.sx * 100}
+          min={1}
+          max={2000}
+          step={5}
+          width={52}
+          digits={1}
+          title="Width, % of its size from the page setup"
+          onChange={(v) => set({ sx: v / 100 })}
+        />
+        <NumberField
+          value={p.sy * 100}
+          min={1}
+          max={2000}
+          step={5}
+          width={52}
+          digits={1}
+          suffix="%"
+          title="Height"
+          onChange={(v) => set({ sy: v / 100 })}
+        />
+      </Row>
+      <Row label="">
+        <button
+          disabled={!moved}
+          onClick={() => setLayer(layerId, { settings: { placement: null } })}
+          title="Back to where the page setup puts it"
+        >
+          Reset position
+        </button>
+        <span className={styles.muted}>Or drag it with ✥ Arrange.</span>
+      </Row>
+    </Section>
   );
 }

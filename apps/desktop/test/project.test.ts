@@ -136,6 +136,25 @@ describe('project files (PROJ-1)', () => {
     ).toThrow(/artwork/);
   });
 
+  it('keeps a moved layer, and refuses squashed or flipped sizes', () => {
+    const d = sample();
+    d.layerOverrides['layer-1'] = {
+      settings: { placement: { dx: 12.5, dy: -3, sx: 1.5, sy: 0.75 } },
+    };
+    const back = parseProject(serializeProject(d));
+    expect(back.layerOverrides['layer-1']?.settings?.placement).toEqual({
+      dx: 12.5,
+      dy: -3,
+      sx: 1.5,
+      sy: 0.75,
+    });
+    const raw = JSON.parse(serializeProject(d));
+    raw.layerOverrides['layer-1'].settings.placement = { dx: 0, dy: 0, sx: -2, sy: 0 };
+    const fixed = parseProject(JSON.stringify(raw)).layerOverrides['layer-1']?.settings?.placement;
+    expect(fixed!.sx).toBeGreaterThan(0);
+    expect(fixed!.sy).toBeGreaterThan(0);
+  });
+
   it('reads the old Zigzag fill as Lines with the pen kept down', () => {
     const f = parseFill({ type: 'zigzag', spacing: 0.8, angle: 30, inset: 0, connect: false });
     expect(f).toMatchObject({ type: 'lines', connect: true, spacing: 0.8, angle: 30 });

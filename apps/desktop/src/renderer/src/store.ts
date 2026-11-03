@@ -80,6 +80,11 @@ type State = {
   adjustStepId: string | null;
   /** The layer whose spiral fill center is being placed in the preview, if any. */
   adjustSpiralId: string | null;
+  /**
+   * Arrange mode: moving and resizing in the preview. `target` is the layer being arranged, or
+   * null for the whole artwork.
+   */
+  arrange: { on: boolean; target: string | null };
   page: PageSetup;
   optimize: OptimizeSettings;
   profileId: string;
@@ -146,6 +151,9 @@ type State = {
   selectLayer(id: string | null): void;
   setAdjustStep(id: string | null): void;
   setAdjustSpiral(layerId: string | null): void;
+  setArrange(on: boolean): void;
+  /** A layer id, or null for the whole artwork. */
+  setArrangeTarget(target: string | null): void;
   setView(patch: Partial<ViewOptions>): void;
   setTab(tab: Tab): void;
   requestFit(): void;
@@ -282,6 +290,7 @@ export const useStore = create<State>()((set, get) => ({
   selectedLayerId: null,
   adjustStepId: null,
   adjustSpiralId: null,
+  arrange: { on: false, target: null },
   page: defaultPageSetup(),
   optimize: defaultOptimizeSettings(),
   profileId: loadProfileId(),
@@ -447,10 +456,30 @@ export const useStore = create<State>()((set, get) => ({
       selectedLayerId,
       // Placing a spiral center is for one layer: picking another ends it.
       adjustSpiralId: s.adjustSpiralId === selectedLayerId ? s.adjustSpiralId : null,
+      // Arranging follows the selected layer.
+      ...(s.arrange.on && selectedLayerId
+        ? { arrange: { on: true, target: selectedLayerId } }
+        : {}),
     })),
   // One thing is adjusted in the preview at a time.
-  setAdjustStep: (adjustStepId) => set({ adjustStepId, adjustSpiralId: null }),
-  setAdjustSpiral: (adjustSpiralId) => set({ adjustSpiralId, adjustStepId: null }),
+  setAdjustStep: (adjustStepId) =>
+    set((s) => ({ adjustStepId, adjustSpiralId: null, arrange: { ...s.arrange, on: false } })),
+  setAdjustSpiral: (adjustSpiralId) =>
+    set((s) => ({ adjustSpiralId, adjustStepId: null, arrange: { ...s.arrange, on: false } })),
+  setArrange: (on) =>
+    set((s) => ({
+      // Starts on the selected layer, or the whole artwork when there's only one layer.
+      arrange: {
+        on,
+        target: (s.doc?.layers.length ?? 0) > 1 ? s.selectedLayerId : null,
+      },
+      ...(on ? { adjustStepId: null, adjustSpiralId: null } : {}),
+    })),
+  setArrangeTarget: (target) =>
+    set((s) => ({
+      arrange: { ...s.arrange, target },
+      ...(target ? { selectedLayerId: target } : {}),
+    })),
   setView: (patch) => set((s) => ({ view: { ...s.view, ...patch } })),
   setTab: (tab) => set({ tab }),
   requestFit: () => set((s) => ({ fitRequest: s.fitRequest + 1 })),

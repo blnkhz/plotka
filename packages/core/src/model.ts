@@ -88,7 +88,15 @@ export type LayerSettings = {
   hideCovered: boolean;
   /** Repeat the layer with slight shifts. Null or count 1 = off. */
   passes?: PassSettings | null;
+  /** Moved and resized on the page (in the preview's Arrange mode). Null = where it falls. */
+  placement?: LayerPlacement | null;
 };
+
+/**
+ * Where a layer sits relative to where the page setup put it: scaled by (sx, sy) around the
+ * center of its bounds, then moved by (dx, dy) mm on the paper.
+ */
+export type LayerPlacement = { dx: number; dy: number; sx: number; sy: number };
 
 export type Layer = {
   id: string;

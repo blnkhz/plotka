@@ -102,3 +102,15 @@
   border-radius: 6px;
   white-space: nowrap;
 }
+.canvas.arranging {
+  cursor: default;
+}
+.on {
+  background: var(--accent);
+  color: var(--on-accent);
+  border-color: var(--accent);
+}
+.arrangeBar {
+  white-space: normal;
+  max-width: calc(100% - 32px);
+}

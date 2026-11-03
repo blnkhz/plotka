@@ -11,6 +11,20 @@ import {
   type Vec2,
 } from '@plotter-studio/core';
 import { beginGesture, endGesture } from '../lib/projectActions';
+import {
+  boxMatrix,
+  CURSORS,
+  dragBox,
+  handleAt,
+  handlePoints,
+  layerAt,
+  snapBox,
+  snapTargets,
+  type Box,
+  type Guides,
+  type Handle,
+} from '../lib/arrange';
+import { arrangeData, commitArrange, type ArrangeData } from '../lib/arrangeActions';
 import { useProcessed, useProfile, type Processed } from '../lib/useProcessed';
 import { completedCount, partialRoute, penAt } from '../lib/playback';
 import { PlaybackBar } from './PlaybackBar';
@@ -18,6 +32,21 @@ import { currentLayerSettings, useStore, type ViewOptions } from '../store';
 import styles from './Preview.module.css';
 
 type ViewTransform = { scale: number; x: number; y: number }; // screen = mm * scale + (x, y)
+
+/**
+ * A drag in arrange mode, drawn by transforming what's already drawn (the pipeline runs once,
+ * on release). After release it stays until the new result arrives, so nothing jumps back.
+ */
+type LiveArrange = {
+  target: string | null;
+  from: Box;
+  box: Box;
+  guides: Guides;
+  committed: boolean;
+};
+/** Screen px within which handles and lines can be grabbed, and snapping happens. */
+const GRAB_PX = 6;
+const SNAP_PX = 6;
 
 const MIN_SCALE = 0.2;
 const MAX_SCALE = 400;
@@ -63,6 +92,14 @@ export function Preview() {
     });
     return { layerId: layer.id, centers: unique };
   }, [adjustSpiralId, processed]);
+  const arrangeOn = useStore((s) => s.arrange.on);
+  const arrangeTarget = useStore((s) => s.arrange.target);
+  const arrangeInfo = useMemo(
+    () => (arrangeOn ? arrangeData(processed) : null),
+    [arrangeOn, processed],
+  );
+  const arrange = arrangeInfo ? { target: arrangeTarget, data: arrangeInfo } : null;
+  const live = useRef<LiveArrange | null>(null);
   const inputs = useRef({
     processed,
     page,
@@ -72,10 +109,27 @@ export function Preview() {
     playbackT,
     guide,
     spiral,
+    arrange,
+    live,
   });
   useEffect(() => {
-    inputs.current = { processed, page, options, bed: profile.bed, pen, playbackT, guide, spiral };
+    inputs.current = {
+      processed,
+      page,
+      options,
+      bed: profile.bed,
+      pen,
+      playbackT,
+      guide,
+      spiral,
+      arrange,
+      live,
+    };
   });
+  // A committed drag stays drawn until its result arrives.
+  useEffect(() => {
+    if (live.current?.committed) live.current = null;
+  }, [processed]);
 
   const draw = useCallback(() => {
     cancelAnimationFrame(frame.current);
@@ -83,6 +137,19 @@ export function Preview() {
       const canvas = canvasRef.current;
       if (!canvas) return;
       render(canvas, view.current, inputs.current);
+      // For the app tests: where the paper is on screen, and the arranged box (mm).
+      const v = view.current;
+      canvas.dataset['view'] = `${v.scale},${v.x},${v.y}`;
+      const a = inputs.current.arrange;
+      const l = inputs.current.live.current;
+      const box =
+        a &&
+        (l && l.target === a.target
+          ? l.box
+          : a.target === null
+            ? a.data.art
+            : a.data.boxes[a.target]);
+      canvas.dataset['arrangeBox'] = box ? JSON.stringify(box) : '';
     });
   }, []);
 
@@ -116,6 +183,8 @@ export function Preview() {
     playbackT,
     guide,
     spiral,
+    arrangeInfo,
+    arrangeTarget,
   ]);
   // Fit on request (file opened, F key, button) and when paper size changes.
   useEffect(fit, [
@@ -184,15 +253,96 @@ export function Preview() {
         draw();
       }
     };
-    let drag: { x: number; y: number; adjust: boolean } | null = null;
+    type ArrangeDrag = { handle: Handle; start: Box; target: string | null; p0: Vec2 };
+    let drag: { x: number; y: number; adjust: boolean; arrange?: ArrangeDrag } | null = null;
+    let space = false;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === ' ') space = e.type === 'keydown';
+    };
+    window.addEventListener('keydown', onKey);
+    window.addEventListener('keyup', onKey);
+    const toPaper = (e: PointerEvent): Vec2 => {
+      const rect = canvas.getBoundingClientRect();
+      const v = view.current;
+      return {
+        x: (e.clientX - rect.left - v.x) / v.scale,
+        y: (e.clientY - rect.top - v.y) / v.scale,
+      };
+    };
+    /** What a press in arrange mode grabs: a handle, a layer, the whole artwork, or nothing. */
+    const arrangeGrab = (e: PointerEvent): ArrangeDrag | null => {
+      const a = inputs.current.arrange;
+      const processed = inputs.current.processed;
+      if (!a || !processed || e.button !== 0 || space) return null;
+      const p = toPaper(e);
+      const tol = GRAB_PX / view.current.scale;
+      const box = (t: string | null) => (t === null ? a.data.art : a.data.boxes[t]) ?? null;
+      const current = box(a.target);
+      const h = current ? handleAt(current, p, tol) : null;
+      // The whole artwork scales with the page: corners only.
+      const resizable = h && h !== 'move' && (a.target !== null || h.length === 2);
+      if (current && resizable) return { handle: h, start: current, target: a.target, p0: p };
+      const hit = layerAt(processed.placed.layers, a.data.boxes, p, tol);
+      if (hit) {
+        if (hit !== a.target) useStore.getState().setArrangeTarget(hit);
+        return { handle: 'move', start: a.data.boxes[hit]!, target: hit, p0: p };
+      }
+      if (current && h === 'move')
+        return { handle: 'move', start: current, target: a.target, p0: p };
+      const paper = paperSize(inputs.current.page);
+      if (p.x >= 0 && p.y >= 0 && p.x <= paper.width && p.y <= paper.height) {
+        // Empty paper: the whole artwork.
+        useStore.getState().setArrangeTarget(null);
+        const art = a.data.art;
+        if (art && handleAt(art, p, tol) === 'move')
+          return { handle: 'move', start: art, target: null, p0: p };
+      }
+      return null;
+    };
     const onDown = (e: PointerEvent) => {
       const adjust = inputs.current.guide !== null || inputs.current.spiral !== null;
-      drag = { x: e.clientX, y: e.clientY, adjust };
+      const arrange = arrangeGrab(e) ?? undefined;
+      drag = { x: e.clientX, y: e.clientY, adjust, arrange };
       if (adjust) beginGesture();
       canvas.setPointerCapture(e.pointerId);
     };
     const onMove = (e: PointerEvent) => {
-      if (!drag) return;
+      if (!drag) {
+        // Arrange mode: show what a press would do.
+        const a = inputs.current.arrange;
+        if (!a) return;
+        const current = a.target === null ? a.data.art : a.data.boxes[a.target];
+        const h = current ? handleAt(current, toPaper(e), GRAB_PX / view.current.scale) : null;
+        const ok = h && (h === 'move' || a.target !== null || h.length === 2);
+        canvas.style.cursor = ok ? CURSORS[h] : '';
+        return;
+      }
+      if (drag.arrange) {
+        const { handle, start, target, p0 } = drag.arrange;
+        const p = toPaper(e);
+        const o = { keepRatio: target === null || !e.shiftKey, fromCenter: e.altKey };
+        let box = dragBox(start, handle, p.x - p0.x, p.y - p0.y, o);
+        let guides: Guides = { xs: [], ys: [] };
+        const a = inputs.current.arrange;
+        if (!e.metaKey && a) {
+          const others = Object.entries(a.data.boxes)
+            .filter(([id]) => target !== null && id !== target)
+            .map(([, b]) => b);
+          const snapped = snapBox(
+            box,
+            start,
+            handle,
+            snapTargets(inputs.current.page, others),
+            SNAP_PX / view.current.scale,
+            o,
+          );
+          box = snapped.box;
+          guides = snapped.guides;
+        }
+        live.current = { target, from: start, box, guides, committed: false };
+        draw();
+        return;
+      }
       const g = inputs.current.guide;
       const placement = inputs.current.processed?.placement;
       if (drag.adjust) {
@@ -224,6 +374,14 @@ export function Preview() {
     };
     const onUp = () => {
       if (drag?.adjust) endGesture();
+      const l = live.current;
+      const processed = inputs.current.processed;
+      if (drag?.arrange && l && !l.committed && processed) {
+        if (commitArrange(processed, l.target, l.from, l.box))
+          live.current = { ...l, guides: { xs: [], ys: [] }, committed: true };
+        else live.current = null;
+        draw();
+      }
       drag = null;
     };
     canvas.addEventListener('wheel', onWheel, { passive: false });
@@ -232,6 +390,8 @@ export function Preview() {
     canvas.addEventListener('pointerup', onUp);
     canvas.addEventListener('pointercancel', onUp);
     return () => {
+      window.removeEventListener('keydown', onKey);
+      window.removeEventListener('keyup', onKey);
       canvas.removeEventListener('wheel', onWheel);
       canvas.removeEventListener('pointerdown', onDown);
       canvas.removeEventListener('pointermove', onMove);
@@ -252,25 +412,61 @@ export function Preview() {
     draw();
   };
 
-  // Esc ends adjusting.
-  const adjusting = adjustStepId !== null || adjustSpiralId !== null;
+  // Esc ends adjusting and arranging; in arrange mode the arrow keys nudge (Shift: 10 mm).
+  const adjusting = adjustStepId !== null || adjustSpiralId !== null || arrangeOn;
   useEffect(() => {
     if (!adjusting) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') useStore.getState().setAdjustStep(null);
+      const arrows: Record<string, [number, number]> = {
+        ArrowLeft: [-1, 0],
+        ArrowRight: [1, 0],
+        ArrowUp: [0, -1],
+        ArrowDown: [0, 1],
+      };
+      const dir = arrows[e.key];
+      const a = inputs.current.arrange;
+      const processed = inputs.current.processed;
+      const typing = (e.target as HTMLElement).closest('input, select, textarea, [role=separator]');
+      if (!dir || !a || !processed || typing) return;
+      e.preventDefault();
+      const l = live.current;
+      const from = l?.target === a.target && l.committed ? l.box : null;
+      const start = from ?? (a.target === null ? a.data.art : a.data.boxes[a.target]);
+      if (!start) return;
+      const step = e.shiftKey ? 10 : 1;
+      const box = dragBox(start, 'move', dir[0] * step, dir[1] * step, {
+        keepRatio: true,
+        fromCenter: false,
+      });
+      // Measured from what's drawn now (a nudge before the last one's result arrives adds up).
+      const base = a.target === null ? a.data.art : a.data.boxes[a.target];
+      if (base && commitArrange(processed, a.target, base, box)) {
+        live.current = {
+          target: a.target,
+          from: base,
+          box,
+          guides: { xs: [], ys: [] },
+          committed: true,
+        };
+        draw();
+      }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [adjusting]);
+  }, [adjusting, draw]);
 
   return (
     <div className={styles.wrap} ref={wrapRef}>
       <canvas
         ref={canvasRef}
-        className={`${styles.canvas} ${guide || spiral ? styles.adjusting : ''}`}
+        className={`${styles.canvas} ${guide || spiral ? styles.adjusting : ''} ${
+          arrangeOn ? styles.arranging : ''
+        }`}
         data-testid="preview"
       />
       {adjustStepId && <AdjustBar ready={guide !== null} />}
+      {arrangeOn && <ArrangeBar />}
       {adjustSpiralId && (
         <AdjustBar
           ready={spiral !== null}
@@ -344,6 +540,44 @@ function zoomGuide(g: StepGuide, factor: number) {
   setGuideParams(g.stepId, (p) => ({ [g.zoomKey]: Number(p[g.zoomKey]) * factor }));
 }
 
+function ArrangeButton() {
+  const on = useStore((s) => s.arrange.on);
+  const setArrange = useStore((s) => s.setArrange);
+  const hasDoc = useStore((s) => s.doc !== null);
+  return (
+    <button
+      className={`${styles.playButton} ${on ? styles.on : ''}`}
+      aria-pressed={on}
+      disabled={!hasDoc}
+      onClick={() => setArrange(!on)}
+      title="Move and resize layers (or the whole artwork) by dragging"
+    >
+      ✥ Arrange
+    </button>
+  );
+}
+
+/** Shown in arrange mode: what's selected and how to move it. */
+function ArrangeBar() {
+  const target = useStore((s) => s.arrange.target);
+  const name = useStore((s) =>
+    target === null ? null : (s.doc?.layers.find((l) => l.id === target)?.name ?? null),
+  );
+  const setArrange = useStore((s) => s.setArrange);
+  return (
+    <div className={`${styles.adjustBar} ${styles.arrangeBar}`} role="status">
+      <span>
+        <strong>{name ?? 'Whole artwork'}</strong> ·{' '}
+        {name
+          ? 'drag to move, handles to resize (⇧ free, ⌥ from the center) · click another layer, or the paper for everything'
+          : 'drag to move, corners to resize (⌥ from the center) · click a layer to arrange just that'}{' '}
+        · arrows nudge · hold ⌘ to stop snapping
+      </span>
+      <button onClick={() => setArrange(false)}>Done</button>
+    </div>
+  );
+}
+
 /** Shown while a transform is adjusted in the preview. */
 function AdjustBar({
   ready,
@@ -388,6 +622,7 @@ function ViewToggles() {
       {toggle('original', 'Original')}
       {toggle('bed', 'Bed')}
       {toggle('margins', 'Margins')}
+      <ArrangeButton />
       <button
         className={styles.playButton}
         onClick={() =>
@@ -425,6 +660,9 @@ type RenderInput = {
   guide: StepGuide | null;
   /** The spiral centers being placed. */
   spiral: { centers: Vec2[] } | null;
+  /** Arrange mode: what's selected and the boxes; `live` is a drag in progress. */
+  arrange: { target: string | null; data: ArrangeData } | null;
+  live: { current: LiveArrange | null };
   processed: Processed | null;
   page: ReturnType<typeof useStore.getState>['page'];
   options: ViewOptions;
@@ -442,7 +680,7 @@ function cssVar(name: string): string {
 function render(
   canvas: HTMLCanvasElement,
   v: ViewTransform,
-  { processed, page, options, bed, pen, playbackT, guide, spiral }: RenderInput,
+  { processed, page, options, bed, pen, playbackT, guide, spiral, arrange, live }: RenderInput,
 ) {
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
@@ -559,12 +797,21 @@ function render(
   ctx.lineWidth = Math.max(options.penWidth, 0.75 * px);
   // Multiply, so layers drawn over each other mix like ink (shows passes and moiré).
   ctx.globalCompositeOperation = 'multiply';
+  // A drag in arrange mode moves what's drawn until the new result arrives.
+  const drag = live.current;
+  const moved = drag && new DOMMatrix([...boxMatrix(drag.from, drag.box)]);
   if (playbackT === null) {
     for (const lt of processed.toolpath.layers) {
       const layer = visible.get(lt.layerId);
       if (!layer?.visible) continue;
       ctx.strokeStyle = layer.color;
-      ctx.stroke(cachedPath(lt.paths));
+      // Pass copies move with the layer they came from.
+      const origin = layer.passOf?.layerId ?? layer.id;
+      if (moved && (drag.target === null || drag.target === origin)) {
+        const p = new Path2D();
+        p.addPath(cachedPath(lt.paths), moved);
+        ctx.stroke(p);
+      } else ctx.stroke(cachedPath(lt.paths));
     }
   } else drawPlayback(ctx, processed, visible, playbackT);
   ctx.globalCompositeOperation = 'source-over';
@@ -624,6 +871,8 @@ function render(
     ctx.stroke();
     ctx.restore();
   }
+
+  if (arrange) drawArrange(ctx, arrange, drag, paper, px);
 
   if (spiral) {
     ctx.save();
@@ -769,4 +1018,56 @@ function addPath(ctx: CanvasPath, pts: { x: number; y: number }[], closed: boole
   ctx.moveTo(pts[0]!.x, pts[0]!.y);
   for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i]!.x, pts[i]!.y);
   if (closed) ctx.closePath();
+}
+
+/** Arrange mode: the selected box with its handles, and snap guides while dragging. */
+function drawArrange(
+  ctx: CanvasRenderingContext2D,
+  arrange: { target: string | null; data: ArrangeData },
+  drag: LiveArrange | null,
+  paper: { width: number; height: number },
+  px: number,
+) {
+  const accent = cssVar('--accent');
+  const current = arrange.target === null ? arrange.data.art : arrange.data.boxes[arrange.target];
+  const box = drag && drag.target === arrange.target ? drag.box : current;
+  ctx.save();
+  // Other layers: faint outlines, so it's clear what can be picked.
+  ctx.strokeStyle = accent;
+  ctx.globalAlpha = 0.35;
+  ctx.lineWidth = px;
+  ctx.setLineDash([2 * px, 3 * px]);
+  if (arrange.target !== null)
+    for (const [id, b] of Object.entries(arrange.data.boxes))
+      if (id !== arrange.target) ctx.strokeRect(b.minX, b.minY, b.maxX - b.minX, b.maxY - b.minY);
+  ctx.globalAlpha = 1;
+  if (box) {
+    ctx.lineWidth = 1.5 * px;
+    ctx.setLineDash([5 * px, 3 * px]);
+    ctx.strokeRect(box.minX, box.minY, box.maxX - box.minX, box.maxY - box.minY);
+    ctx.setLineDash([]);
+    const s = 7 * px;
+    ctx.fillStyle = cssVar('--paper');
+    for (const { handle, at } of handlePoints(box)) {
+      // The whole artwork scales with the page: corners only.
+      if (arrange.target === null && handle.length === 1) continue;
+      ctx.fillRect(at.x - s / 2, at.y - s / 2, s, s);
+      ctx.strokeRect(at.x - s / 2, at.y - s / 2, s, s);
+    }
+  }
+  if (drag && !drag.committed) {
+    ctx.strokeStyle = cssVar('--danger');
+    ctx.lineWidth = px;
+    ctx.beginPath();
+    for (const x of drag.guides.xs) {
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, paper.height);
+    }
+    for (const y of drag.guides.ys) {
+      ctx.moveTo(0, y);
+      ctx.lineTo(paper.width, y);
+    }
+    ctx.stroke();
+  }
+  ctx.restore();
 }

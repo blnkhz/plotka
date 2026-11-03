@@ -1,6 +1,13 @@
-import { documentBounds, isEmptyBounds } from '../geometry/bounds';
+import {
+  documentBounds,
+  emptyBounds,
+  extendBounds,
+  isEmptyBounds,
+  polylinesBounds,
+} from '../geometry/bounds';
 import { clipPolylines, clipRing } from '../geometry/clip';
 import {
+  applyToPoint,
   IDENTITY,
   multiply,
   rotate,
@@ -8,8 +15,8 @@ import {
   translate,
   type Matrix,
 } from '../geometry/matrix';
-import { transformDocument } from '../geometry/transform-doc';
-import type { Bounds, PlotDocument } from '../model';
+import { transformDocument, transformLayer } from '../geometry/transform-doc';
+import type { Bounds, Layer, LayerPlacement, PlotDocument } from '../model';
 import { marginBox, paperSize, type Alignment, type PageSetup, type Rect } from '../page/paper';
 
 const ANCHORS: Record<Exclude<Alignment, 'file'>, [number, number]> = {
@@ -88,18 +95,80 @@ function rotatedBounds(b: Bounds, m: Matrix): Bounds {
   return out;
 }
 
-/**
- * Fit-to-page pipeline step: places the artwork on the paper. The resulting document's
- * width/height are the paper size. In 'fill' mode the overflow outside the margins is cropped.
- */
-export function fitToPage(doc: PlotDocument, page: PageSetup): PlotDocument {
-  const placed = transformDocument(doc, fitMatrix(doc, page));
-  const { width, height } = paperSize(page);
-  const out: PlotDocument = { ...placed, width, height, frame: undefined };
-  return page.fit === 'fill' && page.align !== 'file'
-    ? clipDocument(out, marginBox(page)).doc
-    : out;
+/** The bounds of a layer's strokes and fill outlines (white knockouts don't count). */
+export function layerBounds(layer: Layer): Bounds {
+  const b = polylinesBounds(layer.strokes);
+  for (const f of layer.fills)
+    if (!f.knockout) for (const r of f.outer) for (const p of r) extendBounds(b, p);
+  return b;
 }
+
+const isIdentity = (p: LayerPlacement | null | undefined): p is null | undefined =>
+  !p || (p.dx === 0 && p.dy === 0 && p.sx === 1 && p.sy === 1);
+
+/** The matrix of a layer placement, for a layer whose bounds (before it) are `b`. */
+export function placementMatrix(b: Bounds, p: LayerPlacement): Matrix {
+  const cx = (b.minX + b.maxX) / 2;
+  const cy = (b.minY + b.maxY) / 2;
+  return multiply(
+    translate(cx + p.dx, cy + p.dy),
+    multiply(scaleMatrix(p.sx, p.sy), translate(-cx, -cy)),
+  );
+}
+
+export type PagePlacement = {
+  /** On the paper, with each layer's own placement applied (and the 'fill' crop). */
+  doc: PlotDocument;
+  /** Artwork → paper. */
+  matrix: Matrix;
+  /** Each layer's bounds on the paper before its own placement. */
+  layerBounds: Record<string, Bounds>;
+  /** The box the page setup fits (the artwork's bounds, or its frame), on the paper. */
+  artBounds: Bounds;
+};
+
+/**
+ * Places the artwork on the paper, then each layer where the user moved it. In 'fill' mode the
+ * overflow outside the margins is cropped after that.
+ */
+export function placeOnPage(doc: PlotDocument, page: PageSetup): PagePlacement {
+  const matrix = fitMatrix(doc, page);
+  const fitted = transformDocument(doc, matrix);
+  const bounds: Record<string, Bounds> = {};
+  const layers = fitted.layers.map((l) => {
+    const b = layerBounds(l);
+    bounds[l.id] = b;
+    const p = l.settings.placement;
+    return isIdentity(p) || isEmptyBounds(b) ? l : transformLayer(l, placementMatrix(b, p));
+  });
+  const box = doc.frame ?? documentBounds(doc);
+  const corners = isEmptyBounds(box)
+    ? []
+    : [
+        [box.minX, box.minY],
+        [box.maxX, box.minY],
+        [box.maxX, box.maxY],
+        [box.minX, box.maxY],
+      ];
+  const artBounds = emptyBounds();
+  for (const [x, y] of corners) extendBounds(artBounds, applyToPoint(matrix, x!, y!));
+  const { width, height } = paperSize(page);
+  const out: PlotDocument = { ...fitted, layers, width, height, frame: undefined };
+  return {
+    doc:
+      page.fit === 'fill' && page.align !== 'file' ? clipDocument(out, marginBox(page)).doc : out,
+    matrix,
+    layerBounds: bounds,
+    artBounds,
+  };
+}
+
+/**
+ * Fit-to-page pipeline step: places the artwork on the paper (see `placeOnPage`). The resulting
+ * document's width/height are the paper size.
+ */
+export const fitToPage = (doc: PlotDocument, page: PageSetup): PlotDocument =>
+  placeOnPage(doc, page).doc;
 
 export type ClippedDocument = {
   doc: PlotDocument;

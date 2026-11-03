@@ -33,6 +33,28 @@ blocked. The dashed outline in the preview shows the machine's reach (turn it on
 
 Anything outside the paper (or the plotter's reach) is cut off and shown in red, dashed.
 
+## Moving and resizing layers
+
+Click **✥ Arrange** above the preview to move and resize things by hand.
+
+- **Click** a layer's lines (or inside a filled shape) to select it, or pick it in the Layers
+  list. Click empty paper to select the **whole artwork**. The selection gets a dashed box with
+  handles; the other layers show faint boxes.
+- **Drag** inside the box to move it. **Drag a handle** to resize: corners keep the proportions
+  (hold **⇧** to stretch freely), the side handles stretch one way, and **⌥** resizes around the
+  center. The whole artwork has corner handles only.
+- While dragging, edges and centers **snap** to the margins, the paper's edges and center, and
+  other layers (a red line shows the match). Hold **⌘** to drag without snapping.
+- The **arrow keys** nudge by 1 mm (**⇧** for 10 mm).
+- **Esc** or **Done** goes back to normal; dragging then moves the view again. In arrange mode,
+  drag off the paper or hold **Space** to move the view.
+
+Each drag is one undo step. Moving a layer is saved with the project; it's measured on the
+paper, after **Fit** and **Scale** above, and fills, passes and clipping follow it. Moving the
+whole artwork changes **Scale** and **Offset** in the Page tab. The **Position** section in the
+Fill tab has the exact numbers for the selected layer (**Move X / Y** in mm, **Size W / H** in
+%) and **Reset position**.
+
 ## The preview
 
 - Drag or scroll to move around; pinch (or a mouse wheel) zooms, as do the **−** and **+**

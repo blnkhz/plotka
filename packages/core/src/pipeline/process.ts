@@ -1,11 +1,11 @@
 import { intersectRects } from '../geometry/clip';
 import { applyToPoint, type Matrix } from '../geometry/matrix';
 import type { Vec2 } from '../geometry/vec2';
-import type { PlotDocument, Polyline } from '../model';
+import type { Bounds, PlotDocument, Polyline } from '../model';
 import { optimizePaths, type OptimizeSettings } from '../optimize/order';
 import { paperSize, type PageSetup, type Rect } from '../page/paper';
 import { applyFills } from '../fills/apply';
-import { clipDocument, fitMatrix, fitToPage } from './fit';
+import { clipDocument, placeOnPage } from './fit';
 import { applyPasses } from './passes';
 import { applyTransformsWithGuide, type PipelineStep, type StepGuide } from '../transforms';
 import { buildToolpath, type Toolpath } from './toolpath';
@@ -37,6 +37,10 @@ export type ProcessResult = {
   paperExceedsBed: boolean;
   /** Transformed artwork → paper. */
   placement: Matrix;
+  /** Each layer's bounds on the paper before its own placement (for moving it in the preview). */
+  layerBounds: Record<string, Bounds>;
+  /** The box the page setup fits, on the paper (for moving the whole artwork). */
+  artBounds: Bounds;
   /** The last transform's guide (for adjusting it in the preview), outline on the paper. */
   guide: StepGuide | null;
 };
@@ -55,8 +59,7 @@ export function processDocument({
   const { doc: art, guide } = transforms?.length
     ? applyTransformsWithGuide(doc, transforms)
     : { doc, guide: null };
-  const placed = fitToPage(art, page);
-  const placement = fitMatrix(art, page);
+  const { doc: placed, matrix: placement, layerBounds, artBounds } = placeOnPage(art, page);
   const paper = paperSize(page);
   const printable = intersectRects(
     { x: 0, y: 0, width: paper.width, height: paper.height },
@@ -74,6 +77,8 @@ export function processDocument({
     toolpath: optimize ? optimizeToolpath(unoptimized, optimize) : unoptimized,
     paperExceedsBed: paper.width > bed.width + EPS || paper.height > bed.height + EPS,
     placement,
+    layerBounds,
+    artBounds,
     guide: guide && {
       ...guide,
       outline: guide.outline.map((p) => applyToPoint(placement, p.x, p.y)),
