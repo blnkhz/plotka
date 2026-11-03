@@ -1071,3 +1071,54 @@ test('spiral fill: move its center with the fields or by dragging in the preview
   await expect(page.getByLabel('Same center for all shapes')).toBeChecked();
   await app.close();
 });
+
+test('the side panel resizes by dragging, fits its content, and remembers its width', async () => {
+  const app = await launch();
+  const page = await app.firstWindow();
+  await page.setViewportSize({ width: 1400, height: 900 });
+  await dropFile(page, 'motif.svg');
+  const panel = page.getByRole('tablist').locator('..');
+  const width = async () => Math.round((await panel.boundingBox())!.width);
+  /** True if any tab's content is wider than the panel (needs sideways scrolling). */
+  const overflows = async () => {
+    for (const tab of ['Page', 'Fill', 'Machine', 'Plot']) {
+      await page.getByRole('tab', { name: tab }).click();
+      const wide = await panel.evaluate((el) => {
+        const body = el.lastElementChild as HTMLElement;
+        return body.scrollWidth > body.clientWidth + 1;
+      });
+      if (wide) return tab;
+    }
+    return null;
+  };
+  expect(await width()).toBe(300);
+  expect(await overflows()).toBeNull();
+
+  const handle = page.getByRole('separator', { name: 'Resize the side panel' });
+  const drag = async (dx: number) => {
+    const b = (await handle.boundingBox())!;
+    await page.mouse.move(b.x + b.width / 2, b.y + 200);
+    await page.mouse.down();
+    await page.mouse.move(b.x + b.width / 2 + dx, b.y + 200, { steps: 5 });
+    await page.mouse.up();
+  };
+  const near = async (w: number) => expect(Math.abs((await width()) - w)).toBeLessThanOrEqual(2);
+  await drag(-150);
+  await near(450);
+  await drag(400); // stops at the narrowest
+  expect(await width()).toBe(260);
+  expect(await overflows()).toBeNull();
+  await drag(-2000); // stops where the preview keeps its room: 1400 - 240 - 320
+  expect(await width()).toBe(840);
+
+  await handle.dblclick();
+  expect(await width()).toBe(300);
+  await handle.focus();
+  await page.keyboard.press('ArrowLeft');
+  expect(await width()).toBe(310);
+  await drag(-90);
+  await page.reload();
+  await page.getByRole('tablist').waitFor();
+  await near(400);
+  await app.close();
+});

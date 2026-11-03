@@ -12,7 +12,8 @@
 }
 .row {
   display: grid;
-  grid-template-columns: 84px 1fr;
+  /* minmax(0, …): a long value (a select with long options) shrinks instead of widening the panel. */
+  grid-template-columns: 84px minmax(0, 1fr);
   align-items: center;
   gap: 8px;
   min-height: 26px;
@@ -25,6 +26,11 @@
   gap: 6px;
   align-items: center;
   flex-wrap: wrap;
+  min-width: 0;
+}
+.value > select {
+  max-width: 100%;
+  min-width: 0;
 }
 .number {
   display: inline-flex;

@@ -41,7 +41,7 @@
   padding: 6px 8px;
 }
 .params > div {
-  grid-template-columns: 92px 1fr;
+  grid-template-columns: 92px minmax(0, 1fr);
 }
 .check {
   display: inline-flex;

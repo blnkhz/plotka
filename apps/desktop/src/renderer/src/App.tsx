@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { DoodlePad } from './components/DoodlePad';
 import { HelpPanel } from './components/HelpPanel';
 import { AutoReload } from './components/AutoReload';
@@ -59,14 +59,14 @@ export function App() {
     >
       <Toolbar />
       <RecoveryBanner />
-      <div className={styles.main}>
+      <ResizableMain>
         <aside className={styles.left}>
           <LayersPanel />
           <TransformsPanel />
         </aside>
         <Preview />
         <RightPanel />
-      </div>
+      </ResizableMain>
       {dragging && <div className={styles.dropHint}>Drop to open</div>}
       {doodleOpen && <DoodlePad />}
       {helpOpen && <HelpPanel />}
@@ -210,4 +210,87 @@ function useShortcuts() {
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, []);
+}
+
+const LEFT_WIDTH = 240;
+const RIGHT_DEFAULT = 300;
+const RIGHT_MIN = 260;
+/** The preview always keeps at least this much room. */
+const PREVIEW_MIN = 320;
+const RIGHT_WIDTH_KEY = 'plotter-studio:right-panel-width';
+
+function savedRightWidth(): number {
+  try {
+    const v = Number(localStorage.getItem(RIGHT_WIDTH_KEY));
+    return Number.isFinite(v) && v >= RIGHT_MIN ? v : RIGHT_DEFAULT;
+  } catch {
+    return RIGHT_DEFAULT;
+  }
+}
+
+/**
+ * The three columns, with a handle on the right panel's left edge: drag to resize it, arrow keys
+ * to nudge, double-click to reset. The width is remembered; the preview never gets squeezed
+ * below PREVIEW_MIN.
+ */
+function ResizableMain({ children }: { children: React.ReactNode }) {
+  const [width, setWidth] = useState(savedRightWidth);
+  const [resizing, setResizing] = useState(false);
+  const mainRef = useRef<HTMLDivElement>(null);
+  const maxWidth = () =>
+    Math.max(RIGHT_MIN, (mainRef.current?.clientWidth ?? 1e6) - LEFT_WIDTH - PREVIEW_MIN);
+  const apply = (w: number) => {
+    const next = Math.round(Math.min(maxWidth(), Math.max(RIGHT_MIN, w)));
+    setWidth(next);
+    try {
+      localStorage.setItem(RIGHT_WIDTH_KEY, String(next));
+    } catch {
+      // Only a convenience: the width just won't be remembered.
+    }
+  };
+  return (
+    <div
+      ref={mainRef}
+      className={`${styles.main} ${resizing ? styles.resizing : ''}`}
+      style={{
+        // The panel shrinks with the window rather than squeezing the preview away.
+        gridTemplateColumns: `${LEFT_WIDTH}px minmax(0, 1fr) min(${width}px, max(${RIGHT_MIN}px, calc(100% - ${LEFT_WIDTH + PREVIEW_MIN}px)))`,
+      }}
+    >
+      {children}
+      <div
+        className={styles.resizer}
+        style={{
+          right: `min(${width}px, max(${RIGHT_MIN}px, calc(100% - ${LEFT_WIDTH + PREVIEW_MIN}px)))`,
+        }}
+        role="separator"
+        aria-orientation="vertical"
+        aria-label="Resize the side panel"
+        aria-valuenow={width}
+        aria-valuemin={RIGHT_MIN}
+        tabIndex={0}
+        title="Drag to resize · double-click to reset"
+        onPointerDown={(e) => {
+          e.preventDefault();
+          e.currentTarget.setPointerCapture(e.pointerId);
+          setResizing(true);
+        }}
+        onPointerMove={(e) => {
+          if (!resizing || !mainRef.current) return;
+          apply(mainRef.current.getBoundingClientRect().right - e.clientX);
+        }}
+        onPointerUp={() => setResizing(false)}
+        onPointerCancel={() => setResizing(false)}
+        onDoubleClick={() => apply(RIGHT_DEFAULT)}
+        onKeyDown={(e) => {
+          const step = e.shiftKey ? 50 : 10;
+          // The handle sits on the panel's left edge: left makes the panel wider.
+          if (e.key === 'ArrowLeft') apply(width + step);
+          else if (e.key === 'ArrowRight') apply(width - step);
+          else return;
+          e.preventDefault();
+        }}
+      />
+    </div>
+  );
 }
