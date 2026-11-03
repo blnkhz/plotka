@@ -61,6 +61,7 @@ export function App() {
       <RecoveryBanner />
       <ResizableMain>
         <aside className={styles.left}>
+          <DoodleButton />
           <LayersPanel />
           <TransformsPanel />
         </aside>
@@ -74,6 +75,23 @@ export function App() {
   );
 }
 
+/** Top of the left panel: drawing by hand is another way to get artwork, beside the layers. */
+function DoodleButton() {
+  const setDoodle = useStore((s) => s.setDoodle);
+  const hasDoodle = useStore((s) => s.doodle.strokes.length > 0);
+  return (
+    <div className={styles.doodle}>
+      <button
+        onClick={() => setDoodle({ open: true })}
+        title="Draw something and turn it into vectors"
+      >
+        <span aria-hidden="true">✎</span>
+        {hasDoodle ? 'Edit doodle…' : 'Doodle…'}
+      </button>
+    </div>
+  );
+}
+
 function Toolbar() {
   const source = useStore((s) => s.source);
   const doc = useStore((s) => s.doc);
@@ -81,7 +99,6 @@ function Toolbar() {
   const loading = useStore((s) => s.loading);
   const processed = useProcessed();
   const processing = useProcessing();
-  const setDoodle = useStore((s) => s.setDoodle);
   const hasDoodle = useStore((s) => s.doodle.strokes.length > 0);
   const canUndo = useStore((s) => s.canUndo);
   const canRedo = useStore((s) => s.canRedo);
@@ -103,12 +120,6 @@ function Toolbar() {
       </button>
       <button onClick={() => void redo()} disabled={!canRedo} title="Redo (⇧⌘Z)" aria-label="Redo">
         ↷
-      </button>
-      <button
-        onClick={() => setDoodle({ open: true })}
-        title="Draw something and turn it into vectors"
-      >
-        {hasDoodle ? 'Edit doodle…' : 'Doodle…'}
       </button>
       <button onClick={() => useStore.getState().openHelp()} title="Help (⌘?)">
         Help

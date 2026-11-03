@@ -5,10 +5,11 @@ fills, check the preview, and plot over USB.
 
 ## The window
 
-- **Toolbar** (top): Open, Save, Undo / Redo, Doodle, Help, the file name, and a summary of the
+- **Toolbar** (top): Open, Save, Undo / Redo, Help, the file name, and a summary of the
   plot: number of paths, how far the pen draws, how far it travels with the pen up, and the
   estimated time.
-- **Left panel**: the layers of your artwork, and the transforms (Tile, Tessellate).
+- **Left panel**: **Doodle…** to draw by hand, the layers of your artwork, and the transforms
+  (Tile, Tessellate).
 - **Preview** (middle): exactly what the pen will draw, on the paper.
 - **Right panel**: four tabs. **Page** (paper and placement), **Fill** (fills and passes for the
   selected layer), **Machine** (connecting and moving the plotter) and **Plot** (starting a plot,
@@ -23,7 +24,7 @@ choice is kept for next time. The paper in the preview stays white either way.
 ## Your first plot
 
 1. **Open artwork**: click **Open…** (⌘O) or drop an SVG on the window. Or click **Doodle…**
-   and draw something.
+   at the top of the left panel and draw something.
 2. **Set up the page**: in the **Page** tab, pick the paper size and orientation, and the
    margins. By default the artwork is scaled to fit inside the margins.
 3. **Fill shapes** (optional): select a layer, open the **Fill** tab and pick a fill type.

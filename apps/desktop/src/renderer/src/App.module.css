@@ -75,6 +75,24 @@
   border-right: 1px solid var(--border);
   overflow-y: auto;
 }
+.doodle {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+}
+.doodle button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 500;
+  border-radius: 6px;
+}
+.doodle button span {
+  font-size: 15px;
+}
 .dropHint {
   position: fixed;
   inset: 8px;

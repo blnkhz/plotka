@@ -1,6 +1,6 @@
 # Doodle
 
-Draw something by hand and turn it into clean vectors. Click **Doodle…** in the toolbar.
+Draw something by hand and turn it into clean vectors. Click **Doodle…** at the top of the left panel.
 
 ## Drawing
 
@@ -34,4 +34,4 @@ The header shows how many strokes became how many curves or lines.
 - **Use drawing** opens it like an imported file ("Doodle.svg"): fills, passes, transforms and
   the page setup all work on it.
 - **Save SVG…** saves it as an SVG file to use elsewhere.
-- **Edit doodle…** (toolbar) reopens your strokes. Doodles are saved in projects.
+- **Edit doodle…** (same button) reopens your strokes. Doodles are saved in projects.
