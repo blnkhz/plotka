@@ -1618,3 +1618,56 @@ test('doodle: combine overlapping shapes (merge, cut out, separate, undo)', asyn
   await expect(page.getByTitle('Strokes / filled shapes')).toHaveText('0/1');
   await app.close();
 });
+
+test('parallel pen view: nib width presets, custom width and angle', async () => {
+  const app = await launch();
+  const page = await app.firstWindow();
+  await page.setViewportSize({ width: 1400, height: 900 });
+  await dropFile(page, 'motif.svg');
+  await expect(page.getByText('Updating…')).toHaveCount(0);
+  // How much of the preview is inked (dark pixels).
+  const ink = () =>
+    page.getByTestId('preview').evaluate((c: HTMLCanvasElement) => {
+      const d = c.getContext('2d')!.getImageData(0, 0, c.width, c.height).data;
+      let n = 0;
+      for (let i = 0; i < d.length; i += 4) if (d[i]! < 120 && d[i + 1]! < 120) n++;
+      return n;
+    });
+  const round = await ink();
+
+  await page.getByLabel('Parallel pen').check();
+  await expect(page.getByLabel('Line width')).toBeDisabled();
+  const width = page.getByLabel('Nib width');
+  await expect(width).toHaveValue('3.8');
+  await expect.poll(ink).toBeGreaterThan(round * 3);
+  const wide = await ink();
+  if (shots) await page.screenshot({ path: join(shots, 'parallel-pen.png') });
+
+  // A smaller Pilot Parallel size inks less.
+  await width.selectOption('1.5');
+  await expect.poll(ink).toBeLessThan(wide);
+
+  // Custom width.
+  await width.selectOption('custom');
+  const custom = page.getByLabel('Custom nib width');
+  await custom.fill('8');
+  await expect.poll(ink).toBeGreaterThan(wide);
+
+  // Turning the nib changes which strokes are thick; undo puts the angle back.
+  const angle = page.getByLabel('Nib angle');
+  await expect(angle).toHaveValue('45');
+  const at45 = await ink();
+  // Quick changes to the same setting are one undo step; pause like a person would.
+  await page.waitForTimeout(500);
+  await angle.fill('-45');
+  await expect.poll(ink).not.toBe(at45);
+  if (shots) await page.screenshot({ path: join(shots, 'parallel-pen-angle.png') });
+  await page.getByRole('button', { name: 'Undo' }).click();
+  await expect(angle).toHaveValue('45');
+
+  // Off: back to the round pen.
+  await page.getByLabel('Parallel pen').uncheck();
+  await expect(width).toHaveCount(0);
+  await expect.poll(ink).toBeLessThan(wide / 2);
+  await app.close();
+});

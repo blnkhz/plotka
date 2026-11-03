@@ -68,7 +68,7 @@ const sample = (): ProjectData => ({
     size: { width: 120, height: 80 },
   },
   plotSkip: { 'layer-1~2': true },
-  view: { penWidth: 0.3 },
+  view: { penWidth: 0.3, nib: { on: true, width: 2.75, angle: 30 } },
   texts: [
     {
       id: 'note1',

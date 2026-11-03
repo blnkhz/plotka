@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useThemeKey } from '../lib/useThemeKey';
+import { addNibPath, PARALLEL_SIZES, type Nib } from '../lib/nib';
 import {
   getTransform,
   marginBox,
@@ -671,7 +672,10 @@ function ViewToggles() {
       >
         ▶ Playback
       </button>
-      <label className={styles.toggle} title={LINE_WIDTH_HINT}>
+      <label
+        className={styles.toggle}
+        title={view.nib.on ? 'The parallel pen’s nib sets the width.' : LINE_WIDTH_HINT}
+      >
         Line width
         <input
           type="number"
@@ -680,15 +684,95 @@ function ViewToggles() {
           max={5}
           step={0.05}
           value={view.penWidth}
+          disabled={view.nib.on}
           onChange={(e) => {
             const v = parseFloat(e.target.value);
             if (v > 0) setView({ penWidth: v });
           }}
         />
         mm
-        <span className={styles.previewOnly}>preview only</span>
       </label>
+      {/* Kept together, so a narrow preview wraps the bar before them, not inside. */}
+      <span className={styles.group}>
+        <label className={styles.toggle} title={PARALLEL_HINT}>
+          <input
+            type="checkbox"
+            checked={view.nib.on}
+            onChange={(e) => setView({ nib: { ...view.nib, on: e.target.checked } })}
+          />
+          Parallel pen
+        </label>
+        {view.nib.on && <NibControls />}
+        <span className={styles.previewOnly}>preview only</span>
+      </span>
     </div>
+  );
+}
+
+const PARALLEL_HINT =
+  'See the plot as a broad-edge pen such as a Pilot Parallel would draw it: wide across the ' +
+  'nib, a hairline along it. Only the preview changes.';
+
+/** Parallel pen: nib width (a Pilot Parallel size or your own) and the angle it's held at. */
+function NibControls() {
+  const nib = useStore((s) => s.view.nib);
+  const setView = useStore((s) => s.setView);
+  const preset = PARALLEL_SIZES.includes(nib.width);
+  // Custom stays picked even if the typed width happens to match a preset.
+  const [custom, setCustom] = useState(!preset);
+  const set = (patch: Partial<Nib>) => setView({ nib: { ...nib, ...patch } });
+  return (
+    <>
+      <select
+        aria-label="Nib width"
+        value={custom || !preset ? 'custom' : String(nib.width)}
+        onChange={(e) => {
+          if (e.target.value === 'custom') return setCustom(true);
+          setCustom(false);
+          set({ width: Number(e.target.value) });
+        }}
+      >
+        {PARALLEL_SIZES.map((w) => (
+          <option key={w} value={String(w)}>
+            {w.toFixed(1)} mm
+          </option>
+        ))}
+        <option value="custom">Custom…</option>
+      </select>
+      {(custom || !preset) && (
+        <label className={styles.toggle}>
+          <input
+            type="number"
+            aria-label="Custom nib width"
+            min={0.2}
+            max={30}
+            step={0.1}
+            value={nib.width}
+            onChange={(e) => {
+              const v = parseFloat(e.target.value);
+              if (v > 0) set({ width: v });
+            }}
+          />
+          mm
+        </label>
+      )}
+      <label className={styles.toggle} title="The nib’s angle, counterclockwise from horizontal">
+        Angle
+        <input
+          type="number"
+          aria-label="Nib angle"
+          min={-180}
+          max={180}
+          step={5}
+          value={nib.angle}
+          onChange={(e) => {
+            const v = parseFloat(e.target.value);
+            if (Number.isFinite(v)) set({ angle: v });
+          }}
+        />
+        °
+      </label>
+    </>
   );
 }
 
@@ -818,12 +902,11 @@ function render(
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
   ctx.lineWidth = Math.max(options.penWidth, 0.75 * px);
+  // Parallel pen view: the area a flat nib sweeps, instead of a round tip.
+  const nib = options.nib.on ? options.nib : null;
   for (const layer of processed.clipped.layers) {
     if (layer.plot || !layer.visible) continue;
-    ctx.strokeStyle = layer.color;
-    ctx.beginPath();
-    for (const s of layer.strokes) addPath(ctx, s.points, s.closed);
-    ctx.stroke();
+    drawInk(ctx, layer.strokes, layer.color, nib);
   }
   ctx.restore();
 
@@ -841,16 +924,12 @@ function render(
     for (const lt of processed.toolpath.layers) {
       const layer = visible.get(lt.layerId);
       if (!layer?.visible) continue;
-      ctx.strokeStyle = layer.color;
       // Pass copies move with the layer they came from.
       const origin = layer.passOf?.layerId ?? layer.id;
-      if (moved && (drag.target === null || drag.target === origin)) {
-        const p = new Path2D();
-        p.addPath(cachedPath(lt.paths), moved);
-        ctx.stroke(p);
-      } else ctx.stroke(cachedPath(lt.paths));
+      const m = moved && (drag.target === null || drag.target === origin) ? moved : undefined;
+      drawInk(ctx, lt.paths, layer.color, nib, m);
     }
-  } else drawPlayback(ctx, processed, visible, playbackT);
+  } else drawPlayback(ctx, processed, visible, playbackT, nib);
   ctx.globalCompositeOperation = 'source-over';
 
   // Clipped-away parts
@@ -946,10 +1025,12 @@ function render(
  */
 let played: {
   timeline: Processed['timeline'] | null;
+  nib: Nib | null;
   count: number;
   byLayer: Map<number, Path2D>;
 } = {
   timeline: null,
+  nib: null,
   count: 0,
   byLayer: new Map(),
 };
@@ -958,6 +1039,7 @@ function drawPlayback(
   processed: Processed,
   visible: Map<string, { visible: boolean; color: string }>,
   t: number,
+  nib: Nib | null,
 ) {
   const tp = processed.toolpath;
   const tl = processed.timeline;
@@ -966,28 +1048,27 @@ function drawPlayback(
   for (const lt of tp.layers) {
     const layer = visible.get(lt.layerId);
     if (!layer?.visible) continue;
-    ctx.strokeStyle = layer.color;
-    ctx.stroke(cachedPath(lt.paths));
+    drawInk(ctx, lt.paths, layer.color, nib);
   }
   ctx.restore();
 
   const k = completedCount(tl, t);
-  if (played.timeline !== tl || k < played.count)
-    played = { timeline: tl, count: 0, byLayer: new Map() };
+  if (played.timeline !== tl || played.nib !== nib || k < played.count)
+    played = { timeline: tl, nib, count: 0, byLayer: new Map() };
   for (let i = played.count; i < k; i++) {
     const li = tl.layer[i]!;
     const p = tp.layers[li]?.paths[tl.path[i]!];
     if (!p) continue;
     let path = played.byLayer.get(li);
     if (!path) played.byLayer.set(li, (path = new Path2D()));
-    addPath(path, p.points, p.closed);
+    if (nib) addNibPath(path, p.points, p.closed, nib);
+    else addPath(path, p.points, p.closed);
   }
   played.count = k;
   for (const [li, path] of played.byLayer) {
     const layer = visible.get(tp.layers[li]!.layerId);
     if (!layer?.visible) continue;
-    ctx.strokeStyle = layer.color;
-    ctx.stroke(path);
+    paintInk(ctx, path, layer.color, nib);
   }
   // The path being drawn right now.
   if (k < tl.end.length && tl.start[k]! <= t) {
@@ -996,10 +1077,11 @@ function drawPlayback(
     const layer = visible.get(tp.layers[li]?.layerId ?? '');
     if (p && layer?.visible) {
       const span = tl.end[k]! - tl.start[k]!;
-      ctx.strokeStyle = layer.color;
-      ctx.beginPath();
-      addPath(ctx, partialRoute(p, span > 0 ? (t - tl.start[k]!) / span : 1), false);
-      ctx.stroke();
+      const part = partialRoute(p, span > 0 ? (t - tl.start[k]!) / span : 1);
+      const path = new Path2D();
+      if (nib) addNibPath(path, part, false, nib);
+      else addPath(path, part, false);
+      paintInk(ctx, path, layer.color, nib);
     }
   }
 }
@@ -1048,6 +1130,44 @@ function cachedPath(paths: Polyline[]): Path2D {
     pathCache.set(paths, p);
   }
   return p;
+}
+
+/** The paths as a flat nib sweeps them, cached per processed result and nib. */
+const nibCache = new WeakMap<Polyline[], { nib: Nib; path: Path2D }>();
+function cachedNibPath(paths: Polyline[], nib: Nib): Path2D {
+  const hit = nibCache.get(paths);
+  if (hit?.nib === nib) return hit.path;
+  const path = new Path2D();
+  for (const line of paths) addNibPath(path, line.points, line.closed, nib);
+  nibCache.set(paths, { nib, path });
+  return path;
+}
+
+/** Draws paths in a colour: stroked with the round pen, or filled as a flat nib sweeps them. */
+function drawInk(
+  ctx: CanvasRenderingContext2D,
+  paths: Polyline[],
+  color: string,
+  nib: Nib | null,
+  transform?: DOMMatrix,
+) {
+  let path = nib ? cachedNibPath(paths, nib) : cachedPath(paths);
+  if (transform) {
+    const moved = new Path2D();
+    moved.addPath(path, transform);
+    path = moved;
+  }
+  paintInk(ctx, path, color, nib);
+}
+
+function paintInk(ctx: CanvasRenderingContext2D, path: Path2D, color: string, nib: Nib | null) {
+  if (nib) {
+    ctx.fillStyle = color;
+    ctx.fill(path, 'nonzero');
+  } else {
+    ctx.strokeStyle = color;
+    ctx.stroke(path);
+  }
 }
 
 function addPath(ctx: CanvasPath, pts: { x: number; y: number }[], closed: boolean) {

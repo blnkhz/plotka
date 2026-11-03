@@ -33,6 +33,7 @@ import {
 import type { PlotterStatus } from '@shared/ipc';
 import type { Processed } from './lib/pipeline';
 import { mergeDefaults, parseFill } from './lib/project';
+import { DEFAULT_NIB, type Nib } from './lib/nib';
 
 export type LayerOverride = Partial<Pick<Layer, 'visible' | 'plot' | 'color'>> & {
   settings?: Partial<LayerSettings>;
@@ -47,6 +48,8 @@ export type ViewOptions = {
   margins: boolean;
   /** Pen tip width in mm for drawing strokes. */
   penWidth: number;
+  /** Preview as a parallel (flat-nib) pen: nib width in mm and angle in degrees. */
+  nib: { on: boolean } & Nib;
 };
 
 export type Tab = 'page' | 'fill' | 'machine' | 'plot';
@@ -361,7 +364,14 @@ export const useStore = create<State>()((set, get) => ({
   page: defaultPageSetup(),
   optimize: defaultOptimizeSettings(),
   profileId: loadProfileId(),
-  view: { travel: false, original: false, bed: true, margins: true, penWidth: 0.4 },
+  view: {
+    travel: false,
+    original: false,
+    bed: true,
+    margins: true,
+    penWidth: 0.4,
+    nib: { on: false, ...DEFAULT_NIB },
+  },
   tab: 'page',
   fitRequest: 0,
   pipeline: [],

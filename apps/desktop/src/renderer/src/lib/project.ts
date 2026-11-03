@@ -18,6 +18,8 @@ import {
   type TextItem,
   HERSHEY_FONTS,
 } from '@plotter-studio/core';
+import { DEFAULT_NIB } from './nib';
+import type { ViewOptions } from '../store';
 
 /** Project files (PROJ-1). See docs/plans/epic-10-projects.md for the format. */
 export const PROJECT_FORMAT = 'plotter-studio-project';
@@ -47,7 +49,7 @@ export type ProjectData = {
     size: { width: number; height: number };
   } | null;
   plotSkip: Record<string, true>;
-  view: { penWidth: number };
+  view: Pick<ViewOptions, 'penWidth' | 'nib'>;
   /** LATER-6: text typed in the app. */
   texts: TextItem[];
 };
@@ -322,7 +324,7 @@ export function parseProject(text: string): ProjectData {
     pipeline: parsePipeline(raw['pipeline']),
     doodle,
     plotSkip,
-    view: mergeDefaults({ penWidth: 0.4 }, raw['view']),
+    view: mergeDefaults({ penWidth: 0.4, nib: { on: false, ...DEFAULT_NIB } }, raw['view']),
     texts: parseTexts(raw['texts']),
   };
 }

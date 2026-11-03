@@ -1,5 +1,5 @@
 import { DEFAULT_PROFILE_ID } from '@plotter-studio/plotter';
-import { docWithTexts, knownProfile, sameArtwork, useStore } from '../store';
+import { docWithTexts, knownProfile, sameArtwork, useStore, type ViewOptions } from '../store';
 
 type State = ReturnType<typeof useStore.getState>;
 import {
@@ -45,7 +45,7 @@ export function currentProject(): ProjectData {
       ? { strokes: s.doodle.strokes, settings: s.doodle.settings, size: s.doodle.size }
       : null,
     plotSkip: s.plotSkip,
-    view: { penWidth: s.view.penWidth },
+    view: { penWidth: s.view.penWidth, nib: s.view.nib },
     texts: s.texts,
   };
 }
@@ -65,7 +65,8 @@ type Snapshot = Pick<
   | 'plotSkip'
   | 'profileId'
   | 'texts'
-> & { penWidth: number };
+> &
+  Pick<ViewOptions, 'penWidth' | 'nib'>;
 
 const MAX_HISTORY = 200;
 /** Repeated changes to the same setting closer together than this form one undo step. */
@@ -84,6 +85,7 @@ const snapshot = (s: State): Snapshot => ({
   plotSkip: s.plotSkip,
   profileId: s.profileId,
   penWidth: s.view.penWidth,
+  nib: s.view.nib,
   texts: s.texts,
 });
 
@@ -100,6 +102,7 @@ function changedKey(s: State, p: State): string {
   if (s.texts !== p.texts) keys.push(s.texts.length !== p.texts.length ? 'textList' : 'texts');
   if (s.profileId !== p.profileId) keys.push('profile');
   if (s.view.penWidth !== p.view.penWidth) keys.push('penWidth');
+  if (s.view.nib !== p.view.nib) keys.push('nib');
   return keys.join(',');
 }
 
@@ -159,7 +162,7 @@ async function restore(target: Snapshot) {
       pipeline: target.pipeline,
       plotSkip: target.plotSkip,
       profileId: target.profileId,
-      view: { ...cur.view, penWidth: target.penWidth },
+      view: { ...cur.view, penWidth: target.penWidth, nib: target.nib },
       texts: target.texts,
       doc: docWithTexts(cur.doc, target.texts, target.page),
       dirty: true,
@@ -226,7 +229,7 @@ export async function openProject(
         future: [],
         ...(d.doodle ?? { strokes: [] }),
       },
-      view: { ...s.view, penWidth: d.view.penWidth },
+      view: { ...s.view, penWidth: d.view.penWidth, nib: d.view.nib },
       texts: d.texts,
       error: null,
     });
@@ -295,7 +298,8 @@ export function trackProject(): () => void {
         s.doodle.size !== p.doodle.size ||
         s.plotSkip !== p.plotSkip ||
         s.texts !== p.texts ||
-        s.view.penWidth !== p.view.penWidth;
+        s.view.penWidth !== p.view.penWidth ||
+        s.view.nib !== p.view.nib;
       if (changed) useStore.setState({ dirty: true });
     }
     if (s.projectName !== p.projectName || s.dirty !== p.dirty)

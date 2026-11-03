@@ -74,5 +74,11 @@ hatching keeps its own angle (and lines up with the other layers) rather than tu
   plotter draws with whatever pen is in it. Set it to your pen's tip width (for example 0.3 mm
   for a fineliner) for a more accurate view of how dense and dark the plot will look. It's also
   the stroke width of an exported SVG.
+- **Parallel pen** shows the plot as a broad-edge pen would draw it, such as a Pilot Parallel:
+  lines are wide across the nib and thin along it, like calligraphy. Pick the nib width from the
+  Pilot Parallel sizes (1.5, 2.4, 3.0, 3.8, 4.5 or 6.0 mm) or choose **Custom…** and type your
+  own. **Angle** is how the nib is turned, counterclockwise from horizontal (45° is the usual
+  italic angle). Like Line width, it only changes the preview: hold the pen in the plotter at
+  the same angle to get the same result. It's saved with the project.
 - The blue ring is the pen's position when the plotter is connected; it's filled while the pen
   is down.
