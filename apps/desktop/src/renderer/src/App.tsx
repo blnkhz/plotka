@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { DoodlePad } from './components/DoodlePad';
+import { ImagePad } from './components/ImagePad';
 import { HelpPanel } from './components/HelpPanel';
 import { Splash, splashAtStart } from './components/Splash';
 import { AutoReload } from './components/AutoReload';
@@ -25,6 +26,7 @@ import styles from './App.module.css';
 export function App() {
   const [dragging, setDragging] = useState(false);
   const doodleOpen = useStore((s) => s.doodle.open);
+  const imageOpen = useStore((s) => s.image.open);
   const helpOpen = useStore((s) => s.help.open);
   const [splash, setSplash] = useState(splashAtStart);
   // Artwork arriving another way (Finder, a drop, a menu) closes it too.
@@ -80,6 +82,7 @@ export function App() {
       </ResizableMain>
       {dragging && <div className={styles.dropHint}>Drop to open</div>}
       {doodleOpen && <DoodlePad />}
+      {imageOpen && <ImagePad />}
       {helpOpen && <HelpPanel />}
       {splash && <Splash onClose={() => setSplash(false)} />}
     </div>
@@ -90,6 +93,8 @@ export function App() {
 function DoodleButton() {
   const setDoodle = useStore((s) => s.setDoodle);
   const hasDoodle = useStore((s) => s.doodle.strokes.length > 0);
+  const hasImage = useStore((s) => s.image.bytes !== null);
+  const setImage = useStore((s) => s.setImage);
   return (
     <div className={styles.doodle}>
       <button
@@ -99,6 +104,15 @@ function DoodleButton() {
         <span aria-hidden="true">✎</span>
         {hasDoodle ? 'Edit doodle…' : 'Doodle…'}
       </button>
+      {hasImage && (
+        <button
+          className={styles.secondary}
+          onClick={() => setImage({ open: true })}
+          title="Change how the picture is turned into pen marks"
+        >
+          Edit image…
+        </button>
+      )}
     </div>
   );
 }
@@ -197,6 +211,8 @@ async function menuAction(
         const s = useStore.getState();
         return action === 'undo' ? s.doodleUndo() : s.doodleRedo();
       }
+      // The image pad has no undo; don't change the project behind it.
+      if (useStore.getState().image.open) return;
       return action === 'undo' ? undo() : redo();
   }
 }

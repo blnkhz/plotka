@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   createStep,
+  defaultDitherSettings,
   defaultDoodleSettings,
   defaultOptimizeSettings,
   defaultPageSetup,
@@ -69,6 +70,11 @@ const sample = (): ProjectData => ({
   },
   plotSkip: { 'layer-1~2': true },
   view: { penWidth: 0.3, nib: { on: true, width: 2.75, angle: 30 } },
+  image: {
+    name: 'cat.png',
+    bytes: new Uint8Array([137, 80, 78, 71, 1, 2, 3]),
+    settings: { ...defaultDitherSettings(), method: 'diffusion', shape: 'line', cell: 0.8 },
+  },
   texts: [
     {
       id: 'note1',
@@ -138,6 +144,23 @@ describe('project files (PROJ-1)', () => {
     expect(p.source).toBeNull();
     expect(p.doodle).toBeNull();
     expect(p.optimize).toEqual(defaultOptimizeSettings());
+  });
+
+  it('image pad settings: unknown values fall back to defaults', () => {
+    const text = JSON.stringify({
+      format: PROJECT_FORMAT,
+      version: 1,
+      image: {
+        name: 'a.png',
+        base64: 'AAEC',
+        settings: { method: 'magic', shape: 'star', cell: 2 },
+      },
+    });
+    const image = parseProject(text).image!;
+    expect(image.bytes).toEqual(new Uint8Array([0, 1, 2]));
+    expect(image.settings.method).toBe('ordered');
+    expect(image.settings.shape).toBe('circle');
+    expect(image.settings.cell).toBe(2);
   });
 
   it('leaves out damaged doodle entries (unknown operations, empty shapes)', () => {

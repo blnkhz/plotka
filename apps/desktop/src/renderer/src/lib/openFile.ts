@@ -2,14 +2,21 @@ import { supportedExtensions } from '@plotter-studio/core';
 import { useStore } from '../store';
 import { isProjectFile, PROJECT_EXTENSION } from './project';
 import { openArtwork, openProject } from './projectActions';
+import { IMAGE_EXTENSIONS, isImageFile, openImage } from './imageFiles';
 
 /** Open… : artwork or a project. */
 export async function openWithDialog(): Promise<void> {
   // Save dialogs can't filter on ".plot.json", so allow ".json" and check the name.
-  const result = await window.api.invoke('file:open', [...supportedExtensions(), '.json']);
+  const result = await window.api.invoke('file:open', [
+    ...supportedExtensions(),
+    '.json',
+    ...IMAGE_EXTENSIONS,
+  ]);
   if (!result) return;
   // The main process has already updated its current project path from the dialog.
-  if (isProjectFile(result.name)) await openProject(result.bytes, result.name, { forget: false });
+  if (isImageFile(result.name)) openImage(result.bytes, result.name);
+  else if (isProjectFile(result.name))
+    await openProject(result.bytes, result.name, { forget: false });
   else if (isSupportedFile(result.name)) await openArtwork(result, { forget: false });
   else useStore.setState({ error: unsupported(result.name) });
 }
@@ -20,16 +27,17 @@ export function isSupportedFile(name: string): boolean {
 }
 
 const unsupported = (name: string) =>
-  `Can't open ${name}. Supported: ${[...supportedExtensions(), PROJECT_EXTENSION].join(', ')}`;
+  `Can't open ${name}. Supported: ${[...supportedExtensions(), PROJECT_EXTENSION, ...IMAGE_EXTENSIONS].join(', ')}`;
 
 /** A file from Open Recent, the Dock or Finder (the main process already set the project path). */
 export async function openFromOutside(f: { name: string; path: string; bytes: Uint8Array }) {
-  if (isProjectFile(f.name)) await openProject(f.bytes, f.name, { forget: false });
+  if (isImageFile(f.name)) openImage(f.bytes, f.name);
+  else if (isProjectFile(f.name)) await openProject(f.bytes, f.name, { forget: false });
   else await openArtwork(f, { forget: false });
 }
 
 export async function openDroppedFile(file: File): Promise<void> {
-  if (!isProjectFile(file.name) && !isSupportedFile(file.name)) {
+  if (!isProjectFile(file.name) && !isSupportedFile(file.name) && !isImageFile(file.name)) {
     useStore.setState({ error: unsupported(file.name) });
     return;
   }
@@ -39,6 +47,7 @@ export async function openDroppedFile(file: File): Promise<void> {
   const path = window.api.pathForFile(file);
   if (path) await window.api.invoke('file:dropped', path);
   // A dropped project's own path isn't trusted for saving, so Save will ask where.
-  if (isProjectFile(file.name)) await openProject(bytes, file.name, { forget: true });
+  if (isImageFile(file.name)) openImage(bytes, file.name);
+  else if (isProjectFile(file.name)) await openProject(bytes, file.name, { forget: true });
   else await openArtwork({ name: file.name, bytes, ...(path ? { path } : {}) }, { forget: true });
 }

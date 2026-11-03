@@ -1,0 +1,318 @@
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  ditherGrid,
+  ditherImage,
+  ditherSvg,
+  type DitherResult,
+  type MarkShape,
+} from '@plotter-studio/core';
+import { useThemeKey } from '../lib/useThemeKey';
+import { useStore } from '../store';
+import { NumberField, Row, Section, Segmented } from './controls';
+// Same layout as the doodle pad: header, stage, settings on the right.
+import styles from './DoodlePad.module.css';
+
+const SHAPES: { value: MarkShape; label: string }[] = [
+  { value: 'circle', label: 'Circle' },
+  { value: 'square', label: 'Square' },
+  { value: 'dot', label: 'Dot (a pen tap)' },
+  { value: 'line', label: 'Line' },
+  { value: 'x', label: '×' },
+  { value: 'plus', label: '+' },
+];
+
+/**
+ * The picture drawn into a canvas the size of the grid, so each cell gets the average colour of
+ * its area. Big reductions go down by halves first, which keeps that average fair.
+ */
+function sample(bitmap: ImageBitmap, cols: number, rows: number): Uint8ClampedArray {
+  let src: CanvasImageSource = bitmap;
+  let w = bitmap.width;
+  let h = bitmap.height;
+  while (w / 2 >= cols * 2 && h / 2 >= rows * 2) {
+    w = Math.round(w / 2);
+    h = Math.round(h / 2);
+    const half = new OffscreenCanvas(w, h);
+    const c = half.getContext('2d')!;
+    c.imageSmoothingQuality = 'high';
+    c.drawImage(src, 0, 0, w, h);
+    src = half;
+  }
+  const out = new OffscreenCanvas(cols, rows);
+  const ctx = out.getContext('2d')!;
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(src, 0, 0, cols, rows);
+  return ctx.getImageData(0, 0, cols, rows).data;
+}
+
+/** Turns a picture into a grid of pen marks (dithering), with a live preview. */
+export function ImagePad() {
+  const image = useStore((s) => s.image);
+  const setImage = useStore((s) => s.setImage);
+  const set = useStore((s) => s.setImageSettings);
+  const applyImage = useStore((s) => s.applyImage);
+  const { bytes, name, settings } = image;
+  const [decoded, setDecoded] = useState<{ bytes: Uint8Array; bitmap: ImageBitmap } | null>(null);
+  const [failed, setFailed] = useState<Uint8Array | null>(null);
+  const [showPicture, setShowPicture] = useState(false);
+  const [saved, setSaved] = useState<string | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const wrapRef = useRef<HTMLDivElement>(null);
+
+  // Decode once per image (the browser reads PNG, JPEG, WebP, GIF, BMP).
+  useEffect(() => {
+    if (!bytes) return;
+    let alive = true;
+    createImageBitmap(new Blob([bytes as BlobPart]))
+      .then((bitmap) => alive && setDecoded({ bytes, bitmap }))
+      .catch(() => alive && setFailed(bytes));
+    return () => {
+      alive = false;
+    };
+  }, [bytes]);
+  const bitmap = decoded?.bytes === bytes ? decoded.bitmap : null;
+  const error = failed === bytes && bytes ? `“${name}” can't be read as an image.` : null;
+
+  const result = useMemo<DitherResult | null>(() => {
+    if (!bitmap) return null;
+    const grid = ditherGrid(bitmap.width, bitmap.height, settings);
+    return ditherImage(sample(bitmap, grid.cols, grid.rows), grid, settings);
+  }, [bitmap, settings]);
+
+  const close = useCallback(() => setImage({ open: false }), [setImage]);
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') close();
+    };
+    window.addEventListener('keydown', onKey, true);
+    return () => window.removeEventListener('keydown', onKey, true);
+  }, [close]);
+
+  const draw = useCallback(() => {
+    const canvas = canvasRef.current;
+    const wrap = wrapRef.current;
+    if (!canvas || !wrap) return;
+    const dpr = window.devicePixelRatio || 1;
+    const w = wrap.clientWidth;
+    const h = wrap.clientHeight;
+    canvas.width = w * dpr;
+    canvas.height = h * dpr;
+    canvas.style.width = `${w}px`;
+    canvas.style.height = `${h}px`;
+    const ctx = canvas.getContext('2d')!;
+    const css = getComputedStyle(document.documentElement);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.fillStyle = css.getPropertyValue('--canvas').trim() || '#e5e5e0';
+    ctx.fillRect(0, 0, w, h);
+    if (!result) return;
+    const { width, height } = result.grid;
+    const pad = 24;
+    const scale = Math.max(1e-6, Math.min((w - 2 * pad) / width, (h - 2 * pad) / height));
+    const ox = (w - width * scale) / 2;
+    const oy = (h - height * scale) / 2;
+    ctx.setTransform(dpr * scale, 0, 0, dpr * scale, dpr * ox, dpr * oy);
+    ctx.fillStyle = css.getPropertyValue('--paper').trim() || '#fff';
+    ctx.fillRect(0, 0, width, height);
+    if (showPicture && bitmap) {
+      ctx.globalAlpha = 0.25;
+      ctx.drawImage(bitmap, 0, 0, width, height);
+      ctx.globalAlpha = 1;
+    }
+    const path = new Path2D();
+    for (const m of result.marks) {
+      path.moveTo(m.points[0]!.x, m.points[0]!.y);
+      for (let i = 1; i < m.points.length; i++) path.lineTo(m.points[i]!.x, m.points[i]!.y);
+      if (m.closed) path.closePath();
+    }
+    ctx.strokeStyle = '#111';
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    // A 0.3 mm pen, but never thinner than a screen pixel.
+    ctx.lineWidth = Math.max(0.3, 1 / scale);
+    ctx.stroke(path);
+  }, [result, showPicture, bitmap]);
+  const themeKey = useThemeKey();
+  useEffect(draw, [draw, themeKey]);
+  useEffect(() => {
+    const ro = new ResizeObserver(draw);
+    if (wrapRef.current) ro.observe(wrapRef.current);
+    return () => ro.disconnect();
+  }, [draw]);
+
+  const grid = result?.grid;
+  const svg = () => (result ? ditherSvg(result, name) : '');
+
+  return (
+    <div className={styles.overlay} role="dialog" aria-modal="true" aria-label="Image">
+      <header className={styles.header}>
+        <strong>Image</strong>
+        <span className={styles.muted}>
+          {error ??
+            (grid
+              ? `${name} → ${result.marks.length.toLocaleString()} marks · ${grid.cols} × ${grid.rows} grid · ${grid.width.toFixed(0)} × ${grid.height.toFixed(0)} mm`
+              : 'Reading the image…')}
+        </span>
+        <span className={styles.spacer} />
+        {saved && <span className={styles.muted}>Saved {saved}</span>}
+        <button
+          disabled={!result}
+          onClick={async () => {
+            const base = name.replace(/\.[^.]+$/, '') || 'Image';
+            const path = await window.api.invoke('file:saveText', `${base} (dithered).svg`, svg(), [
+              '.svg',
+            ]);
+            if (path) setSaved(path.split('/').pop() ?? path);
+          }}
+        >
+          Save SVG…
+        </button>
+        <button onClick={close}>Cancel</button>
+        <button
+          className={styles.primary}
+          disabled={!result?.marks.length}
+          onClick={() => void applyImage(svg())}
+        >
+          Use image
+        </button>
+      </header>
+      <div className={styles.body}>
+        <div className={styles.stage} ref={wrapRef}>
+          <canvas ref={canvasRef} data-testid="image-canvas" />
+        </div>
+        <aside className={styles.side}>
+          <Section title="Size" help="opening-artwork#images">
+            <Row label="Width">
+              <NumberField
+                value={settings.width}
+                min={10}
+                max={2000}
+                step={5}
+                suffix="mm"
+                onChange={(width) => set({ width })}
+              />
+            </Row>
+            <Row label="Cell">
+              <NumberField
+                value={settings.cell}
+                min={0.2}
+                max={20}
+                step={0.1}
+                suffix="mm"
+                title="The grid's spacing: one mark at most per cell"
+                onChange={(cell) => set({ cell })}
+              />
+            </Row>
+            {grid?.capped && (
+              <p className={styles.note} role="status">
+                That many cells would take very long to plot: the cells are {grid.cell.toFixed(2)}{' '}
+                mm instead.
+              </p>
+            )}
+          </Section>
+          <Section title="Tone">
+            <Row label="Brightness">
+              <input
+                type="range"
+                aria-label="Brightness"
+                min={-100}
+                max={100}
+                value={settings.brightness}
+                onChange={(e) => set({ brightness: Number(e.target.value) })}
+              />
+              <span className={styles.muted}>{settings.brightness}</span>
+            </Row>
+            <Row label="Contrast">
+              <input
+                type="range"
+                aria-label="Contrast"
+                min={0.2}
+                max={3}
+                step={0.05}
+                value={settings.contrast}
+                onChange={(e) => set({ contrast: Number(e.target.value) })}
+              />
+              <span className={styles.muted}>{settings.contrast.toFixed(2)}</span>
+            </Row>
+            <Row label="">
+              <label className={styles.check} title="Mark the light parts instead of the dark ones">
+                <input
+                  type="checkbox"
+                  checked={settings.invert}
+                  onChange={(e) => set({ invert: e.target.checked })}
+                />
+                Invert (for light ink on dark paper)
+              </label>
+            </Row>
+          </Section>
+          <Section title="Dithering">
+            <Row label="Method">
+              <Segmented
+                value={settings.method}
+                options={[
+                  { value: 'ordered', label: 'Ordered', title: 'A regular pattern (Bayer)' },
+                  {
+                    value: 'diffusion',
+                    label: 'Diffusion',
+                    title: 'Organic, like grain (Floyd–Steinberg)',
+                  },
+                ]}
+                onChange={(method) => set({ method })}
+              />
+            </Row>
+          </Section>
+          <Section title="Marks">
+            <Row label="Shape">
+              <select
+                aria-label="Mark shape"
+                value={settings.shape}
+                onChange={(e) => set({ shape: e.target.value as MarkShape })}
+              >
+                {SHAPES.map((sh) => (
+                  <option key={sh.value} value={sh.value}>
+                    {sh.label}
+                  </option>
+                ))}
+              </select>
+            </Row>
+            {settings.shape !== 'dot' && (
+              <Row label="Size">
+                <input
+                  type="range"
+                  aria-label="Mark size"
+                  min={10}
+                  max={100}
+                  step={5}
+                  value={settings.markSize}
+                  onChange={(e) => set({ markSize: Number(e.target.value) })}
+                />
+                <span className={styles.muted}>{settings.markSize}% of a cell</span>
+              </Row>
+            )}
+            {settings.shape === 'line' && (
+              <Row label="Angle">
+                <NumberField
+                  value={settings.lineAngle}
+                  min={-180}
+                  max={180}
+                  step={15}
+                  suffix="°"
+                  onChange={(lineAngle) => set({ lineAngle })}
+                />
+              </Row>
+            )}
+            <Row label="">
+              <label className={styles.check}>
+                <input
+                  type="checkbox"
+                  checked={showPicture}
+                  onChange={(e) => setShowPicture(e.target.checked)}
+                />
+                Show the picture underneath
+              </label>
+            </Row>
+          </Section>
+        </aside>
+      </div>
+    </div>
+  );
+}

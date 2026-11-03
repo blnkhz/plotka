@@ -5,7 +5,7 @@ building. Each item gets a plan in `docs/plans/` when it's picked up.
 
 ## New features (requested 2026-11-03)
 
-Both come from the earlier web tools at https://blnkhz.github.io/plotter-tools/ (source:
+These come from the earlier web tools at https://blnkhz.github.io/plotter-tools/ (source:
 `blnkhz/plotter-tools`). They're new ways to bring artwork in, so they'd sit next to Open… and
 Doodle…, and their output goes through the usual fills, transforms, optimisation and plotting.
 
@@ -25,15 +25,7 @@ Doodle…, and their output goes through the usual fills, transforms, optimisati
     Re-slicing after the view changes, without opening the model again.
   - **Check first** (spec rule 6): a 3D viewer most likely means Three.js (MIT, large). Ask
     before adding it; the slicing and hidden-line maths itself can live in `packages/core`.
-- **Image dithering**: open a photo or picture (PNG, JPEG, WebP...) and turn it into a grid of
-  small pen marks, darker areas getting more marks.
-  - **Like the old tool**: ordered (Bayer) dithering, cell size, brightness, contrast, and mark
-    shape: square, circle, x or +.
-  - **Worth adding**: cell size in mm on the paper, error diffusion (Floyd–Steinberg) as an
-    option besides ordered, invert, and more shapes (dot, short line at an angle). Marks in
-    nearest-next order, so the plot doesn't jump around the page.
-  - Raster images aren't something the app opens today (SVG and JSON only), so this is also the
-    first image import (LATER-7 lists more file formats).
+- **Image dithering**: done (see `docs/plans/image-dithering.md`).
 
 ## Remaining spec stories (P2 and later)
 

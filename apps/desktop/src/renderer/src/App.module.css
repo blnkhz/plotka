@@ -98,6 +98,19 @@
 .doodle button:hover {
   background: color-mix(in srgb, var(--accent) 85%, var(--text));
 }
+.doodle button.secondary {
+  margin-top: 8px;
+  min-height: 0;
+  padding: 5px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  background: var(--input-bg);
+  color: var(--text);
+  border-color: var(--border);
+}
+.doodle button.secondary:hover {
+  background: var(--hover);
+}
 .doodle button span {
   font-size: 15px;
 }

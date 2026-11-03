@@ -1,7 +1,8 @@
 # Opening artwork
 
-Click **Open…** (⌘O) or drop a file on the window. Plotka opens **SVG** files and its own
-**projects** (`.plot.json`).
+Click **Open…** (⌘O) or drop a file on the window. Plotka opens **SVG** files, its own
+**projects** (`.plot.json`), and **pictures** (PNG, JPEG, WebP, GIF, BMP), which it turns into
+pen marks (see [Images](#images)).
 
 ## SVGs from design apps
 
@@ -71,6 +72,30 @@ Art made by a script can skip SVG: write the paths as JSON and open the `.json` 
 - `width` and `height` are optional; without them the drawing's own extent is used.
 - The toolpath JSON that **File → Export Toolpath JSON…** writes opens too.
 - Auto-reload works for JSON files, so the plot updates each time your script writes the file.
+
+## Images
+
+A picture can't be plotted as it is, so Plotka turns it into a grid of small pen marks: darker
+parts get more marks, lighter parts fewer (this is called dithering). Opening a picture opens
+the **Image** window, with a live preview and these settings:
+
+- **Width**: how wide the result is on the paper, in mm. The height follows the picture.
+- **Cell**: the grid's spacing in mm; each cell gets one mark or none. Smaller cells show more
+  detail but take longer to plot. Very fine grids are limited (the window says so).
+- **Brightness**, **Contrast** and **Invert** (marks on the light parts, for light ink on dark
+  paper).
+- **Method**: **Ordered** gives a tidy, regular pattern; **Diffusion** looks more organic, like
+  film grain.
+- **Shape** of each mark (circle, square, dot, line, × or +) and its **Size** as a share of the
+  cell, so marks can touch or leave gaps. **Line** marks have an **Angle**. A **dot** is a
+  single pen tap, the quickest to plot.
+- **Show the picture underneath** compares the marks with the original.
+
+The header shows how many marks there are and the size on paper. **Use image** opens the result
+like an SVG ("photo (dithered).svg"), so fills, transforms, passes and path optimizing all work
+on it; marks are plotted row by row, back and forth. **Edit image…** (under **Doodle…**) reopens
+the picture with the same settings, and **Save SVG…** saves the marks as a file. The picture and
+its settings are saved in the project.
 
 ## Auto-reload
 

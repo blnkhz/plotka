@@ -47,6 +47,9 @@ export function currentProject(): ProjectData {
     plotSkip: s.plotSkip,
     view: { penWidth: s.view.penWidth, nib: s.view.nib },
     texts: s.texts,
+    image: s.image.bytes
+      ? { name: s.image.name, bytes: s.image.bytes, settings: s.image.settings }
+      : null,
   };
 }
 
@@ -230,6 +233,9 @@ export async function openProject(
         ...(d.doodle ?? { strokes: [] }),
       },
       view: { ...s.view, penWidth: d.view.penWidth, nib: d.view.nib },
+      image: d.image
+        ? { open: false, ...d.image }
+        : { ...s.image, open: false, name: '', bytes: null },
       texts: d.texts,
       error: null,
     });
@@ -299,7 +305,9 @@ export function trackProject(): () => void {
         s.plotSkip !== p.plotSkip ||
         s.texts !== p.texts ||
         s.view.penWidth !== p.view.penWidth ||
-        s.view.nib !== p.view.nib;
+        s.view.nib !== p.view.nib ||
+        s.image.bytes !== p.image.bytes ||
+        s.image.settings !== p.image.settings;
       if (changed) useStore.setState({ dirty: true });
     }
     if (s.projectName !== p.projectName || s.dirty !== p.dirty)

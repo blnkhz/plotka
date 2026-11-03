@@ -1673,3 +1673,64 @@ test('parallel pen view: nib width presets, custom width and angle', async () =>
   await expect.poll(ink).toBeLessThan(wide / 2);
   await app.close();
 });
+
+test('image dithering: open a picture, tune the marks, use it, edit it again', async () => {
+  const app = await launch();
+  const page = await app.firstWindow();
+  await page.setViewportSize({ width: 1400, height: 900 });
+  await page.locator('#root > div').waitFor();
+  // A left-to-right gradient, black to white, dropped on the window as a PNG.
+  await page.evaluate(async () => {
+    const c = document.createElement('canvas');
+    c.width = 300;
+    c.height = 150;
+    const ctx = c.getContext('2d')!;
+    const g = ctx.createLinearGradient(0, 0, 300, 0);
+    g.addColorStop(0, '#000');
+    g.addColorStop(1, '#fff');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, 300, 150);
+    const blob = await new Promise<Blob>((r) => c.toBlob((b) => r(b!), 'image/png'));
+    const dt = new DataTransfer();
+    dt.items.add(new File([blob], 'gradient.png', { type: 'image/png' }));
+    const target = document.querySelector('#root > div')!;
+    target.dispatchEvent(new DragEvent('dragover', { dataTransfer: dt, bubbles: true }));
+    target.dispatchEvent(new DragEvent('drop', { dataTransfer: dt, bubbles: true }));
+  });
+  const pad = page.getByRole('dialog', { name: 'Image' });
+  await expect(pad).toBeVisible();
+  // 150 mm at 1 mm cells: a 150 × 75 grid; about half the cells inked.
+  const header = pad.getByText(/gradient\.png → [\d,]+ marks/);
+  await expect(pad.getByText(/150 × 75 grid/)).toBeVisible();
+  const marks = async () =>
+    Number((await header.textContent())!.match(/→ ([\d,]+) marks/)![1]!.replace(/,/g, ''));
+  const half = await marks();
+  expect(half).toBeGreaterThan(150 * 75 * 0.4);
+  expect(half).toBeLessThan(150 * 75 * 0.6);
+  if (shots) await page.screenshot({ path: join(shots, 'image-pad.png') });
+
+  // Bigger cells: fewer marks. Brighter: fewer again.
+  const cell = pad.getByRole('spinbutton', { name: 'Cell' });
+  await cell.fill('2');
+  await cell.press('Enter');
+  await expect(pad.getByText(/75 × 38 grid/)).toBeVisible();
+  const coarse = await marks();
+  expect(coarse).toBeLessThan(half / 3);
+  await pad.getByLabel('Brightness').fill('40');
+  await expect.poll(marks).toBeLessThan(coarse);
+  await pad.getByRole('button', { name: 'Diffusion' }).click();
+  await pad.getByLabel('Mark shape').selectOption('dot');
+  if (shots) await page.screenshot({ path: join(shots, 'image-pad-dots.png') });
+
+  // Use it: it opens as artwork; Edit image… brings back the same settings.
+  await pad.getByRole('button', { name: 'Use image' }).click();
+  await expect(pad).toHaveCount(0);
+  await expect(page.getByText('gradient (dithered).svg')).toBeVisible();
+  await expect(page.getByText(/[\d,]+ paths · draw/)).toBeVisible();
+  await page.getByRole('button', { name: 'Edit image…' }).click();
+  await expect(pad.getByLabel('Mark shape')).toHaveValue('dot');
+  await expect(pad.getByRole('spinbutton', { name: 'Cell' })).toHaveValue('2');
+  await page.keyboard.press('Escape');
+  await expect(pad).toHaveCount(0);
+  await app.close();
+});

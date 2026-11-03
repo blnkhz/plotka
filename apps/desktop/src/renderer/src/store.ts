@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 import {
   createStep,
+  defaultDitherSettings,
+  type DitherSettings,
   defaultDoodleSettings,
   defaultFillSettings,
   defaultOptimizeSettings,
@@ -73,6 +75,15 @@ export type DoodleState = {
   size: { width: number; height: number };
 };
 
+/** An image being turned into pen marks (image pad), kept so it can be edited again. */
+export type ImageState = {
+  open: boolean;
+  /** The image file's name, and its bytes as opened (null: none yet). */
+  name: string;
+  bytes: Uint8Array | null;
+  settings: DitherSettings;
+};
+
 type State = {
   source: Source | null;
   layerMode: LayerMode;
@@ -111,6 +122,7 @@ type State = {
   /** Transform steps (tile, ...), applied in order before the page setup. */
   pipeline: PipelineStep[];
   doodle: DoodleState;
+  image: ImageState;
   /** Live plotter status from the main process. */
   plotter: PlotterStatus | null;
   /** Last plotter error, shown in the Machine / Plot tabs. */
@@ -192,6 +204,10 @@ type State = {
   togglePlotLayer(id: string): void;
   /** Turns the doodle into vectors and opens it as the artwork. */
   applyDoodle(): Promise<void>;
+  setImage(patch: Partial<ImageState>): void;
+  setImageSettings(patch: Partial<DitherSettings>): void;
+  /** Opens the image pad's result (an SVG of pen marks) as the artwork. */
+  applyImage(svg: string): Promise<void>;
 };
 
 /** Doodle pad undo steps kept. */
@@ -443,6 +459,7 @@ export const useStore = create<State>()((set, get) => ({
   reloadedAt: null,
   undrawnNoticeHidden: false,
   help: { open: false, topic: 'getting-started', anchor: '' },
+  image: { open: false, name: '', bytes: null, settings: defaultDitherSettings() },
   doodle: {
     open: false,
     strokes: [],
@@ -662,6 +679,15 @@ export const useStore = create<State>()((set, get) => ({
       else next[id] = true;
       return { plotSkip: next };
     }),
+  setImage: (patch) => set((s) => ({ image: { ...s.image, ...patch } })),
+  setImageSettings: (patch) =>
+    set((s) => ({ image: { ...s.image, settings: { ...s.image.settings, ...patch } } })),
+  async applyImage(svg) {
+    const { name } = get().image;
+    set((s) => ({ image: { ...s.image, open: false } }));
+    const base = name.replace(/\.[^.]+$/, '') || 'Image';
+    await get().openFile({ name: `${base} (dithered).svg`, bytes: new TextEncoder().encode(svg) });
+  },
   async applyDoodle() {
     const doodle = get().doodle;
     const svg = doodleSvg(doodle);

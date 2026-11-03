@@ -1,4 +1,8 @@
 import {
+  defaultDitherSettings,
+  DITHER_METHODS,
+  MARK_SHAPES,
+  type DitherSettings,
   defaultDoodleSettings,
   defaultFillSettings,
   defaultOptimizeSettings,
@@ -52,6 +56,8 @@ export type ProjectData = {
   view: Pick<ViewOptions, 'penWidth' | 'nib'>;
   /** LATER-6: text typed in the app. */
   texts: TextItem[];
+  /** The picture last turned into pen marks, and how (kept to edit again). */
+  image: { name: string; bytes: Uint8Array; settings: DitherSettings } | null;
 };
 
 export class ProjectError extends Error {
@@ -108,6 +114,9 @@ export function serializeProject(d: ProjectData, now = new Date()): string {
       plotSkip: d.plotSkip,
       view: d.view,
       texts: d.texts,
+      image: d.image
+        ? { name: d.image.name, base64: toBase64(d.image.bytes), settings: d.image.settings }
+        : null,
     },
     null,
     1,
@@ -296,6 +305,19 @@ export function parseProject(text: string): ProjectData {
     }
   }
 
+  let image: ProjectData['image'] = null;
+  const img = raw['image'];
+  if (isObj(img) && typeof img['name'] === 'string' && typeof img['base64'] === 'string') {
+    try {
+      const settings = mergeDefaults(defaultDitherSettings(), img['settings']);
+      if (!DITHER_METHODS.includes(settings.method)) settings.method = 'ordered';
+      if (!MARK_SHAPES.includes(settings.shape)) settings.shape = 'circle';
+      image = { name: img['name'], bytes: fromBase64(img['base64']), settings };
+    } catch {
+      // A damaged picture only loses the image pad's copy; the artwork itself is separate.
+    }
+  }
+
   const d = raw['doodle'];
   const defaultsDoodle = defaultDoodleSettings();
   const doodle: ProjectData['doodle'] = isObj(d)
@@ -326,6 +348,7 @@ export function parseProject(text: string): ProjectData {
     plotSkip,
     view: mergeDefaults({ penWidth: 0.4, nib: { on: false, ...DEFAULT_NIB } }, raw['view']),
     texts: parseTexts(raw['texts']),
+    image,
   };
 }
 
