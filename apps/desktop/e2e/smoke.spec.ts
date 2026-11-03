@@ -499,6 +499,15 @@ test('remove and restore layers; a hidden layer that still plots is flagged', as
   await page.getByRole('button', { name: 'Remove Outlines' }).click();
   await page.getByRole('button', { name: 'Undo' }).click();
   await expect(page.getByRole('button', { name: 'Remove Outlines' })).toBeVisible();
+
+  // A removed layer stays removed when switching layer modes and back.
+  await page.getByRole('button', { name: 'Remove Outlines' }).click();
+  await page.getByRole('button', { name: 'One layer' }).click();
+  await expect(page.getByText('1 removed layer')).toHaveCount(0);
+  await page.getByRole('button', { name: 'By color' }).click();
+  await page.getByRole('button', { name: 'From file' }).click();
+  await expect(page.getByRole('button', { name: 'Remove Outlines' })).toHaveCount(0);
+  await expect(page.getByText('1 removed layer')).toBeVisible();
   await app.close();
 });
 
@@ -891,5 +900,19 @@ test('machine profiles: pick another model, duplicate and edit your own (DRIVER-
   await page.getByRole('tab', { name: 'Machine' }).click();
   await expect(page.getByLabel('Profile name')).toHaveValue('Bantam Tools NextDraw 8511 (my copy)');
   await expect(page.getByText('320 × 218 mm')).toBeVisible();
+  await app.close();
+});
+
+test('line width is labelled as a preview-only setting', async () => {
+  const app = await launch();
+  const page = await app.firstWindow();
+  await page.setViewportSize({ width: 1400, height: 900 });
+  await dropFile(page, 'motif.svg');
+  const width = page.getByRole('spinbutton', { name: 'Line width' });
+  await expect(width).toHaveValue('0.4');
+  await expect(page.getByText('preview only', { exact: true })).toBeVisible();
+  await width.fill('0.8');
+  await expect(width).toHaveValue('0.8');
+  if (shots) await page.screenshot({ path: join(shots, 'line-width.png') });
   await app.close();
 });

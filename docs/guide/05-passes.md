@@ -31,5 +31,5 @@ and **don't turn the motors off** while changing pens (that loses the position).
 ## Preview
 
 Layers are drawn as ink mixing on paper, so overlaps darken like the real thing. Set the
-preview's **Pen** width to your pen's tip width to judge it: with a wide pen, several passes can
+preview's **Line width** to your pen's tip width to judge it: with a wide pen, several passes can
 cover the paper completely.

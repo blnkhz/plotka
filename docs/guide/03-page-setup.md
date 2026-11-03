@@ -43,7 +43,9 @@ Anything outside the paper (or the plotter's reach) is cut off and shown in red,
 - **▶ Playback** shows the plot being drawn in order, timed like the real plot: drag the slider
   to any moment, press play, and pick a speed (1× to 100×). Everything not yet drawn shows
   faintly, and the blue ring is where the pen would be. ✕ closes it.
-- **Pen** sets the width the lines are drawn with in the preview. Set it to your pen's tip width
-  (for example 0.3 mm for a fineliner) to see how dark the plot will be.
+- **Line width** sets how thick lines are drawn in the preview. It doesn't change the plot: the
+  plotter draws with whatever pen is in it. Set it to your pen's tip width (for example 0.3 mm
+  for a fineliner) for a more accurate view of how dense and dark the plot will look. It's also
+  the stroke width of an exported SVG.
 - The blue ring is the pen's position when the plotter is connected; it's filled while the pen
   is down.

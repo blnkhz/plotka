@@ -193,6 +193,11 @@ export function Preview() {
   );
 }
 
+const LINE_WIDTH_HINT =
+  'How thick lines are drawn in the preview. It doesn’t change the plot: the plotter draws with ' +
+  'whatever pen is in it. Set it to your pen’s tip width (e.g. 0.3 mm for a fineliner) for a ' +
+  'more accurate view of how dense and dark the plot will look.';
+
 function ViewToggles() {
   const view = useStore((s) => s.view);
   const setView = useStore((s) => s.setView);
@@ -223,10 +228,11 @@ function ViewToggles() {
       >
         ▶ Playback
       </button>
-      <label className={styles.toggle} title="Pen tip width">
-        Pen
+      <label className={styles.toggle} title={LINE_WIDTH_HINT}>
+        Line width
         <input
           type="number"
+          aria-label="Line width"
           min={0.05}
           max={5}
           step={0.05}
@@ -237,6 +243,7 @@ function ViewToggles() {
           }}
         />
         mm
+        <span className={styles.previewOnly}>preview only</span>
       </label>
     </div>
   );

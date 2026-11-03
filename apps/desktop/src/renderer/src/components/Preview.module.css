@@ -37,6 +37,11 @@
 .toggle input[type='number'] {
   width: 52px;
 }
+.previewOnly {
+  margin-left: 4px;
+  color: var(--muted);
+  font-size: 11px;
+}
 .zoom {
   position: absolute;
   right: 8px;
