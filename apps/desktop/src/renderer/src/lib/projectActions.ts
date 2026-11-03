@@ -50,6 +50,14 @@ export function currentProject(): ProjectData {
     image: s.image.bytes
       ? { name: s.image.name, bytes: s.image.bytes, settings: s.image.settings }
       : null,
+    model: s.model.bytes
+      ? {
+          name: s.model.name,
+          bytes: s.model.bytes,
+          settings: s.model.settings,
+          camera: s.model.camera,
+        }
+      : null,
   };
 }
 
@@ -236,6 +244,9 @@ export async function openProject(
       image: d.image
         ? { open: false, ...d.image }
         : { ...s.image, open: false, name: '', bytes: null },
+      model: d.model
+        ? { open: false, ...d.model }
+        : { ...s.model, open: false, name: '', bytes: null, camera: null },
       texts: d.texts,
       error: null,
     });
@@ -307,7 +318,10 @@ export function trackProject(): () => void {
         s.view.penWidth !== p.view.penWidth ||
         s.view.nib !== p.view.nib ||
         s.image.bytes !== p.image.bytes ||
-        s.image.settings !== p.image.settings;
+        s.image.settings !== p.image.settings ||
+        s.model.bytes !== p.model.bytes ||
+        s.model.settings !== p.model.settings ||
+        s.model.camera !== p.model.camera;
       if (changed) useStore.setState({ dirty: true });
     }
     if (s.projectName !== p.projectName || s.dirty !== p.dirty)

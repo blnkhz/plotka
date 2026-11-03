@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { DoodlePad } from './components/DoodlePad';
 import { ImagePad } from './components/ImagePad';
+import { ModelPad } from './components/ModelPad';
 import { HelpPanel } from './components/HelpPanel';
 import { Splash, splashAtStart } from './components/Splash';
 import { AutoReload } from './components/AutoReload';
@@ -27,6 +28,7 @@ export function App() {
   const [dragging, setDragging] = useState(false);
   const doodleOpen = useStore((s) => s.doodle.open);
   const imageOpen = useStore((s) => s.image.open);
+  const modelOpen = useStore((s) => s.model.open);
   const helpOpen = useStore((s) => s.help.open);
   const [splash, setSplash] = useState(splashAtStart);
   // Artwork arriving another way (Finder, a drop, a menu) closes it too.
@@ -83,6 +85,7 @@ export function App() {
       {dragging && <div className={styles.dropHint}>Drop to open</div>}
       {doodleOpen && <DoodlePad />}
       {imageOpen && <ImagePad />}
+      {modelOpen && <ModelPad />}
       {helpOpen && <HelpPanel />}
       {splash && <Splash onClose={() => setSplash(false)} />}
     </div>
@@ -95,6 +98,8 @@ function DoodleButton() {
   const hasDoodle = useStore((s) => s.doodle.strokes.length > 0);
   const hasImage = useStore((s) => s.image.bytes !== null);
   const setImage = useStore((s) => s.setImage);
+  const hasModel = useStore((s) => s.model.bytes !== null);
+  const setModel = useStore((s) => s.setModel);
   return (
     <div className={styles.doodle}>
       <button
@@ -111,6 +116,15 @@ function DoodleButton() {
           title="Change how the picture is turned into pen marks"
         >
           Edit image…
+        </button>
+      )}
+      {hasModel && (
+        <button
+          className={styles.secondary}
+          onClick={() => setModel({ open: true })}
+          title="Change the slices or the view of the 3D model"
+        >
+          Edit 3D model…
         </button>
       )}
     </div>
@@ -211,8 +225,8 @@ async function menuAction(
         const s = useStore.getState();
         return action === 'undo' ? s.doodleUndo() : s.doodleRedo();
       }
-      // The image pad has no undo; don't change the project behind it.
-      if (useStore.getState().image.open) return;
+      // The image and 3D pads have no undo; don't change the project behind them.
+      if (useStore.getState().image.open || useStore.getState().model.open) return;
       return action === 'undo' ? undo() : redo();
   }
 }

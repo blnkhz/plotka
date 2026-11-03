@@ -3,6 +3,7 @@ import {
   createStep,
   defaultDitherSettings,
   defaultDoodleSettings,
+  defaultSliceSettings,
   defaultOptimizeSettings,
   defaultPageSetup,
   defaultPassSettings,
@@ -74,6 +75,12 @@ const sample = (): ProjectData => ({
     name: 'cat.png',
     bytes: new Uint8Array([137, 80, 78, 71, 1, 2, 3]),
     settings: { ...defaultDitherSettings(), method: 'diffusion', shape: 'line', cell: 0.8 },
+  },
+  model: {
+    name: 'teapot.stl',
+    bytes: new Uint8Array([115, 111, 108, 105, 100]),
+    settings: { ...defaultSliceSettings(), lines: 90, axis: 'z', tilt: 15, mode: 'full' },
+    camera: { position: [1, 2, 3], target: [0, 0.5, 0] },
   },
   texts: [
     {
@@ -161,6 +168,22 @@ describe('project files (PROJ-1)', () => {
     expect(image.settings.method).toBe('ordered');
     expect(image.settings.shape).toBe('circle');
     expect(image.settings.cell).toBe(2);
+  });
+
+  it('3D model: unknown settings fall back; a bad camera is dropped', () => {
+    const text = JSON.stringify({
+      format: PROJECT_FORMAT,
+      version: 1,
+      model: {
+        name: 'a.obj',
+        base64: 'AAEC',
+        settings: { axis: 'w', mode: 'x-ray', projection: 'fisheye', lines: 40 },
+        camera: { position: [1, 2], target: [0, 0, 0] },
+      },
+    });
+    const model = parseProject(text).model!;
+    expect(model.settings).toEqual({ ...defaultSliceSettings(), lines: 40 });
+    expect(model.camera).toBeNull();
   });
 
   it('leaves out damaged doodle entries (unknown operations, empty shapes)', () => {

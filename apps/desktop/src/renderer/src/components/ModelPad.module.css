@@ -1,0 +1,48 @@
+/* The 3D view and the plotted result side by side. */
+.stage {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  min-width: 0;
+  min-height: 0;
+}
+.pane {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+.pane + .pane {
+  border-left: 1px solid var(--border);
+}
+.pane canvas {
+  position: absolute;
+  inset: 0;
+}
+.view {
+  position: absolute;
+  inset: 0;
+  background: var(--canvas);
+}
+.view canvas {
+  cursor: grab;
+}
+.view canvas:active {
+  cursor: grabbing;
+}
+.caption {
+  position: absolute;
+  left: 10px;
+  bottom: 8px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: var(--panel);
+  color: var(--muted);
+  font-size: 11px;
+  pointer-events: none;
+}
+.presets {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+  margin-top: 8px;
+}

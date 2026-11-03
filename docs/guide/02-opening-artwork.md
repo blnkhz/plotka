@@ -1,8 +1,9 @@
 # Opening artwork
 
 Click **Open…** (⌘O) or drop a file on the window. Plotka opens **SVG** files, its own
-**projects** (`.plot.json`), and **pictures** (PNG, JPEG, WebP, GIF, BMP), which it turns into
-pen marks (see [Images](#images)).
+**projects** (`.plot.json`), **pictures** (PNG, JPEG, WebP, GIF, BMP), which it turns into
+pen marks (see [Images](#images)), and **3D models** (OBJ, STL, PLY, glTF / GLB, 3MF), which it
+slices into lines (see [3D models](#3d-models)).
 
 ## SVGs from design apps
 
@@ -99,6 +100,26 @@ like an SVG ("photo (dithered).svg"), so fills, transforms, passes and path opti
 on it; marks are plotted row by row, back and forth. **Edit image…** (under **Doodle…**) reopens
 the picture with the same settings, and **Save SVG…** saves the marks as a file. The picture and
 its settings are saved in the project.
+
+## 3D models
+
+A 3D model becomes evenly spaced parallel lines, like contour lines wrapped around it, drawn as
+seen from the angle you choose. Opening a model opens the **3D model** window: the model on the
+left (drag to turn it, right-drag to move it, scroll to zoom), and on the right the lines as
+they'll be plotted, updated when you let go.
+
+- **Lines**: how many slices. **Direction**: horizontal slices, or vertical ones side to side or
+  front to back. **Tilt** turns the slices at an angle.
+- **Visible part** draws only the parts of the lines you can see from this angle, so the model
+  looks solid. **Full mesh** draws every line, the back too, like a wireframe.
+- **Perspective** or **Flat** (no perspective: lines that are parallel stay parallel), and
+  quick views: **Front**, **Side**, **Top** and **¾**.
+- **Width**: how wide the result is on the paper, in mm.
+
+Every mesh in the file is used, and big models are scaled to fit. A `.gltf` whose data is in
+separate files won't open: export it as `.glb`. **Use model** opens the lines like an SVG
+("teapot (sliced).svg"); **Edit 3D model…** (under **Doodle…**) reopens it with the same view
+and settings, which are saved in the project with the model.
 
 ## Auto-reload
 

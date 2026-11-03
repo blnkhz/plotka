@@ -9,22 +9,7 @@ These come from the earlier web tools at https://blnkhz.github.io/plotter-tools/
 `blnkhz/plotter-tools`). They're new ways to bring artwork in, so they'd sit next to Open… and
 Doodle…, and their output goes through the usual fills, transforms, optimisation and plotting.
 
-- **3D slicer ("parallel remesher")**: open a 3D model, turn it to the view you want, and cut it
-  into evenly spaced parallel lines, drawn as seen from that view.
-  - **Formats**: more than OBJ: STL, PLY, glTF / GLB and 3MF too (OBJ, STL and glTF cover most
-    exports from Blender, CAD and 3D-printing tools). Several files or meshes in one file are
-    combined.
-  - **Visible part only vs full mesh**: a setting. Visible only removes the parts of each line
-    hidden behind the model from the current view (hidden-line removal), so it reads as a
-    solid object; full mesh draws every line, back included, like the old tool did.
-  - **Controls**: number of lines (or spacing in mm), slice direction (the old tool sliced
-    horizontally only; any axis or angle), perspective or flat (orthographic) view, and the
-    view itself: rotate, pan and zoom with the mouse, plus a few presets (front, side, top,
-    three-quarter).
-  - **Output**: lines joined into long paths per slice; then the usual path optimisation.
-    Re-slicing after the view changes, without opening the model again.
-  - **Check first** (spec rule 6): a 3D viewer most likely means Three.js (MIT, large). Ask
-    before adding it; the slicing and hidden-line maths itself can live in `packages/core`.
+- **3D slicer**: done (see `docs/plans/3d-slicer.md`).
 - **Image dithering**: done (see `docs/plans/image-dithering.md`).
 
 ## Remaining spec stories (P2 and later)

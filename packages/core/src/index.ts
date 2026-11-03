@@ -30,3 +30,4 @@ export * from './pipeline/resume';
 export * from './export/export';
 export * from './text/text';
 export * from './raster/dither';
+export * from './mesh/slice';

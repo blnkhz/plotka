@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 import {
   createStep,
+  defaultSliceSettings,
+  type SliceSettings,
   defaultDitherSettings,
   type DitherSettings,
   defaultDoodleSettings,
@@ -84,6 +86,16 @@ export type ImageState = {
   settings: DitherSettings;
 };
 
+/** A 3D model being sliced (3D slicer pad), kept so it can be edited again. */
+export type ModelState = {
+  open: boolean;
+  name: string;
+  bytes: Uint8Array | null;
+  settings: SliceSettings;
+  /** Where the 3D view was looking from and at (null: the default view). */
+  camera: { position: [number, number, number]; target: [number, number, number] } | null;
+};
+
 type State = {
   source: Source | null;
   layerMode: LayerMode;
@@ -123,6 +135,7 @@ type State = {
   pipeline: PipelineStep[];
   doodle: DoodleState;
   image: ImageState;
+  model: ModelState;
   /** Live plotter status from the main process. */
   plotter: PlotterStatus | null;
   /** Last plotter error, shown in the Machine / Plot tabs. */
@@ -208,6 +221,10 @@ type State = {
   setImageSettings(patch: Partial<DitherSettings>): void;
   /** Opens the image pad's result (an SVG of pen marks) as the artwork. */
   applyImage(svg: string): Promise<void>;
+  setModel(patch: Partial<ModelState>): void;
+  setModelSettings(patch: Partial<SliceSettings>): void;
+  /** Opens the slicer's result (an SVG of the slices) as the artwork. */
+  applyModel(svg: string): Promise<void>;
 };
 
 /** Doodle pad undo steps kept. */
@@ -460,6 +477,7 @@ export const useStore = create<State>()((set, get) => ({
   undrawnNoticeHidden: false,
   help: { open: false, topic: 'getting-started', anchor: '' },
   image: { open: false, name: '', bytes: null, settings: defaultDitherSettings() },
+  model: { open: false, name: '', bytes: null, settings: defaultSliceSettings(), camera: null },
   doodle: {
     open: false,
     strokes: [],
@@ -682,6 +700,15 @@ export const useStore = create<State>()((set, get) => ({
   setImage: (patch) => set((s) => ({ image: { ...s.image, ...patch } })),
   setImageSettings: (patch) =>
     set((s) => ({ image: { ...s.image, settings: { ...s.image.settings, ...patch } } })),
+  setModel: (patch) => set((s) => ({ model: { ...s.model, ...patch } })),
+  setModelSettings: (patch) =>
+    set((s) => ({ model: { ...s.model, settings: { ...s.model.settings, ...patch } } })),
+  async applyModel(svg) {
+    const { name } = get().model;
+    set((s) => ({ model: { ...s.model, open: false } }));
+    const base = name.replace(/\.[^.]+$/, '') || 'Model';
+    await get().openFile({ name: `${base} (sliced).svg`, bytes: new TextEncoder().encode(svg) });
+  },
   async applyImage(svg) {
     const { name } = get().image;
     set((s) => ({ image: { ...s.image, open: false } }));

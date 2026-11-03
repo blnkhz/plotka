@@ -1739,3 +1739,116 @@ test('image dithering: open a picture, tune the marks, use it, edit it again', a
   await expect(pad).toHaveCount(0);
   await app.close();
 });
+
+/** A cube from -1 to 1 as text 3D files: STL (12 facets), OBJ (6 quads), PLY (6 quads). */
+function cubeFiles() {
+  const v = (i: number) => [i & 1 ? 1 : -1, i & 2 ? 1 : -1, i & 4 ? 1 : -1];
+  const quads = [
+    [0, 1, 3, 2],
+    [4, 6, 7, 5],
+    [0, 4, 5, 1],
+    [2, 3, 7, 6],
+    [0, 2, 6, 4],
+    [1, 5, 7, 3],
+  ];
+  const facet = (a: number, b: number, c: number) =>
+    `facet normal 0 0 0\nouter loop\n${[a, b, c].map((i) => `vertex ${v(i).join(' ')}`).join('\n')}\nendloop\nendfacet`;
+  const stl = `solid cube\n${quads.flatMap(([a, b, c, d]) => [facet(a!, b!, c!), facet(a!, c!, d!)]).join('\n')}\nendsolid cube\n`;
+  const obj =
+    Array.from({ length: 8 }, (_, i) => `v ${v(i).join(' ')}`).join('\n') +
+    '\n' +
+    quads.map((q) => `f ${q.map((i) => i + 1).join(' ')}`).join('\n') +
+    '\n';
+  const ply = [
+    'ply',
+    'format ascii 1.0',
+    'element vertex 8',
+    'property float x',
+    'property float y',
+    'property float z',
+    'element face 6',
+    'property list uchar int vertex_indices',
+    'end_header',
+    ...Array.from({ length: 8 }, (_, i) => v(i).join(' ')),
+    ...quads.map((q) => `4 ${q.join(' ')}`),
+    '',
+  ].join('\n');
+  return { 'cube.stl': stl, 'cube.obj': obj, 'cube.ply': ply };
+}
+
+async function dropText(page: Page, name: string, content: string) {
+  await page.evaluate(
+    ({ name, content }) => {
+      const dt = new DataTransfer();
+      dt.items.add(new File([content], name, { type: 'application/octet-stream' }));
+      const target = document.querySelector('#root > div')!;
+      target.dispatchEvent(new DragEvent('dragover', { dataTransfer: dt, bubbles: true }));
+      target.dispatchEvent(new DragEvent('drop', { dataTransfer: dt, bubbles: true }));
+    },
+    { name, content },
+  );
+}
+
+test('3D slicer: STL, OBJ and PLY; visible part vs full mesh; use it and edit it again', async () => {
+  const app = await launch();
+  const page = await app.firstWindow();
+  await page.setViewportSize({ width: 1400, height: 900 });
+  await page.locator('#root > div').waitFor();
+  const files = cubeFiles();
+  const pad = page.getByRole('dialog', { name: '3D model' });
+
+  await dropText(page, 'cube.stl', files['cube.stl']);
+  await expect(pad).toBeVisible();
+  // From ¾ above, each of the 60 slices shows as one line round the two near sides.
+  await expect(pad.getByText(/cube\.stl → 60 lines · 12 triangles · 150 × \d+ mm/)).toBeVisible();
+  // How much of the result is inked.
+  const ink = () =>
+    page.getByTestId('model-result').evaluate((c: HTMLCanvasElement) => {
+      const d = c.getContext('2d')!.getImageData(0, 0, c.width, c.height).data;
+      let n = 0;
+      for (let i = 0; i < d.length; i += 4) if (d[i]! < 120) n++;
+      return n;
+    });
+  await expect.poll(ink).toBeGreaterThan(0);
+  await page.waitForTimeout(400);
+  const visible = await ink();
+  if (shots) await page.screenshot({ path: join(shots, 'slicer.png') });
+
+  // The full mesh draws the back of every slice too: more ink.
+  await pad.getByRole('button', { name: 'Full mesh' }).click();
+  await expect.poll(ink).toBeGreaterThan(visible * 1.4);
+  // Fewer lines: closed loops, one per plane.
+  const lines = pad.getByRole('spinbutton', { name: 'Lines' });
+  await lines.fill('20');
+  await lines.press('Enter');
+  await expect(pad.getByText(/→ 20 lines/)).toBeVisible();
+  // From straight above, the slices on the sides are under the top face: hidden.
+  await pad.getByRole('button', { name: 'Top', exact: true }).click();
+  await page.waitForTimeout(400); // the result follows the view a moment later
+  const fromAbove = await ink();
+  await pad.getByRole('button', { name: 'Visible part' }).click();
+  await expect.poll(ink).toBeLessThan(fromAbove * 0.2);
+  await expect(pad.getByText(/nothing to draw from this view/)).toBeVisible();
+  if (shots) await page.screenshot({ path: join(shots, 'slicer-top.png') });
+  await pad.getByRole('button', { name: '¾', exact: true }).click();
+  await page.waitForTimeout(400);
+
+  // Use it; Edit 3D model… brings back the same settings.
+  await pad.getByRole('button', { name: 'Use model' }).click();
+  await expect(pad).toHaveCount(0);
+  await expect(page.getByText('cube (sliced).svg')).toBeVisible();
+  await expect(page.getByText(/\d+ paths · draw/)).toBeVisible();
+  await page.getByRole('button', { name: 'Edit 3D model…' }).click();
+  await expect(pad.getByRole('spinbutton', { name: 'Lines' })).toHaveValue('20');
+  await page.keyboard.press('Escape');
+
+  // The same cube as OBJ and PLY (quads, split into triangles).
+  for (const name of ['cube.obj', 'cube.ply'] as const) {
+    await dropText(page, name, files[name]);
+    await expect(
+      pad.getByText(new RegExp(`${name.replace('.', '\\.')} → \\d+ lines · 12 triangles`)),
+    ).toBeVisible();
+    await page.keyboard.press('Escape');
+  }
+  await app.close();
+});

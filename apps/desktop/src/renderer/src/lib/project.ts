@@ -1,4 +1,6 @@
 import {
+  defaultSliceSettings,
+  type SliceSettings,
   defaultDitherSettings,
   DITHER_METHODS,
   MARK_SHAPES,
@@ -58,6 +60,13 @@ export type ProjectData = {
   texts: TextItem[];
   /** The picture last turned into pen marks, and how (kept to edit again). */
   image: { name: string; bytes: Uint8Array; settings: DitherSettings } | null;
+  /** The 3D model last sliced, how, and the view (kept to edit again). */
+  model: {
+    name: string;
+    bytes: Uint8Array;
+    settings: SliceSettings;
+    camera: { position: [number, number, number]; target: [number, number, number] } | null;
+  } | null;
 };
 
 export class ProjectError extends Error {
@@ -116,6 +125,14 @@ export function serializeProject(d: ProjectData, now = new Date()): string {
       texts: d.texts,
       image: d.image
         ? { name: d.image.name, base64: toBase64(d.image.bytes), settings: d.image.settings }
+        : null,
+      model: d.model
+        ? {
+            name: d.model.name,
+            base64: toBase64(d.model.bytes),
+            settings: d.model.settings,
+            camera: d.model.camera,
+          }
         : null,
     },
     null,
@@ -318,6 +335,28 @@ export function parseProject(text: string): ProjectData {
     }
   }
 
+  let model: ProjectData['model'] = null;
+  const mdl = raw['model'];
+  if (isObj(mdl) && typeof mdl['name'] === 'string' && typeof mdl['base64'] === 'string') {
+    try {
+      const settings = mergeDefaults(defaultSliceSettings(), mdl['settings']);
+      if (!['x', 'y', 'z'].includes(settings.axis)) settings.axis = 'y';
+      if (!['visible', 'full'].includes(settings.mode)) settings.mode = 'visible';
+      if (!['perspective', 'orthographic'].includes(settings.projection))
+        settings.projection = 'perspective';
+      const cam = mdl['camera'];
+      const vec = (v: unknown): v is [number, number, number] =>
+        Array.isArray(v) && v.length === 3 && v.every(isNum);
+      const camera =
+        isObj(cam) && vec(cam['position']) && vec(cam['target'])
+          ? { position: cam['position'], target: cam['target'] }
+          : null;
+      model = { name: mdl['name'], bytes: fromBase64(mdl['base64']), settings, camera };
+    } catch {
+      // A damaged model only loses the slicer's copy; the artwork itself is separate.
+    }
+  }
+
   const d = raw['doodle'];
   const defaultsDoodle = defaultDoodleSettings();
   const doodle: ProjectData['doodle'] = isObj(d)
@@ -349,6 +388,7 @@ export function parseProject(text: string): ProjectData {
     view: mergeDefaults({ penWidth: 0.4, nib: { on: false, ...DEFAULT_NIB } }, raw['view']),
     texts: parseTexts(raw['texts']),
     image,
+    model,
   };
 }
 

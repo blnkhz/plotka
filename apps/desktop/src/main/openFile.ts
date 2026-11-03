@@ -7,7 +7,8 @@ import { addRecent, removeRecent } from './recent';
 import { allowWatch, allowWatchFromProject } from './watch';
 
 /** Files the app can open from Open Recent, the Dock or Finder. */
-export const isOpenable = (path: string) => /\.(svg|json|png|jpe?g|webp|gif|bmp)$/i.test(path);
+export const isOpenable = (path: string) =>
+  /\.(svg|json|png|jpe?g|webp|gif|bmp|obj|stl|ply|glb|gltf|3mf)$/i.test(path);
 
 /**
  * Opens a file chosen outside the Open dialog (Open Recent, Dock, Finder) and sends it to the

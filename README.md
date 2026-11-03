@@ -13,7 +13,11 @@ extension needed.
 ## Features
 
 - Open SVGs from Illustrator, Inkscape, Figma, Affinity Designer and code, or draw a doodle and
-  turn it into clean curves or straight lines
+  turn it into clean curves or straight lines (and merge, cut or intersect its shapes)
+- Pictures (PNG, JPEG, WebP...) become pen marks: ordered or diffusion dithering, or halftone,
+  with circles, squares, dots, lines, × or +
+- 3D models (OBJ, STL, PLY, glTF / GLB, 3MF) become parallel slices drawn from any angle, with
+  hidden lines removed or the full mesh
 - Paper presets, margins, fit and alignment
 - Text in single-stroke Hershey fonts (six styles), typed in the app or from SVG text
 - Fills: lines (or a zigzag), crosshatch, triangles, hexagons, waves (smooth, zigzag, square),
