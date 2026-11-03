@@ -7,7 +7,7 @@ import {
   type Matrix,
   type PageSetup,
   type Vec2,
-} from '@plotter-studio/core';
+} from '@plotka/core';
 
 /**
  * Arrange mode (moving and resizing layers in the preview): the box maths, snapping and hit

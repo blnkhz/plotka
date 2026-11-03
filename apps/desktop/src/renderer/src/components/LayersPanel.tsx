@@ -1,4 +1,4 @@
-import type { LayerMode } from '@plotter-studio/core';
+import type { LayerMode } from '@plotka/core';
 import { applyOverrides, useStore } from '../store';
 import { Section, Segmented } from './controls';
 import styles from './LayersPanel.module.css';

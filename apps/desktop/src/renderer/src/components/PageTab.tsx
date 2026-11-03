@@ -1,4 +1,4 @@
-import { PAPER_PRESETS, type Alignment, type FitMode, type Margins } from '@plotter-studio/core';
+import { PAPER_PRESETS, type Alignment, type FitMode, type Margins } from '@plotka/core';
 import { useState } from 'react';
 import { useStore } from '../store';
 import { NumberField, Row, Section, Segmented } from './controls';

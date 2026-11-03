@@ -7,7 +7,7 @@ import {
   type LayerPlacement,
   type TextItem,
   HERSHEY_FONTS,
-} from '@plotter-studio/core';
+} from '@plotka/core';
 import { applyOverrides, currentLayerSettings, useStore } from '../store';
 import { Notice, NumberField, Row, Section, Segmented } from './controls';
 import { PassesSection } from './PassesSection';

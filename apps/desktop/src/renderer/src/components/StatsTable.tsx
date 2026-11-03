@@ -1,4 +1,4 @@
-import type { PathStats } from '@plotter-studio/core';
+import type { PathStats } from '@plotka/core';
 import { fmtDistance, fmtDuration } from '../lib/format';
 import { useProcessed } from '../lib/useProcessed';
 import styles from './StatsTable.module.css';

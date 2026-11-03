@@ -14,14 +14,14 @@ export type OpenFileResult = {
   bytes: Uint8Array;
 } | null;
 
-import type { Bounds, Toolpath } from '@plotter-studio/core';
+import type { Bounds, Toolpath } from '@plotka/core';
 import type { Appearance } from './themes';
 import type {
   LayerMotionSettings,
   MachineProfile,
   MachineState,
   RunProgress,
-} from '@plotter-studio/plotter';
+} from '@plotka/plotter';
 
 export type PortInfo = { path: string; label: string; isPlotter: boolean };
 

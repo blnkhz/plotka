@@ -1,4 +1,4 @@
-import { getTransform, TRANSFORMS, type ParamSpec, type PipelineStep } from '@plotter-studio/core';
+import { getTransform, TRANSFORMS, type ParamSpec, type PipelineStep } from '@plotka/core';
 import { useStore } from '../store';
 import { NumberField, Row, Section } from './controls';
 import styles from './TransformsPanel.module.css';

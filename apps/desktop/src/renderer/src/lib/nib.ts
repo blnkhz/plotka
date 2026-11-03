@@ -1,4 +1,4 @@
-import type { Vec2 } from '@plotter-studio/core';
+import type { Vec2 } from '@plotka/core';
 
 /**
  * A flat, chisel-like nib (Pilot Parallel and other broad-edge pens), for the preview: `width`

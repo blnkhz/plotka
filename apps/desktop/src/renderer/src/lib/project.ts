@@ -23,12 +23,14 @@ import {
   type PipelineStep,
   type TextItem,
   HERSHEY_FONTS,
-} from '@plotter-studio/core';
+} from '@plotka/core';
 import { DEFAULT_NIB } from './nib';
 import type { ViewOptions } from '../store';
 
 /** Project files (PROJ-1). See docs/plans/epic-10-projects.md for the format. */
-export const PROJECT_FORMAT = 'plotter-studio-project';
+export const PROJECT_FORMAT = 'plotka-project';
+/** What files saved before the app was named Plotka say in `format`: still opened. */
+export const LEGACY_PROJECT_FORMAT = 'plotter-studio-project';
 export const PROJECT_VERSION = 1;
 export const PROJECT_EXTENSION = '.plot.json';
 
@@ -296,7 +298,7 @@ export function parseProject(text: string): ProjectData {
   } catch {
     throw new ProjectError("This project file is damaged (it isn't valid JSON).");
   }
-  if (!isObj(raw) || raw['format'] !== PROJECT_FORMAT)
+  if (!isObj(raw) || (raw['format'] !== PROJECT_FORMAT && raw['format'] !== LEGACY_PROJECT_FORMAT))
     throw new ProjectError("This isn't a Plotka project file.");
   const version = raw['version'];
   if (!isNum(version) || version < 1)

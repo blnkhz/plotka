@@ -1,5 +1,5 @@
 {
-  "name": "@plotter-studio/desktop",
+  "name": "@plotka/desktop",
   "productName": "Plotka",
   "version": "0.1.0",
   "private": true,
@@ -21,8 +21,8 @@
     "@fontsource-variable/bricolage-grotesque": "5.3.0",
     "@fontsource/dm-mono": "5.3.0",
     "@playwright/test": "^1.64.1",
-    "@plotter-studio/core": "workspace:*",
-    "@plotter-studio/plotter": "workspace:*",
+    "@plotka/core": "workspace:*",
+    "@plotka/plotter": "workspace:*",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@types/three": "0.186.0",

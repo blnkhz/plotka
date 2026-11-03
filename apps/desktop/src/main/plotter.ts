@@ -12,8 +12,8 @@ import {
   type DeviceInfo,
   type MachineProfile,
   type PlotterDriver,
-} from '@plotter-studio/plotter';
-import type { Bounds } from '@plotter-studio/core';
+} from '@plotka/plotter';
+import type { Bounds } from '@plotka/core';
 import {
   SIMULATED_PORT,
   type ActionResult,

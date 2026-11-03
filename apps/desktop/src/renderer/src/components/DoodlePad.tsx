@@ -10,7 +10,7 @@ import {
   type DoodleItem,
   type DoodlePath,
   type Vec2,
-} from '@plotter-studio/core';
+} from '@plotka/core';
 import { doodleSvg, useStore } from '../store';
 import { NumberField, Row, Section, Segmented } from './controls';
 import styles from './DoodlePad.module.css';

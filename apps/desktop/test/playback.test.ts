@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { Polyline } from '@plotter-studio/core';
+import type { Polyline } from '@plotka/core';
 import { completedCount, fmtClock, partialRoute, penAt } from '../src/renderer/src/lib/playback';
 import type { Timeline } from '../src/renderer/src/lib/pipeline';
 

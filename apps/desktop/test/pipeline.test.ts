@@ -4,8 +4,8 @@ import {
   defaultOptimizeSettings,
   defaultPageSetup,
   type PlotDocument,
-} from '@plotter-studio/core';
-import { DEFAULT_PROFILE_ID, getProfile } from '@plotter-studio/plotter';
+} from '@plotka/core';
+import { DEFAULT_PROFILE_ID, getProfile } from '@plotka/plotter';
 import { computeProcessed, type PipelineInput } from '../src/renderer/src/lib/pipeline';
 
 const doc = (): PlotDocument => {

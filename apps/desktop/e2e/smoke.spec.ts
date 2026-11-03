@@ -8,7 +8,7 @@ const shots = process.env['SCREENSHOT_DIR'];
 
 /**
  * Launches the app with a fresh, temporary data folder (never the user's own settings).
- * PLOTTER_STUDIO_E2E skips the "unsaved changes" question on close; PLOTTER_STUDIO_NO_SPLASH
+ * PLOTKA_E2E skips the "unsaved changes" question on close; PLOTKA_NO_SPLASH
  * skips the splash screen (the splash test turns it back on).
  */
 const launch = (env: Record<string, string> = {}) =>
@@ -16,9 +16,9 @@ const launch = (env: Record<string, string> = {}) =>
     args: [join(__dirname, '..')],
     env: {
       ...process.env,
-      PLOTTER_STUDIO_E2E: '1',
-      PLOTTER_STUDIO_NO_SPLASH: '1',
-      PLOTTER_STUDIO_USER_DATA: mkdtempSync(join(tmpdir(), 'plotter-studio-e2e-')),
+      PLOTKA_E2E: '1',
+      PLOTKA_NO_SPLASH: '1',
+      PLOTKA_USER_DATA: mkdtempSync(join(tmpdir(), 'plotka-e2e-')),
       ...env,
     },
   });
@@ -279,7 +279,7 @@ test('connect the simulated plotter, jog, plot, pause, resume, finish', async ()
 });
 
 test('save a project and open it again with all its settings (PROJ-1)', async () => {
-  const file = join(mkdtempSync(join(tmpdir(), 'plotter-studio-')), 'My pattern.plot.json');
+  const file = join(mkdtempSync(join(tmpdir(), 'plotka-')), 'My pattern.plot.json');
   const app = await launch();
   // Stand in for the native dialogs.
   await app.evaluate(({ dialog }, path) => {
@@ -303,7 +303,7 @@ test('save a project and open it again with all its settings (PROJ-1)', async ()
   await page.getByRole('button', { name: 'Save', exact: true }).click();
   await expect.poll(title).toBe('My pattern — Plotka');
   const saved = JSON.parse(readFileSync(file, 'utf8'));
-  expect(saved.format).toBe('plotter-studio-project');
+  expect(saved.format).toBe('plotka-project');
   expect(saved.source.name).toBe('motif.svg');
   expect(saved.pipeline[0].params.pattern).toBe('p4g');
 
@@ -589,9 +589,9 @@ test('heavy processing runs in the background; the window stays responsive (PREV
 });
 
 test('autosave: unsaved work comes back after a crash (PROJ-4)', async () => {
-  const data = mkdtempSync(join(tmpdir(), 'plotter-studio-e2e-'));
+  const data = mkdtempSync(join(tmpdir(), 'plotka-e2e-'));
   const open = async () => {
-    const app = await launch({ PLOTTER_STUDIO_USER_DATA: data });
+    const app = await launch({ PLOTKA_USER_DATA: data });
     const page = await app.firstWindow();
     await page.setViewportSize({ width: 1400, height: 900 });
     await page.locator('#root > div').waitFor();
@@ -629,7 +629,7 @@ test('autosave: unsaved work comes back after a crash (PROJ-4)', async () => {
 });
 
 test('recent files: File → Open Recent reopens projects (PROJ-4)', async () => {
-  const dir = mkdtempSync(join(tmpdir(), 'plotter-studio-'));
+  const dir = mkdtempSync(join(tmpdir(), 'plotka-'));
   const file = join(dir, 'Recent test.plot.json');
   const app = await launch();
   await app.evaluate(({ dialog }, path) => {
@@ -664,7 +664,7 @@ test('recent files: File → Open Recent reopens projects (PROJ-4)', async () =>
 
 test('auto-reload: the artwork reloads when its file changes, keeping settings (IMPORT-5)', async () => {
   const { writeFileSync, renameSync } = await import('node:fs');
-  const dir = mkdtempSync(join(tmpdir(), 'plotter-studio-watch-'));
+  const dir = mkdtempSync(join(tmpdir(), 'plotka-watch-'));
   const file = join(dir, 'art.svg');
   const svg = (shapes: string) =>
     `<svg xmlns="http://www.w3.org/2000/svg" width="100mm" height="100mm" viewBox="0 0 100 100">${shapes}</svg>`;
@@ -725,7 +725,7 @@ test('continue a stopped plot from where it stopped (PLOT-5)', async () => {
 });
 
 test('export what will be plotted as SVG and toolpath JSON (PREVIEW-6)', async () => {
-  const dir = mkdtempSync(join(tmpdir(), 'plotter-studio-export-'));
+  const dir = mkdtempSync(join(tmpdir(), 'plotka-export-'));
   const app = await launch();
   await app.evaluate(({ dialog }, dir) => {
     dialog.showSaveDialog = (async (...args: unknown[]) => {
@@ -773,7 +773,7 @@ test('export what will be plotted as SVG and toolpath JSON (PREVIEW-6)', async (
     })
     .toBeGreaterThan(0);
   const json = JSON.parse(readFileSync(jsonFile, 'utf8'));
-  expect(json.format).toBe('plotter-studio-toolpath');
+  expect(json.format).toBe('plotka-toolpath');
   expect(json.layers[0].paths).toHaveLength(paths);
   await app.close();
 });
@@ -810,8 +810,8 @@ test('playback: scrub and play the plot order (PREVIEW-4)', async () => {
 });
 
 test('your default fill is used for automatic fills and remembered (HATCH-7)', async () => {
-  const data = mkdtempSync(join(tmpdir(), 'plotter-studio-e2e-'));
-  let app = await launch({ PLOTTER_STUDIO_USER_DATA: data });
+  const data = mkdtempSync(join(tmpdir(), 'plotka-e2e-'));
+  let app = await launch({ PLOTKA_USER_DATA: data });
   let page = await app.firstWindow();
   await page.setViewportSize({ width: 1400, height: 900 });
   await dropFile(page, 'motif.svg');
@@ -825,7 +825,7 @@ test('your default fill is used for automatic fills and remembered (HATCH-7)', a
   await app.close();
 
   // After a restart, a fill-only file gets it.
-  app = await launch({ PLOTTER_STUDIO_USER_DATA: data });
+  app = await launch({ PLOTKA_USER_DATA: data });
   page = await app.firstWindow();
   await page.setViewportSize({ width: 1400, height: 900 });
   await dropFile(page, 'fill-only.svg');
@@ -836,8 +836,8 @@ test('your default fill is used for automatic fills and remembered (HATCH-7)', a
 });
 
 test('named page presets: save, apply, delete, remembered (PAGE-4)', async () => {
-  const data = mkdtempSync(join(tmpdir(), 'plotter-studio-e2e-'));
-  let app = await launch({ PLOTTER_STUDIO_USER_DATA: data });
+  const data = mkdtempSync(join(tmpdir(), 'plotka-e2e-'));
+  let app = await launch({ PLOTKA_USER_DATA: data });
   let page = await app.firstWindow();
   await page.setViewportSize({ width: 1400, height: 900 });
   await page.locator('#root > div').waitFor();
@@ -858,7 +858,7 @@ test('named page presets: save, apply, delete, remembered (PAGE-4)', async () =>
   await app.close();
 
   // Remembered after a restart; Delete removes it.
-  app = await launch({ PLOTTER_STUDIO_USER_DATA: data });
+  app = await launch({ PLOTKA_USER_DATA: data });
   page = await app.firstWindow();
   await page.locator('#root > div').waitFor();
   await page.getByLabel('Page preset').selectOption('A4 landscape 20 mm');
@@ -881,8 +881,8 @@ test('open paths from code as JSON (IMPORT-7)', async () => {
 });
 
 test('machine profiles: pick another model, duplicate and edit your own (DRIVER-5b)', async () => {
-  const data = mkdtempSync(join(tmpdir(), 'plotter-studio-e2e-'));
-  let app = await launch({ PLOTTER_STUDIO_USER_DATA: data });
+  const data = mkdtempSync(join(tmpdir(), 'plotka-e2e-'));
+  let app = await launch({ PLOTKA_USER_DATA: data });
   let page = await app.firstWindow();
   await page.setViewportSize({ width: 1400, height: 900 });
   await page.locator('#root > div').waitFor();
@@ -904,7 +904,7 @@ test('machine profiles: pick another model, duplicate and edit your own (DRIVER-
   await app.close();
 
   // Your profile, and the choice of it, are remembered.
-  app = await launch({ PLOTTER_STUDIO_USER_DATA: data });
+  app = await launch({ PLOTKA_USER_DATA: data });
   page = await app.firstWindow();
   await page.locator('#root > div').waitFor();
   await page.getByRole('tab', { name: 'Machine' }).click();
@@ -1455,8 +1455,8 @@ test('text: type it in a single-stroke font, style it, delete and undo (LATER-6)
 });
 
 test('View > Appearance: light, dark and colour themes, kept after a restart', async () => {
-  const dataDir = mkdtempSync(join(tmpdir(), 'plotter-studio-e2e-'));
-  const env = { PLOTTER_STUDIO_USER_DATA: dataDir };
+  const dataDir = mkdtempSync(join(tmpdir(), 'plotka-e2e-'));
+  const env = { PLOTKA_USER_DATA: dataDir };
   const bg = (page: Page) =>
     page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--bg').trim());
   // Playwright pins pages to light by default; let the app's own setting through.
@@ -1517,11 +1517,11 @@ test('View > Appearance: light, dark and colour themes, kept after a restart', a
 });
 
 test('splash screen: start from it, open a recent file, turn it off', async () => {
-  const dataDir = mkdtempSync(join(tmpdir(), 'plotter-studio-e2e-'));
+  const dataDir = mkdtempSync(join(tmpdir(), 'plotka-e2e-'));
   // One recent file, as the app would have saved it.
   const motif = join(fixtures, 'motif.svg');
   writeFileSync(join(dataDir, 'recent.json'), JSON.stringify([{ path: motif, name: 'motif.svg' }]));
-  const env = { PLOTTER_STUDIO_USER_DATA: dataDir, PLOTTER_STUDIO_NO_SPLASH: '' };
+  const env = { PLOTKA_USER_DATA: dataDir, PLOTKA_NO_SPLASH: '' };
   const splash = (page: Page) => page.getByRole('dialog', { name: 'Welcome to Plotka' });
 
   // Shown at start; Esc closes it.

@@ -1,4 +1,4 @@
-import type { Layer } from '@plotter-studio/core';
+import type { Layer } from '@plotka/core';
 import { useProfile } from '../lib/useProcessed';
 import { useStore } from '../store';
 import { NumberField, Row, Section } from './controls';

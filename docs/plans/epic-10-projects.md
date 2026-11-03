@@ -4,7 +4,7 @@
 
 ```json
 {
-  "format": "plotter-studio-project",
+  "format": "plotka-project",
   "version": 1,
   "savedAt": "2026-11-02T18:00:00.000Z",
   "source": { "name": "motif.svg", "base64": "…" },

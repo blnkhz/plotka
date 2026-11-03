@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { Toolpath } from '@plotter-studio/core';
+import type { Toolpath } from '@plotka/core';
 import {
   DEFAULT_PROFILE_ID,
   DriverError,

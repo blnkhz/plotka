@@ -48,7 +48,7 @@ export function toolpathToSvg(
   ].join('\n');
 }
 
-export const TOOLPATH_FORMAT = 'plotter-studio-toolpath';
+export const TOOLPATH_FORMAT = 'plotka-toolpath';
 
 /**
  * PREVIEW-6: the planned toolpath as JSON. Coordinates in mm from the paper's top-left corner

@@ -1,4 +1,4 @@
-import type { Vec2 } from '@plotter-studio/core';
+import type { Vec2 } from '@plotka/core';
 import { DriverError } from '../driver/types';
 import type { Plan, StepPos } from '../motion/plan';
 import type { ServoSettings } from '../servo';

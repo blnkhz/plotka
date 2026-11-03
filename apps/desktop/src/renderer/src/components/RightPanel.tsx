@@ -1,5 +1,5 @@
 import { useProcessed, useProfile } from '../lib/useProcessed';
-import { undrawnFillCount } from '@plotter-studio/core';
+import { undrawnFillCount } from '@plotka/core';
 import { applyOverrides, useStore, type Tab } from '../store';
 import { Notice, Section } from './controls';
 import { FillTab } from './FillTab';

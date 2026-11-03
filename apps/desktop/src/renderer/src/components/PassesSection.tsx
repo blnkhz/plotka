@@ -4,7 +4,7 @@ import {
   MAX_PASSES,
   type Layer,
   type PassSettings,
-} from '@plotter-studio/core';
+} from '@plotka/core';
 import { currentLayerSettings, useStore } from '../store';
 import { NumberField, Row, Section } from './controls';
 import styles from './FillTab.module.css';

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createLayer, defaultPageSetup, placementMatrix, applyToPoint } from '@plotter-studio/core';
+import { createLayer, defaultPageSetup, placementMatrix, applyToPoint } from '@plotka/core';
 import {
   dragBox,
   dragFrame,

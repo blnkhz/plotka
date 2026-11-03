@@ -1,4 +1,4 @@
-import { paperSize, toolpathToJson, toolpathToSvg } from '@plotter-studio/core';
+import { paperSize, toolpathToJson, toolpathToSvg } from '@plotka/core';
 import { useStore } from '../store';
 
 /** PREVIEW-6: saves what will be plotted, as SVG or toolpath JSON. */

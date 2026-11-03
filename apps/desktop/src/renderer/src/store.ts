@@ -26,14 +26,14 @@ import {
   type OptimizeSettings,
   type PageSetup,
   type PlotDocument,
-} from '@plotter-studio/core';
+} from '@plotka/core';
 import {
   BUILTIN_PROFILES,
   DEFAULT_PROFILE_ID,
   getProfile,
   validateProfile,
   type MachineProfile,
-} from '@plotter-studio/plotter';
+} from '@plotka/plotter';
 import type { PlotterStatus } from '@shared/ipc';
 import type { Processed } from './lib/pipeline';
 import { mergeDefaults, parseFill } from './lib/project';

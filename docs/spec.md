@@ -2,8 +2,6 @@
 
 A desktop app that loads SVG artwork, lets me set up the paper and fills, previews exactly what the pen will draw, and drives an AxiDraw or Bantam Tools NextDraw plotter directly over USB. The goal is to never need the official AxiDraw/NextDraw software or the Inkscape extension again.
 
-Working name: **Plotka**
-
 ### Known context
 
 - **Primary machine:** AxiDraw V3/A3 with the standard servo pen lift. This is the only hardware that will be tested at first. Other EBB machines (other AxiDraw sizes, NextDraw) should work through machine profiles, but they're community-tested.
@@ -58,7 +56,7 @@ The architecture keeps the door open to a browser version later: the core is pur
 ### Repo layout
 
 ```
-plotter-studio/
+plotka/
   apps/desktop/          # Electron main, preload, renderer (React)
     src/main/            # window, serial, plot job runner, file IO
     src/preload/         # typed IPC bridge
@@ -484,5 +482,5 @@ MVP stories: all P0 items in Epics 1 to 10. The repo is public-ready (SETUP-4) a
 
 1. **Paper alignment habits:** do you always home to the top left corner, or do you need a "set origin here" feature? (Before PAGE-2.)
 2. **Kaleidoscope source:** should it wedge-clip the original art, or squeeze the whole drawing into each wedge? Both are in GEN-1, but which is the default? (Before GEN-1.)
-3. **Project name:** "Plotter Studio" is a placeholder. A final name is needed before the repo goes public, and it shouldn't use "AxiDraw" or other trademarks in the name.
+3. **Project name:** decided: **Plotka** (previously the placeholder "Plotter Studio").
 4. **License:** MIT is the default here because it's the easiest for others to reuse. If you'd rather require that forks stay open, GPL-3.0 is the alternative. Decide before SETUP-4.

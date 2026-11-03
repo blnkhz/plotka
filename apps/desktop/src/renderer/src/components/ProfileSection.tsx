@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { BUILTIN_PROFILES, validateProfile, type MachineProfile } from '@plotter-studio/plotter';
+import { BUILTIN_PROFILES, validateProfile, type MachineProfile } from '@plotka/plotter';
 import { useProfile } from '../lib/useProcessed';
 import { useStore } from '../store';
 import { Notice, NumberField, Row, Section } from './controls';

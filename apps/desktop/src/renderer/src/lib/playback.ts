@@ -1,4 +1,4 @@
-import type { Polyline, Vec2 } from '@plotter-studio/core';
+import type { Polyline, Vec2 } from '@plotka/core';
 import type { Timeline } from './pipeline';
 
 /** PREVIEW-4 helpers: what has been drawn at time `t` (ms from the start of the plot). */

@@ -1,5 +1,5 @@
 import { SerialPort } from 'serialport';
-import { DriverError, type Transport } from '@plotter-studio/plotter';
+import { DriverError, type Transport } from '@plotka/plotter';
 import type { PortInfo } from '@shared/ipc';
 
 /** EiBotBoard USB IDs (docs/hardware-notes.md). */

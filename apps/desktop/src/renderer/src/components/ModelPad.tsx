@@ -24,7 +24,7 @@ import {
   sliceSvg,
   type SliceAxis,
   type SliceResult,
-} from '@plotter-studio/core';
+} from '@plotka/core';
 import { loadMesh, ModelError } from '../lib/modelFiles';
 import { useThemeKey } from '../lib/useThemeKey';
 import { useStore } from '../store';

@@ -1,4 +1,4 @@
-import type { MachineProfile } from '@plotter-studio/plotter';
+import type { MachineProfile } from '@plotka/plotter';
 import { resolveProfile, useStore } from '../store';
 import type { Processed } from './pipeline';
 

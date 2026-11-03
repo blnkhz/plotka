@@ -1,4 +1,4 @@
-import { isEmptyBounds, layerBounds } from '@plotter-studio/core';
+import { isEmptyBounds, layerBounds } from '@plotka/core';
 import { currentLayerSettings, useStore } from '../store';
 import {
   frameOf,

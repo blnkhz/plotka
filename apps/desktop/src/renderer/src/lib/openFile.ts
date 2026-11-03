@@ -1,4 +1,4 @@
-import { supportedExtensions } from '@plotter-studio/core';
+import { supportedExtensions } from '@plotka/core';
 import { useStore } from '../store';
 import { isProjectFile, PROJECT_EXTENSION } from './project';
 import { openArtwork, openProject } from './projectActions';

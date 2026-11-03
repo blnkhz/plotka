@@ -3,7 +3,7 @@ import { defineConfig, externalizeDepsPlugin } from 'electron-vite';
 import react from '@vitejs/plugin-react';
 
 // Workspace packages are TS source, so they are bundled rather than externalized.
-const workspace = ['@plotter-studio/core', '@plotter-studio/plotter'];
+const workspace = ['@plotka/core', '@plotka/plotter'];
 
 export default defineConfig({
   main: {

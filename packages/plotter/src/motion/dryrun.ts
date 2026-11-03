@@ -1,4 +1,4 @@
-import type { Bounds, Vec2 } from '@plotter-studio/core';
+import type { Bounds, Vec2 } from '@plotka/core';
 import type { MachineProfile } from '../profile';
 import { planTravel, type Plan, type PlanItem, type StepPos } from './plan';
 

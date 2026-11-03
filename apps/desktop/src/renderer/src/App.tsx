@@ -269,11 +269,15 @@ const RIGHT_DEFAULT = 300;
 const RIGHT_MIN = 260;
 /** The preview always keeps at least this much room. */
 const PREVIEW_MIN = 320;
-const RIGHT_WIDTH_KEY = 'plotter-studio:right-panel-width';
+const RIGHT_WIDTH_KEY = 'plotka:right-panel-width';
+/** The key before the app was named Plotka: read if the new one isn't set yet. */
+const OLD_RIGHT_WIDTH_KEY = 'plotter-studio:right-panel-width';
 
 function savedRightWidth(): number {
   try {
-    const v = Number(localStorage.getItem(RIGHT_WIDTH_KEY));
+    const v = Number(
+      localStorage.getItem(RIGHT_WIDTH_KEY) ?? localStorage.getItem(OLD_RIGHT_WIDTH_KEY),
+    );
     return Number.isFinite(v) && v >= RIGHT_MIN ? v : RIGHT_DEFAULT;
   } catch {
     return RIGHT_DEFAULT;

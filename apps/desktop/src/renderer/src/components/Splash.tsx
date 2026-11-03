@@ -6,13 +6,15 @@ import styles from './Splash.module.css';
 // The app icon is the logo (Matcha Mauve in every theme).
 import logoUrl from '../../../../build/icon.svg?url';
 
-const SHOW_KEY = 'plotter-studio.splash';
+const SHOW_KEY = 'plotka.splash';
+/** The key before the app was named Plotka: read if the new one isn't set yet. */
+const OLD_SHOW_KEY = 'plotter-studio.splash';
 
 /** Whether to show the splash screen at start: on unless turned off (or skipped by tests). */
 export function splashAtStart(): boolean {
   if (new URLSearchParams(location.search).get('splash') === '0') return false;
   try {
-    return localStorage.getItem(SHOW_KEY) !== 'off';
+    return (localStorage.getItem(SHOW_KEY) ?? localStorage.getItem(OLD_SHOW_KEY)) !== 'off';
   } catch {
     return true;
   }

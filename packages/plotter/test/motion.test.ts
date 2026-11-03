@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { Polyline, Toolpath, Vec2 } from '@plotter-studio/core';
+import type { Polyline, Toolpath, Vec2 } from '@plotka/core';
 import {
   DEFAULT_PROFILE_ID,
   getProfile,

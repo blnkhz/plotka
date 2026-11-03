@@ -8,13 +8,13 @@ import {
   type ProcessResult,
   type Toolpath,
   type ToolpathStats,
-} from '@plotter-studio/core';
+} from '@plotka/core';
 import {
   planToolpath,
   type LayerMotionSettings,
   type MachineProfile,
   type Plan,
-} from '@plotter-studio/plotter';
+} from '@plotka/plotter';
 
 /** Everything the pipeline needs. Plain data, so it can be sent to a worker. */
 export type PipelineInput = {

@@ -1,5 +1,5 @@
 {
-  "name": "plotter-studio",
+  "name": "plotka",
   "private": true,
   "version": "0.1.0",
   "type": "module",
@@ -10,16 +10,16 @@
     "node": ">=22"
   },
   "scripts": {
-    "dev": "pnpm --filter @plotter-studio/desktop dev",
-    "build": "pnpm --filter @plotter-studio/desktop build",
-    "build:mac": "pnpm --filter @plotter-studio/desktop build:mac",
+    "dev": "pnpm --filter @plotka/desktop dev",
+    "build": "pnpm --filter @plotka/desktop build",
+    "build:mac": "pnpm --filter @plotka/desktop build:mac",
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "pnpm -r typecheck",
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "test:e2e": "pnpm --filter @plotter-studio/desktop test:e2e",
+    "test:e2e": "pnpm --filter @plotka/desktop test:e2e",
     "release": "sh scripts/release.sh"
   },
   "devDependencies": {

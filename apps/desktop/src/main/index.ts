@@ -11,8 +11,7 @@ import { migrateUserData, OLD_APP_NAME } from './migrate';
 
 // Automated tests run with their own data folder, so they never touch the user's settings,
 // saved pen heights, recent files or recovery file.
-if (process.env['PLOTTER_STUDIO_USER_DATA'])
-  app.setPath('userData', process.env['PLOTTER_STUDIO_USER_DATA']);
+if (process.env['PLOTKA_USER_DATA']) app.setPath('userData', process.env['PLOTKA_USER_DATA']);
 // The app used to be called Plotter Studio: bring its settings along (once, before Electron
 // creates the new folder).
 else migrateUserData(join(app.getPath('appData'), OLD_APP_NAME), app.getPath('userData'));
@@ -41,7 +40,7 @@ function createWindow(): BrowserWindow {
   let closing = false;
   win.on('close', (e) => {
     // Automated tests close the window themselves; there's nobody to answer a question.
-    if (closing || process.env['PLOTTER_STUDIO_E2E']) return;
+    if (closing || process.env['PLOTKA_E2E']) return;
     if (!plotter.isPlotting()) {
       if (!project.dirty) return;
       const choice = dialog.showMessageBoxSync(win, {
@@ -81,7 +80,7 @@ function createWindow(): BrowserWindow {
   // The theme goes in the URL so the first paint already has its colours.
   // Automated tests skip the splash screen unless they're testing it.
   const query: Record<string, string> = { theme: appearance() };
-  if (process.env['PLOTTER_STUDIO_NO_SPLASH']) query['splash'] = '0';
+  if (process.env['PLOTKA_NO_SPLASH']) query['splash'] = '0';
   if (!app.isPackaged && process.env['ELECTRON_RENDERER_URL']) {
     const url = new URL(process.env['ELECTRON_RENDERER_URL']);
     for (const [k, v] of Object.entries(query)) url.searchParams.set(k, v);

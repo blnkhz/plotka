@@ -1,4 +1,4 @@
-import { DEFAULT_PROFILE_ID } from '@plotter-studio/plotter';
+import { DEFAULT_PROFILE_ID } from '@plotka/plotter';
 import { docWithTexts, knownProfile, sameArtwork, useStore, type ViewOptions } from '../store';
 
 type State = ReturnType<typeof useStore.getState>;

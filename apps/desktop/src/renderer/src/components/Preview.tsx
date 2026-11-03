@@ -12,7 +12,7 @@ import {
   type Polyline,
   type StepGuide,
   type Vec2,
-} from '@plotter-studio/core';
+} from '@plotka/core';
 import { beginGesture, endGesture } from '../lib/projectActions';
 import {
   dragFrame,

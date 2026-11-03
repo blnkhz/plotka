@@ -1,4 +1,4 @@
-import type { LayerMotionSettings } from '@plotter-studio/plotter';
+import type { LayerMotionSettings } from '@plotka/plotter';
 import type {
   ActionResult,
   ManualCommand,
@@ -12,7 +12,7 @@ import {
   toolpathFrom,
   type ResumePoint,
   type Toolpath,
-} from '@plotter-studio/core';
+} from '@plotka/core';
 import { currentProject } from './projectActions';
 import { serializeProject } from './project';
 import type { Processed } from './useProcessed';

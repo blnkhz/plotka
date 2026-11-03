@@ -1,4 +1,4 @@
-import type { Polyline, Toolpath, Vec2 } from '@plotter-studio/core';
+import type { Polyline, Toolpath, Vec2 } from '@plotka/core';
 import type { MotionSegment } from '../ebb';
 import type { MachineProfile } from '../profile';
 import { servoSettings, type ServoSettings } from '../servo';

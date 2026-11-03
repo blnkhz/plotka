@@ -5,7 +5,7 @@ import {
   type DitherMethod,
   type DitherResult,
   type MarkShape,
-} from '@plotter-studio/core';
+} from '@plotka/core';
 import { useThemeKey } from '../lib/useThemeKey';
 import { useStore } from '../store';
 import { NumberField, Row, Section } from './controls';

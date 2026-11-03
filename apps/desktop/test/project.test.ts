@@ -7,12 +7,13 @@ import {
   defaultOptimizeSettings,
   defaultPageSetup,
   defaultPassSettings,
-} from '@plotter-studio/core';
+} from '@plotka/core';
 import {
   fromBase64,
   isProjectFile,
   mergeDefaults,
   parseFill,
+  LEGACY_PROJECT_FORMAT,
   parseProject,
   PROJECT_FORMAT,
   projectNameFromFile,
@@ -117,6 +118,13 @@ describe('project files (PROJ-1)', () => {
     expect(json.version).toBe(1);
     expect(json.savedAt).toBe('2026-11-02T00:00:00.000Z');
     expect(parseProject(text)).toEqual(d);
+  });
+
+  it('still opens files saved before the app was named Plotka', () => {
+    const d = sample();
+    const old = JSON.parse(serializeProject(d));
+    old.format = LEGACY_PROJECT_FORMAT;
+    expect(parseProject(JSON.stringify(old))).toEqual(d);
   });
 
   it('keeps where the artwork came from (for auto-reload), but only SVG paths', () => {

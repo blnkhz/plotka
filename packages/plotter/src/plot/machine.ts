@@ -1,4 +1,4 @@
-import type { Vec2 } from '@plotter-studio/core';
+import type { Vec2 } from '@plotka/core';
 import type { MotionSegment } from '../ebb';
 import { planTravel, type StepPos } from '../motion/plan';
 import type { MachineProfile } from '../profile';

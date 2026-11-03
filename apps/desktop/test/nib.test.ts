@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { nibHalf, nibQuads, PARALLEL_SIZES } from '../src/renderer/src/lib/nib';
-import type { Vec2 } from '@plotter-studio/core';
+import type { Vec2 } from '@plotka/core';
 
 const signedArea = (q: Vec2[]) =>
   q.reduce((a, p, i) => {

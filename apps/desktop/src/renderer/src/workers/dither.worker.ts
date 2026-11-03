@@ -1,5 +1,5 @@
 /// <reference lib="webworker" />
-import { ditherImage, type DitherGrid, type DitherSettings } from '@plotter-studio/core';
+import { ditherImage, type DitherGrid, type DitherSettings } from '@plotka/core';
 
 export type DitherRequest = {
   id: number;
