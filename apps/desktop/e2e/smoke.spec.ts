@@ -1718,7 +1718,12 @@ test('image dithering: open a picture, tune the marks, use it, edit it again', a
   expect(coarse).toBeLessThan(half / 3);
   await pad.getByLabel('Brightness').fill('40');
   await expect.poll(marks).toBeLessThan(coarse);
-  await pad.getByRole('button', { name: 'Diffusion' }).click();
+  // Halftone: a mark in (nearly) every cell, sized by the dark.
+  await pad.getByLabel('Method').selectOption('halftone');
+  await expect.poll(marks).toBeGreaterThan(coarse);
+  await expect(pad.getByText('up to 80% of a cell')).toBeVisible();
+  if (shots) await page.screenshot({ path: join(shots, 'image-pad-halftone.png') });
+  await pad.getByLabel('Method').selectOption('diffusion');
   await pad.getByLabel('Mark shape').selectOption('dot');
   if (shots) await page.screenshot({ path: join(shots, 'image-pad-dots.png') });
 

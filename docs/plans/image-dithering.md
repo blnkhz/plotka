@@ -7,8 +7,10 @@ mm and plotted in a sensible order.
 - **Core** (`packages/core/src/raster/dither.ts`, pure, tested): takes RGBA pixels already
   sampled one per cell, so it needs no image decoder.
   - Tone: luminance (transparent counts as white), then brightness, contrast, invert.
-  - Methods: **ordered** (8 × 8 Bayer, 65 levels; the old tool used 4 × 4) and **error
-    diffusion** (Floyd–Steinberg, serpentine).
+  - Methods: **ordered** (8 × 8 Bayer, 65 levels; the old tool used 4 × 4), **error
+    diffusion** (Floyd–Steinberg, serpentine) and **halftone** (added after: a mark in every
+    cell, sized by its ink; marks are outlines, so their ink grows with size, not area, and
+    size = ink; cells under 3 % ink get none; dots fall back to ordered).
   - Marks per inked cell: **square**, **circle**, **x**, **+**, **line** (at an angle) and
     **dot** (a pen tap). Mark size is a share of the cell, so neighbours can touch or not.
   - Order: rows in alternating directions, so the pen sweeps back and forth (the path optimiser

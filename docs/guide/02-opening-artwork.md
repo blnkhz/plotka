@@ -85,7 +85,10 @@ the **Image** window, with a live preview and these settings:
 - **Brightness**, **Contrast** and **Invert** (marks on the light parts, for light ink on dark
   paper).
 - **Method**: **Ordered** gives a tidy, regular pattern; **Diffusion** looks more organic, like
-  film grain.
+  film grain; **Halftone** puts a mark in every cell and makes it bigger where the picture is
+  darker, like newspaper photos (very light cells get none). With Halftone, **Size** is the
+  size of the darkest marks. Dots can't change size, so with dots Halftone places them like
+  Ordered.
 - **Shape** of each mark (circle, square, dot, line, × or +) and its **Size** as a share of the
   cell, so marks can touch or leave gaps. **Line** marks have an **Angle**. A **dot** is a
   single pen tap, the quickest to plot.

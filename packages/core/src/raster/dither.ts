@@ -7,8 +7,11 @@ import type { Vec2 } from '../geometry/vec2';
  * the browser), so nothing here decodes images.
  */
 
-/** Ordered: a fixed threshold pattern, tidy and regular. Diffusion: Floyd–Steinberg, organic. */
-export type DitherMethod = 'ordered' | 'diffusion';
+/**
+ * Ordered: a fixed threshold pattern, tidy and regular. Diffusion: Floyd–Steinberg, organic.
+ * Halftone: a mark in every cell, bigger where it's darker.
+ */
+export type DitherMethod = 'ordered' | 'diffusion' | 'halftone';
 
 /** The mark drawn in each inked cell. `dot` is a single pen tap. */
 export type MarkShape = 'square' | 'circle' | 'x' | 'plus' | 'line' | 'dot';
@@ -44,7 +47,10 @@ export const defaultDitherSettings = (): DitherSettings => ({
   lineAngle: 45,
 });
 
-export const DITHER_METHODS: readonly DitherMethod[] = ['ordered', 'diffusion'];
+export const DITHER_METHODS: readonly DitherMethod[] = ['ordered', 'diffusion', 'halftone'];
+
+/** Halftone: cells lighter than this get no mark (it would be smaller than the pen). */
+export const HALFTONE_MIN_INK = 0.03;
 export const MARK_SHAPES: readonly MarkShape[] = ['square', 'circle', 'x', 'plus', 'line', 'dot'];
 
 /** Most cells in a grid; past this the cells get bigger (a plot of more marks takes days). */
@@ -114,7 +120,12 @@ const BAYER8: number[] = (() => {
 })();
 
 /** Which cells get a mark. */
-export function ditherCells(ink: Float32Array, cols: number, rows: number, method: DitherMethod) {
+export function ditherCells(
+  ink: Float32Array,
+  cols: number,
+  rows: number,
+  method: Exclude<DitherMethod, 'halftone'>,
+) {
   const on = new Uint8Array(cols * rows);
   if (method === 'ordered') {
     for (let y = 0; y < rows; y++)
@@ -147,13 +158,19 @@ export function ditherCells(ink: Float32Array, cols: number, rows: number, metho
   return on;
 }
 
-/** The pen marks for the inked cells, row by row in alternating directions. */
-export function ditherMarks(on: Uint8Array, grid: DitherGrid, s: DitherSettings): Polyline[] {
+/**
+ * The pen marks for the inked cells, row by row in alternating directions. With `scale` (one
+ * value 0..1 per cell), each mark is that share of its full size: halftone.
+ */
+export function ditherMarks(
+  on: Uint8Array,
+  grid: DitherGrid,
+  s: DitherSettings,
+  scale?: Float32Array,
+): Polyline[] {
   const { cols, rows, cell } = grid;
-  const r = (Math.min(100, Math.max(10, s.markSize)) / 100) * (cell / 2);
+  const full = (Math.min(100, Math.max(10, s.markSize)) / 100) * (cell / 2);
   const a = (s.lineAngle * Math.PI) / 180;
-  const ux = Math.cos(a) * r;
-  const uy = -Math.sin(a) * r;
   const out: Polyline[] = [];
   const line = (pts: Vec2[], closed = false) => out.push({ points: pts, closed });
   for (let y = 0; y < rows; y++) {
@@ -161,6 +178,9 @@ export function ditherMarks(on: Uint8Array, grid: DitherGrid, s: DitherSettings)
     for (let k = 0; k < cols; k++) {
       const x = ltr ? k : cols - 1 - k;
       if (!on[y * cols + x]) continue;
+      const r = scale ? full * scale[y * cols + x]! : full;
+      const ux = Math.cos(a) * r;
+      const uy = -Math.sin(a) * r;
       const cx = (x + 0.5) * cell;
       const cy = (y + 0.5) * cell;
       switch (s.shape) {
@@ -227,7 +247,19 @@ export type DitherResult = { grid: DitherGrid; marks: Polyline[] };
 
 /** RGBA pixels, one per grid cell (`grid.cols` × `grid.rows`), to pen marks. */
 export function ditherImage(rgba: ArrayLike<number>, grid: DitherGrid, s: DitherSettings) {
-  const on = ditherCells(inkLevels(rgba, s), grid.cols, grid.rows, s.method);
+  const ink = inkLevels(rgba, s);
+  // Halftone: every cell that wants ink gets a mark, its size following the ink. Marks are
+  // outlines, so the ink they leave grows with their size (not their area): size = ink.
+  // Dots can't change size, so they're placed like ordered dithering.
+  if (s.method === 'halftone' && s.shape !== 'dot') {
+    const on = ink.map((v) => (v > HALFTONE_MIN_INK ? 1 : 0));
+    return {
+      grid,
+      marks: ditherMarks(Uint8Array.from(on), grid, s, ink),
+    } satisfies DitherResult;
+  }
+  const method = s.method === 'halftone' ? 'ordered' : s.method;
+  const on = ditherCells(ink, grid.cols, grid.rows, method);
   return { grid, marks: ditherMarks(on, grid, s) } satisfies DitherResult;
 }
 

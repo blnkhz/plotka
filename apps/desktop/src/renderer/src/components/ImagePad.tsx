@@ -3,12 +3,13 @@ import {
   ditherGrid,
   ditherImage,
   ditherSvg,
+  type DitherMethod,
   type DitherResult,
   type MarkShape,
 } from '@plotter-studio/core';
 import { useThemeKey } from '../lib/useThemeKey';
 import { useStore } from '../store';
-import { NumberField, Row, Section, Segmented } from './controls';
+import { NumberField, Row, Section } from './controls';
 // Same layout as the doodle pad: header, stage, settings on the right.
 import styles from './DoodlePad.module.css';
 
@@ -20,6 +21,12 @@ const SHAPES: { value: MarkShape; label: string }[] = [
   { value: 'x', label: '×' },
   { value: 'plus', label: '+' },
 ];
+
+const METHOD_HINTS: Record<DitherMethod, string> = {
+  ordered: 'A tidy, regular pattern of marks.',
+  diffusion: 'Marks scattered organically, like film grain.',
+  halftone: 'A mark in every cell, bigger where the picture is darker.',
+};
 
 /**
  * The picture drawn into a canvas the size of the grid, so each cell gets the average colour of
@@ -246,19 +253,23 @@ export function ImagePad() {
           </Section>
           <Section title="Dithering">
             <Row label="Method">
-              <Segmented
+              <select
+                aria-label="Method"
                 value={settings.method}
-                options={[
-                  { value: 'ordered', label: 'Ordered', title: 'A regular pattern (Bayer)' },
-                  {
-                    value: 'diffusion',
-                    label: 'Diffusion',
-                    title: 'Organic, like grain (Floyd–Steinberg)',
-                  },
-                ]}
-                onChange={(method) => set({ method })}
-              />
+                onChange={(e) => set({ method: e.target.value as DitherMethod })}
+              >
+                <option value="ordered">Ordered</option>
+                <option value="diffusion">Diffusion</option>
+                <option value="halftone">Halftone</option>
+              </select>
             </Row>
+            <p className={styles.hint}>{METHOD_HINTS[settings.method]}</p>
+            {settings.method === 'halftone' && settings.shape === 'dot' && (
+              <p className={styles.note} role="status">
+                Dots are all one size, so they’re placed like Ordered. Pick another shape for marks
+                that grow with the dark.
+              </p>
+            )}
           </Section>
           <Section title="Marks">
             <Row label="Shape">
@@ -285,7 +296,10 @@ export function ImagePad() {
                   value={settings.markSize}
                   onChange={(e) => set({ markSize: Number(e.target.value) })}
                 />
-                <span className={styles.muted}>{settings.markSize}% of a cell</span>
+                <span className={styles.muted}>
+                  {settings.method === 'halftone' ? 'up to ' : ''}
+                  {settings.markSize}% of a cell
+                </span>
               </Row>
             )}
             {settings.shape === 'line' && (

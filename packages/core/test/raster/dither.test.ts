@@ -77,6 +77,39 @@ describe('image dithering', () => {
     expect(line.points[0]!.x).toBeCloseTo(line.points[1]!.x); // upright
   });
 
+  it('halftone: a mark per cell, bigger where darker; light cells get none', () => {
+    // Four cells: white, light grey, mid grey, black (left to right).
+    const rgba = Uint8Array.from([255, 200, 128, 0].flatMap((g) => [g, g, g, 255]));
+    const grid = ditherGrid(4, 1, s({ width: 4, cell: 1 }));
+    const { marks } = ditherImage(
+      rgba,
+      grid,
+      s({ width: 4, cell: 1, method: 'halftone', shape: 'line', lineAngle: 0, markSize: 100 }),
+    );
+    expect(marks).toHaveLength(3); // the white cell has none
+    const lengths = marks.map((m) => Math.abs(m.points[1]!.x - m.points[0]!.x));
+    expect(lengths[0]!).toBeLessThan(lengths[1]!);
+    expect(lengths[1]!).toBeLessThan(lengths[2]!);
+    expect(lengths[2]!).toBeCloseTo(1); // black: the full mark
+    expect(lengths[1]!).toBeCloseTo(1 - 128 / 255, 1); // size follows the ink
+  });
+
+  it('halftone with dots places them like ordered dithering', () => {
+    const grid = ditherGrid(16, 16, s({ width: 16, cell: 1 }));
+    const grey = flat(256, 128);
+    const halftone = ditherImage(
+      grey,
+      grid,
+      s({ width: 16, cell: 1, method: 'halftone', shape: 'dot' }),
+    );
+    const ordered = ditherImage(
+      grey,
+      grid,
+      s({ width: 16, cell: 1, method: 'ordered', shape: 'dot' }),
+    );
+    expect(halftone.marks).toEqual(ordered.marks);
+  });
+
   it('the SVG is in mm and imports with every mark', () => {
     const grid = ditherGrid(20, 10, s({ width: 40, cell: 2 }));
     const black = flat(grid.cols * grid.rows, 0);
