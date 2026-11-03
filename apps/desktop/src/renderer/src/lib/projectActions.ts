@@ -112,6 +112,19 @@ function record(before: Snapshot, key: string) {
   syncFlags();
 }
 
+/**
+ * A gesture (like a drag in the preview) is one undo step however many changes it makes.
+ * Call `endGesture` when it's over.
+ */
+let gesture: { before: Snapshot; recorded: boolean } | null = null;
+export function beginGesture() {
+  gesture = { before: snapshot(useStore.getState()), recorded: false };
+}
+export function endGesture() {
+  gesture = null;
+  lastRecord = -Infinity;
+}
+
 export function resetHistory() {
   past = [];
   future = [];
@@ -238,7 +251,10 @@ export function trackProject(): () => void {
       if (!sameArtwork(s.source, p.source)) resetHistory();
       else if (s.doc === p.doc) {
         const key = changedKey(s, p);
-        if (key) record(snapshot(p), key);
+        if (key && gesture) {
+          if (!gesture.recorded) record(gesture.before, 'gesture');
+          gesture.recorded = true;
+        } else if (key) record(snapshot(p), key);
       }
     }
     if (!quiet && !s.dirty) {

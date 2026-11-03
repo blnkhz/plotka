@@ -13,7 +13,13 @@ export function TransformsPanel() {
         <p className={styles.muted}>Repeat or rearrange the artwork before it goes on the page.</p>
       )}
       {pipeline.map((step, i) => (
-        <StepCard key={step.id} step={step} first={i === 0} last={i === pipeline.length - 1} />
+        <StepCard
+          key={step.id}
+          step={step}
+          first={i === 0}
+          last={i === pipeline.length - 1}
+          lastEnabled={pipeline.filter((s) => s.enabled).at(-1)?.id === step.id}
+        />
       ))}
       <select
         className={styles.add}
@@ -34,8 +40,20 @@ export function TransformsPanel() {
   );
 }
 
-function StepCard({ step, first, last }: { step: PipelineStep; first: boolean; last: boolean }) {
+function StepCard({
+  step,
+  first,
+  last,
+  lastEnabled,
+}: {
+  step: PipelineStep;
+  first: boolean;
+  last: boolean;
+  lastEnabled: boolean;
+}) {
   const updateStep = useStore((s) => s.updateStep);
+  const adjusting = useStore((s) => s.adjustStepId === step.id);
+  const setAdjustStep = useStore((s) => s.setAdjustStep);
   const removeStep = useStore((s) => s.removeStep);
   const moveStep = useStore((s) => s.moveStep);
   const def = getTransform(step.type);
@@ -81,6 +99,21 @@ function StepCard({ step, first, last }: { step: PipelineStep; first: boolean; l
       </div>
       {def && step.enabled && (
         <div className={styles.params}>
+          {def.guide && (
+            <button
+              className={`${styles.adjust} ${adjusting ? styles.adjusting : ''}`}
+              disabled={!lastEnabled && !adjusting}
+              aria-pressed={adjusting}
+              title={
+                lastEnabled
+                  ? 'Drag the artwork and scroll to zoom it, right in the preview'
+                  : `Works when ${name} is the last transform`
+              }
+              onClick={() => setAdjustStep(adjusting ? null : step.id)}
+            >
+              {adjusting ? 'Done adjusting' : 'Adjust in preview'}
+            </button>
+          )}
           {def.params.map((p) => (
             <ParamField
               key={p.key}

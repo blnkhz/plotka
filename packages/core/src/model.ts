@@ -109,6 +109,12 @@ export type PlotDocument = {
     /** 'illustrator', 'inkscape', 'figma', 'affinity', ... when detected. */
     generator?: string;
   };
+  /**
+   * The area the page fit places, when it should differ from the drawn bounds. Set by a
+   * transform whose output must not jump around while it's adjusted (the kaleidoscope's circle).
+   * Only the last transform's frame counts: transforms get their input without one.
+   */
+  frame?: Bounds;
 };
 
 export const DEFAULT_PEN_ID = 'default';

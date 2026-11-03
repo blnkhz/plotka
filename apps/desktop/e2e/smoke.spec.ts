@@ -916,3 +916,43 @@ test('line width is labelled as a preview-only setting', async () => {
   if (shots) await page.screenshot({ path: join(shots, 'line-width.png') });
   await app.close();
 });
+
+test('kaleidoscope: adjust by dragging and zooming in the preview (GEN-1)', async () => {
+  const app = await launch();
+  const page = await app.firstWindow();
+  await page.setViewportSize({ width: 1400, height: 900 });
+  await dropFile(page, 'motif.svg');
+  await page.getByLabel('Add transform').selectOption('kaleidoscope');
+  await expect(page.getByLabel('Source')).toHaveValue('wedge');
+  const centerX = page.getByRole('spinbutton', { name: 'Center X', exact: true });
+  const zoom = page.getByRole('spinbutton', { name: 'Zoom', exact: true });
+  await expect(centerX).toHaveValue('0');
+  if (shots) await page.screenshot({ path: join(shots, 'kaleidoscope.png') });
+
+  await page.getByRole('button', { name: 'Adjust in preview' }).click();
+  await expect(page.getByText('Drag to move the artwork', { exact: false })).toBeVisible();
+  const box = (await page.getByTestId('preview').boundingBox())!;
+  const x = box.x + box.width / 2;
+  const y = box.y + box.height / 2;
+  await page.mouse.move(x, y);
+  await page.mouse.down();
+  for (let i = 1; i <= 10; i++) await page.mouse.move(x + i * 6, y, { steps: 2 });
+  await page.mouse.up();
+  await expect.poll(async () => Number(await centerX.inputValue())).toBeLessThan(0);
+  await page.mouse.wheel(0, -200);
+  await expect.poll(async () => Number(await zoom.inputValue())).toBeGreaterThan(100);
+  if (shots) await page.screenshot({ path: join(shots, 'kaleidoscope-adjusted.png') });
+
+  // Undo: the zoom, then the whole drag in one step.
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('button', { name: 'Adjust in preview' })).toBeVisible();
+  await page.getByRole('button', { name: 'Undo' }).click();
+  await expect(zoom).toHaveValue('100');
+  await page.getByRole('button', { name: 'Undo' }).click();
+  await expect(centerX).toHaveValue('0');
+
+  // Only the last transform can be adjusted.
+  await page.getByLabel('Add transform').selectOption('tile');
+  await expect(page.getByRole('button', { name: 'Adjust in preview' })).toBeDisabled();
+  await app.close();
+});

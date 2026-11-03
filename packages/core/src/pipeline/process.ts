@@ -1,12 +1,13 @@
 import { intersectRects } from '../geometry/clip';
+import { applyToPoint, type Matrix } from '../geometry/matrix';
 import type { Vec2 } from '../geometry/vec2';
 import type { PlotDocument, Polyline } from '../model';
 import { optimizePaths, type OptimizeSettings } from '../optimize/order';
 import { paperSize, type PageSetup, type Rect } from '../page/paper';
 import { applyFills } from '../fills/apply';
-import { clipDocument, fitToPage } from './fit';
+import { clipDocument, fitMatrix, fitToPage } from './fit';
 import { applyPasses } from './passes';
-import { applyTransforms, type PipelineStep } from '../transforms';
+import { applyTransformsWithGuide, type PipelineStep, type StepGuide } from '../transforms';
 import { buildToolpath, type Toolpath } from './toolpath';
 
 export type ProcessInput = {
@@ -34,6 +35,10 @@ export type ProcessResult = {
   unoptimized: Toolpath;
   /** True when the paper is larger than the machine travel. Blocks plotting. */
   paperExceedsBed: boolean;
+  /** Transformed artwork → paper. */
+  placement: Matrix;
+  /** The last transform's guide (for adjusting it in the preview), outline on the paper. */
+  guide: StepGuide | null;
 };
 
 /**
@@ -47,8 +52,11 @@ export function processDocument({
   optimize,
   transforms,
 }: ProcessInput): ProcessResult {
-  const art = transforms?.length ? applyTransforms(doc, transforms) : doc;
+  const { doc: art, guide } = transforms?.length
+    ? applyTransformsWithGuide(doc, transforms)
+    : { doc, guide: null };
   const placed = fitToPage(art, page);
+  const placement = fitMatrix(art, page);
   const paper = paperSize(page);
   const printable = intersectRects(
     { x: 0, y: 0, width: paper.width, height: paper.height },
@@ -65,6 +73,17 @@ export function processDocument({
     unoptimized,
     toolpath: optimize ? optimizeToolpath(unoptimized, optimize) : unoptimized,
     paperExceedsBed: paper.width > bed.width + EPS || paper.height > bed.height + EPS,
+    placement,
+    guide: guide && {
+      ...guide,
+      outline: guide.outline.map((p) => applyToPoint(placement, p.x, p.y)),
+      ...(guide.source && {
+        source: guide.source.map((l) => ({
+          closed: l.closed,
+          points: l.points.map((p) => applyToPoint(placement, p.x, p.y)),
+        })),
+      }),
+    },
   };
 }
 

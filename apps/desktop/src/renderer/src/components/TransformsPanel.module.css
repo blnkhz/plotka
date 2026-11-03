@@ -55,3 +55,12 @@
   width: 100%;
   min-width: 0;
 }
+.adjust {
+  width: 100%;
+  margin-bottom: 6px;
+}
+.adjusting {
+  background: var(--accent);
+  color: var(--on-accent);
+  border-color: var(--accent);
+}

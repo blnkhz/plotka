@@ -1,5 +1,14 @@
 import { useCallback, useEffect, useRef } from 'react';
-import { marginBox, paperSize, undrawnFillCount, type Polyline } from '@plotter-studio/core';
+import {
+  getTransform,
+  marginBox,
+  paperSize,
+  undrawnFillCount,
+  type ParamValues,
+  type Polyline,
+  type StepGuide,
+} from '@plotter-studio/core';
+import { beginGesture, endGesture } from '../lib/projectActions';
 import { useProcessed, useProfile, type Processed } from '../lib/useProcessed';
 import { completedCount, partialRoute, penAt } from '../lib/playback';
 import { PlaybackBar } from './PlaybackBar';
@@ -36,9 +45,11 @@ export function Preview() {
     : null;
   const playback = useStore((s) => s.playback);
   const playbackT = playback.on ? playback.t : null;
-  const inputs = useRef({ processed, page, options, bed: profile.bed, pen, playbackT });
+  const adjustStepId = useStore((s) => s.adjustStepId);
+  const guide = adjustStepId && processed?.guide?.stepId === adjustStepId ? processed.guide : null;
+  const inputs = useRef({ processed, page, options, bed: profile.bed, pen, playbackT, guide });
   useEffect(() => {
-    inputs.current = { processed, page, options, bed: profile.bed, pen, playbackT };
+    inputs.current = { processed, page, options, bed: profile.bed, pen, playbackT, guide };
   });
 
   const draw = useCallback(() => {
@@ -68,7 +79,18 @@ export function Preview() {
   }, [draw]);
 
   // Redraw when inputs change.
-  useEffect(draw, [draw, processed, page, options, profile, pen?.x, pen?.y, pen?.down, playbackT]);
+  useEffect(draw, [
+    draw,
+    processed,
+    page,
+    options,
+    profile,
+    pen?.x,
+    pen?.y,
+    pen?.down,
+    playbackT,
+    guide,
+  ]);
   // Fit on request (file opened, F key, button) and when paper size changes.
   useEffect(fit, [
     fit,
@@ -111,6 +133,12 @@ export function Preview() {
     };
     const onWheel = (e: WheelEvent) => {
       e.preventDefault();
+      // Adjusting a transform: the wheel or a pinch zooms the artwork instead of the view.
+      if (inputs.current.guide) {
+        const speed = e.ctrlKey ? 0.01 : 0.002;
+        zoomGuide(inputs.current.guide, Math.exp(-e.deltaY * speed));
+        return;
+      }
       const rect = canvas.getBoundingClientRect();
       const sx = e.clientX - rect.left;
       const sy = e.clientY - rect.top;
@@ -130,22 +158,43 @@ export function Preview() {
         draw();
       }
     };
-    let drag: { x: number; y: number } | null = null;
+    let drag: { x: number; y: number; adjust: boolean } | null = null;
     const onDown = (e: PointerEvent) => {
-      drag = { x: e.clientX, y: e.clientY };
+      const adjust = inputs.current.guide !== null;
+      drag = { x: e.clientX, y: e.clientY, adjust };
+      if (adjust) beginGesture();
       canvas.setPointerCapture(e.pointerId);
     };
     const onMove = (e: PointerEvent) => {
       if (!drag) return;
+      const g = inputs.current.guide;
+      const placement = inputs.current.processed?.placement;
+      if (drag.adjust) {
+        if (g && placement) {
+          // Screen px → paper mm → the transform's own mm (undo the page placement's scale
+          // and turn), then into the transform's params.
+          const k = view.current.scale;
+          const dx = (e.clientX - drag.x) / k;
+          const dy = (e.clientY - drag.y) / k;
+          const [a, b, c, d] = placement;
+          const det = a * d - b * c;
+          if (det) dragGuide(g, (d * dx - c * dy) / det, (-b * dx + a * dy) / det);
+        }
+        drag = { ...drag, x: e.clientX, y: e.clientY };
+        return;
+      }
       view.current = {
         ...view.current,
         x: view.current.x + e.clientX - drag.x,
         y: view.current.y + e.clientY - drag.y,
       };
-      drag = { x: e.clientX, y: e.clientY };
+      drag = { ...drag, x: e.clientX, y: e.clientY };
       draw();
     };
-    const onUp = () => (drag = null);
+    const onUp = () => {
+      if (drag?.adjust) endGesture();
+      drag = null;
+    };
     canvas.addEventListener('wheel', onWheel, { passive: false });
     canvas.addEventListener('pointerdown', onDown);
     canvas.addEventListener('pointermove', onMove);
@@ -172,9 +221,24 @@ export function Preview() {
     draw();
   };
 
+  // Esc ends adjusting.
+  useEffect(() => {
+    if (!adjustStepId) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') useStore.getState().setAdjustStep(null);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [adjustStepId]);
+
   return (
     <div className={styles.wrap} ref={wrapRef}>
-      <canvas ref={canvasRef} className={styles.canvas} />
+      <canvas
+        ref={canvasRef}
+        className={`${styles.canvas} ${guide ? styles.adjusting : ''}`}
+        data-testid="preview"
+      />
+      {adjustStepId && <AdjustBar ready={guide !== null} />}
       <PlaybackBar />
       <ViewToggles />
       <div className={styles.zoom}>
@@ -189,6 +253,51 @@ export function Preview() {
         </button>
       </div>
       {!hasDoc && <div className={styles.empty}>Open or drop an SVG to start.</div>}
+    </div>
+  );
+}
+
+/** Sets params of the step being adjusted, clamped to their ranges. */
+function setGuideParams(stepId: string, values: (params: ParamValues) => ParamValues) {
+  const s = useStore.getState();
+  const step = s.pipeline.find((st) => st.id === stepId);
+  const def = step && getTransform(step.type);
+  if (!step || !def) return;
+  const current: ParamValues = {};
+  for (const p of def.params) current[p.key] = step.params[p.key] ?? p.default;
+  const next = values(current);
+  const params: ParamValues = {};
+  for (const [key, v] of Object.entries(next)) {
+    const spec = def.params.find((p) => p.key === key);
+    if (spec?.type !== 'number' || typeof v !== 'number') continue;
+    const clamped = Math.min(spec.max, Math.max(spec.min, v));
+    params[key] = Math.round(clamped * 100) / 100;
+  }
+  s.updateStep(stepId, { params });
+}
+
+/** Moves the artwork under the guide by (dx, dy) mm (in the transform's output). */
+function dragGuide(g: StepGuide, dx: number, dy: number) {
+  const [a, b, c, d] = g.drag.perMm;
+  setGuideParams(g.stepId, (p) => ({
+    [g.drag.xKey]: Number(p[g.drag.xKey]) + a * dx + b * dy,
+    [g.drag.yKey]: Number(p[g.drag.yKey]) + c * dx + d * dy,
+  }));
+}
+
+function zoomGuide(g: StepGuide, factor: number) {
+  setGuideParams(g.stepId, (p) => ({ [g.zoomKey]: Number(p[g.zoomKey]) * factor }));
+}
+
+/** Shown while a transform is adjusted in the preview. */
+function AdjustBar({ ready }: { ready: boolean }) {
+  const setAdjustStep = useStore((s) => s.setAdjustStep);
+  return (
+    <div className={styles.adjustBar} role="status">
+      {ready
+        ? 'Drag to move the artwork (shown in blue) under the outline · scroll or pinch to zoom it'
+        : 'Turn the transform on and make it the last one to adjust it here.'}
+      <button onClick={() => setAdjustStep(null)}>Done</button>
     </div>
   );
 }
@@ -250,6 +359,8 @@ function ViewToggles() {
 }
 
 type RenderInput = {
+  /** The transform being adjusted: its outline is drawn over everything. */
+  guide: StepGuide | null;
   processed: Processed | null;
   page: ReturnType<typeof useStore.getState>['page'];
   options: ViewOptions;
@@ -267,7 +378,7 @@ function cssVar(name: string): string {
 function render(
   canvas: HTMLCanvasElement,
   v: ViewTransform,
-  { processed, page, options, bed, pen, playbackT }: RenderInput,
+  { processed, page, options, bed, pen, playbackT, guide }: RenderInput,
 ) {
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
@@ -423,6 +534,31 @@ function render(
     ctx.moveTo(pos.x, pos.y);
     ctx.lineTo(0, 0);
     ctx.stroke();
+  }
+
+  if (guide) {
+    ctx.save();
+    if (guide.source) {
+      // The artwork where it sits now, so the user sees what goes into the outline.
+      ctx.globalAlpha = 0.35;
+      ctx.strokeStyle = cssVar('--accent');
+      ctx.lineWidth = px;
+      ctx.beginPath();
+      for (const l of guide.source) addPath(ctx, l.points, l.closed);
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
+    ctx.beginPath();
+    addPath(ctx, guide.outline, true);
+    ctx.fillStyle = cssVar('--accent');
+    ctx.globalAlpha = 0.08;
+    ctx.fill();
+    ctx.globalAlpha = 1;
+    ctx.strokeStyle = cssVar('--accent');
+    ctx.lineWidth = 1.5 * px;
+    ctx.setLineDash([5 * px, 3 * px]);
+    ctx.stroke();
+    ctx.restore();
   }
 
   drawPen(ctx, pen, px);

@@ -1,4 +1,4 @@
-# Transforms: Tile, Tessellate and Symmetry
+# Transforms: Tile, Tessellate, Symmetry and Kaleidoscope
 
 Transforms repeat or rearrange the artwork before it goes on the page. Add them in the left
 panel under **Transforms** with **Add transform…**. Each one has a checkbox to turn it off, arrows
@@ -32,6 +32,31 @@ patterns.
 - **Start angle**: turns the whole pattern.
 
 It stacks with the others: for example Symmetry first, then Tile to repeat the rosette on a grid.
+
+## Kaleidoscope
+
+Cuts a wedge out of the artwork and repeats it around a center, mirroring every other wedge so
+the edges meet like in a real kaleidoscope.
+
+- **Wedges**: how many wedges make the circle. With mirroring, an odd number goes up by one so
+  every seam matches.
+- **Mirror every other wedge**: off just turns the copies.
+- **Source**: **Cut a wedge** takes a slice of the artwork. **Squeeze it all in** bends the whole
+  artwork into each wedge instead (its top along the rim, its bottom at the center), so nothing
+  is lost but shapes get distorted.
+- **Zoom**: take a smaller (or bigger) part of the artwork.
+- **Center X / Y**: where the center sits on the artwork, from its middle.
+- **Wedge angle**: turn the wedge over the artwork to take a different slice.
+
+**Adjust in preview** lets you do this by hand: the wedge is outlined in the preview with the
+artwork shown faintly in blue where it sits, dragging moves the artwork under the wedge, and
+scrolling (or pinching) zooms it. With **Squeeze it all in**, the outline is the rectangle that
+gets bent into each wedge. The pattern updates as you go.
+Press Esc or **Done** to go back to moving the view. Each drag is one step to undo. It works when
+Kaleidoscope is the last transform in the list (anything after it would move the wedge).
+
+Lines that run exactly along a seam are drawn by both neighboring wedges; **Remove lines
+drawn twice** (under Optimize, on by default) draws them once.
 
 ## Spiral repeat
 

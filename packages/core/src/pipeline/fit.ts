@@ -30,7 +30,7 @@ const ANCHORS: Record<Exclude<Alignment, 'file'>, [number, number]> = {
  */
 export function fitMatrix(doc: PlotDocument, page: PageSetup): Matrix {
   const box = marginBox(page);
-  const bounds = documentBounds(doc);
+  const bounds = doc.frame ?? documentBounds(doc);
   const empty = isEmptyBounds(bounds);
 
   if (page.align === 'file') {
@@ -95,7 +95,7 @@ function rotatedBounds(b: Bounds, m: Matrix): Bounds {
 export function fitToPage(doc: PlotDocument, page: PageSetup): PlotDocument {
   const placed = transformDocument(doc, fitMatrix(doc, page));
   const { width, height } = paperSize(page);
-  const out: PlotDocument = { ...placed, width, height };
+  const out: PlotDocument = { ...placed, width, height, frame: undefined };
   return page.fit === 'fill' && page.align !== 'file'
     ? clipDocument(out, marginBox(page)).doc
     : out;

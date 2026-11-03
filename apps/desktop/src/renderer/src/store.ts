@@ -76,6 +76,8 @@ type State = {
    */
   overridesByMode: Partial<Record<LayerMode, Record<string, LayerOverride>>>;
   selectedLayerId: string | null;
+  /** The transform step being adjusted by dragging in the preview, if any. */
+  adjustStepId: string | null;
   page: PageSetup;
   optimize: OptimizeSettings;
   profileId: string;
@@ -140,6 +142,7 @@ type State = {
   setOptimize(patch: Partial<OptimizeSettings>): void;
   setLayer(id: string, patch: LayerOverride): void;
   selectLayer(id: string | null): void;
+  setAdjustStep(id: string | null): void;
   setView(patch: Partial<ViewOptions>): void;
   setTab(tab: Tab): void;
   requestFit(): void;
@@ -274,6 +277,7 @@ export const useStore = create<State>()((set, get) => ({
   layerOverrides: {},
   overridesByMode: {},
   selectedLayerId: null,
+  adjustStepId: null,
   page: defaultPageSetup(),
   optimize: defaultOptimizeSettings(),
   profileId: loadProfileId(),
@@ -435,6 +439,7 @@ export const useStore = create<State>()((set, get) => ({
     }),
 
   selectLayer: (selectedLayerId) => set({ selectedLayerId }),
+  setAdjustStep: (adjustStepId) => set({ adjustStepId }),
   setView: (patch) => set((s) => ({ view: { ...s.view, ...patch } })),
   setTab: (tab) => set({ tab }),
   requestFit: () => set((s) => ({ fitRequest: s.fitRequest + 1 })),
@@ -452,7 +457,11 @@ export const useStore = create<State>()((set, get) => ({
           : st,
       ),
     })),
-  removeStep: (id) => set((s) => ({ pipeline: s.pipeline.filter((st) => st.id !== id) })),
+  removeStep: (id) =>
+    set((s) => ({
+      pipeline: s.pipeline.filter((st) => st.id !== id),
+      adjustStepId: s.adjustStepId === id ? null : s.adjustStepId,
+    })),
   moveStep: (id, delta) =>
     set((s) => {
       const i = s.pipeline.findIndex((st) => st.id === id);

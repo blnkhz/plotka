@@ -1,6 +1,6 @@
 # Adding a transform
 
-Transforms (Tile, and later kaleidoscope, symmetry, fractal…) change the artwork before it's
+Transforms (Tile, Kaleidoscope, Symmetry, and later fractal…) change the artwork before it's
 placed on the page. They show up in the **Transforms** list in the left panel, where users can
 add, reorder, turn off and remove them. The settings form is generated from each transform's
 parameter list, so a new transform needs no UI code.
@@ -50,6 +50,14 @@ Rules:
   `MAX_TILE_POINTS` in `tile.ts`).
 - Param types: `number` (with `min`, `max`, `step`, optional `suffix`, `integer`), `select`,
   `boolean`. Add `help` for a tooltip. Labels use plain words.
+
+### Adjusting in the preview (optional)
+
+A transform can also return a `guide(doc, params)`: an outline (in its output coordinates) and
+which params a drag and a zoom change, with mm-to-param factors. Its card then gets **Adjust in
+preview**, and the preview draws the outline and turns drags and scrolling into param changes
+(one undo step per drag). Only the last enabled transform can be adjusted. See
+`kaleidoscope.ts`; test that a drag of (dx, dy) moves the content by exactly that.
 
 ## 2. Register it
 
