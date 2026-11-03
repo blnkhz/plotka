@@ -81,7 +81,7 @@ export function Splash({ onClose }: { onClose: () => void }) {
             ×
           </button>
           <div className={styles.brand}>
-            <img src={logoUrl} alt="" width={40} height={40} />
+            <img src={logoUrl} alt="" width={60} height={60} />
             Plotter Studio
           </div>
           <h1 className={styles.title}>
