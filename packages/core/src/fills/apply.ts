@@ -13,15 +13,27 @@ import type { Bounds, FillRegion, FillSettings, Layer, PlotDocument, Polyline } 
 import type { Vec2 } from '../geometry/vec2';
 import { hatchRegion } from './hatch';
 import { concentricFill, dotFill, insetArea, spiralFill } from './patterns';
+import { wavyFill } from './wavy';
 
 export const SUPPORTED_FILL_TYPES = [
   'none',
   'lines',
   'crosshatch',
+  'waves',
+  'noise',
   'concentric',
   'spiral',
   'dots',
 ] as const;
+
+/** Waves and noise settings when a fill doesn't have them yet. */
+export const WAVY_DEFAULTS = {
+  amplitude: 2,
+  wavelength: 10,
+  phase: 0,
+  noiseScale: 15,
+  seed: 1,
+} as const;
 
 export const defaultFillSettings = (): FillSettings => ({
   type: 'lines',
@@ -70,6 +82,18 @@ export function fillRegion(region: FillRegion, f: FillSettings, center?: Vec2): 
         ...hatchRegion(region, base),
         ...hatchRegion(region, { ...base, angle: f.crossAngle ?? f.angle + 90 }),
       ];
+    case 'waves':
+    case 'noise':
+      return wavyFill(region, {
+        ...base,
+        kind: f.type,
+        amplitude: f.amplitude ?? WAVY_DEFAULTS.amplitude,
+        wavelength: f.wavelength ?? WAVY_DEFAULTS.wavelength,
+        phase: f.phase ?? WAVY_DEFAULTS.phase,
+        noiseScale: f.noiseScale ?? WAVY_DEFAULTS.noiseScale,
+        seed: f.seed ?? WAVY_DEFAULTS.seed,
+        allowCross: !!f.allowCross,
+      });
     case 'concentric':
       return concentricFill(region, base);
     case 'spiral':

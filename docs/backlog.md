@@ -35,28 +35,16 @@ Design notes:
 
 ## More fill types (new, requested 2026-11-02)
 
-New fill patterns, each with its own controls for size and amplitude, on the same global grid
-logic so neighboring shapes line up:
+Waves and Noise are done. Still to consider, on the same global grid:
 
-- **Waves**: parallel lines bent into sine waves. Controls: spacing, angle, **wavelength**,
-  **amplitude**, phase shift per line (for interference patterns).
-- **Noise**: lines displaced by smooth noise (Perlin or simplex), for an organic, hand-drawn or
-  topographic look. Controls: spacing, angle, **noise scale** (feature size), **amplitude**,
-  **seed** (repeatable). Optional "flow" mode where lines follow the noise direction instead of
-  only being displaced.
-- **Further ideas** to consider at the same time:
-  - **Flow field**: short strokes following a noise field.
-  - **Ripples**: concentric circles around a movable point, clipped to the shape (like the
-    spiral, with a center).
-  - **Zigzag waves**: triangle and square waves with the same controls.
-  - **Hexagons and triangles**: grid fills.
-  - **Stippling by tone**: dots spaced by the source color, building on "spacing from fill
-    color".
-
-Notes: waves and noise must stay inside the shape and its inset (clip each displaced line to the
-inset area). They work with "Keep pen down between lines" where joins stay inside, and with
-"Spacing from fill color". Amplitude is limited so lines never cross unless the user asks.
-Previews and tests should check repeatability (same seed, same lines).
+- **Noise "flow" mode**: lines follow the noise direction instead of only being displaced.
+- **Flow field**: short strokes following a noise field.
+- **Ripples**: concentric circles around a movable point, clipped to the shape (like the
+  spiral, with a center).
+- **Zigzag waves**: triangle and square waves with the Waves controls.
+- **Hexagons and triangles**: grid fills.
+- **Stippling by tone**: dots spaced by the source color, building on "spacing from fill
+  color".
 
 ## Remaining spec stories (P2 and later)
 

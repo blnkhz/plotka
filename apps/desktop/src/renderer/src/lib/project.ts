@@ -146,6 +146,9 @@ export function parseFill(v: unknown): FillSettings | null | undefined {
   if (isNum(v['centerX'])) f.centerX = v['centerX'];
   if (isNum(v['centerY'])) f.centerY = v['centerY'];
   if (typeof v['sharedCenter'] === 'boolean') f.sharedCenter = v['sharedCenter'];
+  for (const k of ['amplitude', 'wavelength', 'phase', 'noiseScale', 'seed'] as const)
+    if (isNum(v[k])) f[k] = v[k];
+  if (typeof v['allowCross'] === 'boolean') f.allowCross = v['allowCross'];
   return f;
 }
 

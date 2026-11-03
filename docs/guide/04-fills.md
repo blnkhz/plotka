@@ -9,6 +9,16 @@ layers** copies them (and the layer's speeds) to the others.
 
 - **Lines**: parallel lines (hatching).
 - **Crosshatch**: two sets of lines. **Second angle** defaults to the first + 90°.
+- **Waves**: parallel lines bent into waves. **Wavelength** is the length of one wave,
+  **Amplitude** how far the lines swing, and **Phase shift** moves each line's wave a little
+  from the one before, for interference and moiré patterns (0 keeps them in step).
+- **Noise**: lines bent by smooth random bumps, for an organic, hand-drawn or topographic look.
+  **Bump size** sets how big the bumps are, **Amplitude** how far the lines move, and **Seed**
+  picks the pattern (the same seed always gives the same lines).
+
+  For both, the amplitude is held back so neighboring lines never cross; the Fill tab says when
+  that happens. Tick **Let lines cross** to allow it.
+
 - **Concentric**: rings following the outline inward, like contour lines.
 - **Spiral**: a spiral from the shape's center outward, cut to the shape. Best on round shapes.
 - **Dots**: a grid of pen taps. **Jitter** moves each dot randomly by up to that share of the

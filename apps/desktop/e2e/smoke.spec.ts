@@ -1130,3 +1130,35 @@ test('the side panel resizes by dragging, fits its content, and remembers its wi
   await near(400);
   await app.close();
 });
+
+test('waves and noise fills, with the amplitude held back unless lines may cross', async () => {
+  const app = await launch();
+  const page = await app.firstWindow();
+  await page.setViewportSize({ width: 1400, height: 900 });
+  await dropFile(page, 'motif.svg');
+  const paths = async () =>
+    Number((await page.getByText(/\d+ paths · draw/).textContent())!.match(/(\d+) paths/)![1]);
+  await page.getByRole('tab', { name: 'Fill' }).click();
+  await page.getByLabel('Fill type').selectOption('waves');
+  await expect(page.getByRole('spinbutton', { name: 'Wavelength' })).toHaveValue('10');
+  await expect.poll(paths).toBeGreaterThan(3);
+  await expect(page.getByText('Updating…')).toHaveCount(0);
+  if (shots) await page.screenshot({ path: join(shots, 'fill-waves.png') });
+
+  const phase = page.getByRole('spinbutton', { name: 'Phase shift' });
+  await phase.fill('180');
+  await phase.press('Enter');
+  const amp = page.getByRole('spinbutton', { name: 'Amplitude' });
+  await amp.fill('3');
+  await amp.press('Enter');
+  await expect(page.getByText(/Held to 0\.3 mm so lines don't cross/)).toBeVisible();
+  await page.getByLabel('Let lines cross').check();
+  await expect(page.getByText(/Held to/)).toHaveCount(0);
+
+  await page.getByLabel('Fill type').selectOption('noise');
+  await expect(page.getByRole('spinbutton', { name: 'Bump size' })).toHaveValue('15');
+  await page.getByLabel('Let lines cross').uncheck();
+  await expect(page.getByText('Updating…')).toHaveCount(0);
+  if (shots) await page.screenshot({ path: join(shots, 'fill-noise.png') });
+  await app.close();
+});

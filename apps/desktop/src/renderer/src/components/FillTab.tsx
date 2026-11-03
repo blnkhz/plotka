@@ -1,4 +1,9 @@
-import { type FillSettings, type FillType } from '@plotter-studio/core';
+import {
+  maxWavyAmplitude,
+  WAVY_DEFAULTS,
+  type FillSettings,
+  type FillType,
+} from '@plotter-studio/core';
 import { applyOverrides, currentLayerSettings, useStore } from '../store';
 import { Notice, NumberField, Row, Section } from './controls';
 import { PassesSection } from './PassesSection';
@@ -9,14 +14,16 @@ const TYPES: { value: FillType; label: string }[] = [
   { value: 'none', label: 'None' },
   { value: 'lines', label: 'Lines' },
   { value: 'crosshatch', label: 'Crosshatch' },
+  { value: 'waves', label: 'Waves' },
+  { value: 'noise', label: 'Noise' },
   { value: 'concentric', label: 'Concentric' },
   { value: 'spiral', label: 'Spiral' },
   { value: 'dots', label: 'Dots' },
 ];
 
 /** Which controls apply to each fill type. */
-const USES_ANGLE = new Set<FillType>(['lines', 'crosshatch', 'spiral', 'dots']);
-const USES_CONNECT = new Set<FillType>(['lines', 'crosshatch', 'concentric']);
+const USES_ANGLE = new Set<FillType>(['lines', 'crosshatch', 'waves', 'noise', 'spiral', 'dots']);
+const USES_CONNECT = new Set<FillType>(['lines', 'crosshatch', 'waves', 'noise', 'concentric']);
 const SPACING_LABEL: Partial<Record<FillType, string>> = {
   concentric: 'Ring spacing',
   spiral: 'Turn spacing',
@@ -152,6 +159,9 @@ export function FillTab() {
                   </label>
                 </Row>
               </>
+            )}
+            {(type === 'waves' || type === 'noise') && (
+              <WavyFields fill={fill} type={type} setFill={setFill} />
             )}
             {type === 'dots' && (
               <Row label="Jitter">
@@ -304,3 +314,103 @@ function describeFill(f: FillSettings): string {
 }
 
 const sameFill = (a: FillSettings, b: FillSettings) => JSON.stringify(a) === JSON.stringify(b);
+
+/** Waves and noise: size and amplitude, with a note when the amplitude is held back. */
+function WavyFields({
+  fill,
+  type,
+  setFill,
+}: {
+  fill: FillSettings;
+  type: 'waves' | 'noise';
+  setFill: (patch: Partial<FillSettings>) => void;
+}) {
+  const v = { ...WAVY_DEFAULTS, ...fill };
+  const limit = maxWavyAmplitude({ ...v, kind: type });
+  const limited = !fill.allowCross && v.amplitude > limit * 0.95;
+  return (
+    <>
+      {type === 'waves' ? (
+        <>
+          <Row label="Wavelength">
+            <NumberField
+              value={v.wavelength}
+              min={0.5}
+              max={500}
+              step={0.5}
+              suffix="mm"
+              title="Length of one wave"
+              onChange={(wavelength) => setFill({ wavelength })}
+            />
+          </Row>
+          <Row label="Phase shift">
+            <NumberField
+              value={v.phase}
+              min={-360}
+              max={360}
+              step={5}
+              suffix="° / line"
+              title="Shift each line's wave from the one before, for interference patterns. 0 keeps every wave in step."
+              onChange={(phase) => setFill({ phase })}
+            />
+          </Row>
+        </>
+      ) : (
+        <>
+          <Row label="Bump size">
+            <NumberField
+              value={v.noiseScale}
+              min={0.5}
+              max={500}
+              step={0.5}
+              suffix="mm"
+              title="How big the bumps are: small is busy and wobbly, large is gentle"
+              onChange={(noiseScale) => setFill({ noiseScale })}
+            />
+          </Row>
+          <Row label="Seed">
+            <NumberField
+              value={v.seed}
+              min={0}
+              max={99999}
+              step={1}
+              digits={0}
+              title="Picks the pattern. The same seed always gives the same lines."
+              onChange={(seed) => setFill({ seed: Math.round(seed) })}
+            />
+          </Row>
+        </>
+      )}
+      <Row label="Amplitude">
+        <NumberField
+          value={v.amplitude}
+          min={0}
+          max={100}
+          step={0.1}
+          suffix="mm"
+          title="How far the lines move sideways, at most"
+          onChange={(amplitude) => setFill({ amplitude })}
+        />
+      </Row>
+      <Row label="">
+        <label
+          className={styles.check}
+          title="Allow amplitudes where neighboring lines cross each other"
+        >
+          <input
+            type="checkbox"
+            checked={!!fill.allowCross}
+            onChange={(e) => setFill({ allowCross: e.target.checked })}
+          />
+          Let lines cross
+        </label>
+      </Row>
+      {limited && (
+        <p className={styles.muted}>
+          Held to {(limit * 0.95).toFixed(1)} mm so lines don't cross. Tick Let lines cross for
+          more.
+        </p>
+      )}
+    </>
+  );
+}

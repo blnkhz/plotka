@@ -18,6 +18,7 @@ export * from './optimize/merge';
 export * from './optimize/order';
 export * from './geometry/polygon';
 export * from './fills/patterns';
+export * from './fills/wavy';
 export * from './pipeline/passes';
 export * from './transforms';
 export * from './doodle/doodle';

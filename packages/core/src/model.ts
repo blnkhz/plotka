@@ -19,7 +19,8 @@ export type FillRegion = {
   knockout?: boolean;
 };
 
-export type FillType = 'none' | 'lines' | 'crosshatch' | 'concentric' | 'spiral' | 'dots';
+export type FillType =
+  'none' | 'lines' | 'crosshatch' | 'waves' | 'noise' | 'concentric' | 'spiral' | 'dots';
 
 export type FillSettings = {
   type: FillType;
@@ -42,6 +43,18 @@ export type FillSettings = {
   centerY?: number;
   /** Spiral: one center for all the layer's shapes (the center of them all together). */
   sharedCenter?: boolean;
+  /** Waves and noise: mm, the most a line moves sideways (see WAVY_DEFAULTS). */
+  amplitude?: number;
+  /** Waves: mm per wave. */
+  wavelength?: number;
+  /** Waves: degrees the wave shifts from one line to the next. */
+  phase?: number;
+  /** Noise: mm, the size of the bumps. */
+  noiseScale?: number;
+  /** Noise: picks the pattern; the same seed always gives the same lines. */
+  seed?: number;
+  /** Waves and noise: allow amplitudes that make neighboring lines cross. */
+  allowCross?: boolean;
 };
 
 /**
