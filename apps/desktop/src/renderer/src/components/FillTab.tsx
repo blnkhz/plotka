@@ -4,9 +4,11 @@ import {
   type FillSettings,
   type FillType,
   type LayerPlacement,
+  type TextItem,
+  HERSHEY_FONTS,
 } from '@plotter-studio/core';
 import { applyOverrides, currentLayerSettings, useStore } from '../store';
-import { Notice, NumberField, Row, Section } from './controls';
+import { Notice, NumberField, Row, Section, Segmented } from './controls';
 import { PassesSection } from './PassesSection';
 import { SpeedSection } from './SpeedSection';
 import styles from './FillTab.module.css';
@@ -95,260 +97,270 @@ export function FillTab() {
 
   return (
     <>
-      <Section title={`Fill · ${layer.name}`} help="fills">
-        {drawable === 0 && <p className={styles.muted}>This layer has no filled shapes.</p>}
-        <Row label="Type">
-          <select
-            aria-label="Fill type"
-            value={type}
-            onChange={(e) => {
-              const t = e.target.value as FillType;
-              if (t === 'none') setLayer(layer.id, { settings: { fill: null } });
-              else {
-                const start = MIN_START_SPACING[t];
-                const spacing = fill?.spacing ?? useStore.getState().defaultFill.spacing;
-                setFill(start && spacing < start ? { type: t, spacing: start } : { type: t });
-              }
-            }}
-          >
-            {TYPES.map((t) => (
-              <option key={t.value} value={t.value}>
-                {t.label}
-              </option>
-            ))}
-          </select>
-        </Row>
-        {fill && type !== 'none' && (
-          <>
-            <Row label={SPACING_LABEL[type] ?? 'Spacing'}>
-              <NumberField
-                value={fill.spacing}
-                min={0.05}
-                max={50}
-                step={0.05}
-                suffix="mm"
-                onChange={(spacing) => setFill({ spacing })}
-              />
-              <span className={styles.muted} title="Per centimeter">
-                {(10 / fill.spacing).toFixed(1)} /cm
-              </span>
+      {layer.text ? (
+        <TextSection item={layer.text} />
+      ) : (
+        <>
+          <Section title={`Fill · ${layer.name}`} help="fills">
+            {drawable === 0 && <p className={styles.muted}>This layer has no filled shapes.</p>}
+            <Row label="Type">
+              <select
+                aria-label="Fill type"
+                value={type}
+                onChange={(e) => {
+                  const t = e.target.value as FillType;
+                  if (t === 'none') setLayer(layer.id, { settings: { fill: null } });
+                  else {
+                    const start = MIN_START_SPACING[t];
+                    const spacing = fill?.spacing ?? useStore.getState().defaultFill.spacing;
+                    setFill(start && spacing < start ? { type: t, spacing: start } : { type: t });
+                  }
+                }}
+              >
+                {TYPES.map((t) => (
+                  <option key={t.value} value={t.value}>
+                    {t.label}
+                  </option>
+                ))}
+              </select>
             </Row>
-            {USES_ANGLE.has(type) && (
-              <Row label={type === 'spiral' ? 'Start angle' : 'Angle'}>
-                <NumberField
-                  value={fill.angle}
-                  min={-360}
-                  max={360}
-                  step={5}
-                  suffix="°"
-                  onChange={(angle) => setFill({ angle })}
-                />
-              </Row>
-            )}
-            {CENTERED.has(type) && (
+            {fill && type !== 'none' && (
               <>
-                <Row label="Center X / Y">
+                <Row label={SPACING_LABEL[type] ?? 'Spacing'}>
                   <NumberField
-                    value={fill.centerX ?? 0}
-                    min={-1000}
-                    max={1000}
-                    step={1}
-                    width={52}
-                    title="Move the center, in mm from the shape's center (right is +)"
-                    onChange={(centerX) => setFill({ centerX })}
-                  />
-                  <NumberField
-                    value={fill.centerY ?? 0}
-                    min={-1000}
-                    max={1000}
-                    step={1}
-                    width={52}
+                    value={fill.spacing}
+                    min={0.05}
+                    max={50}
+                    step={0.05}
                     suffix="mm"
-                    title="Down is +"
-                    onChange={(centerY) => setFill({ centerY })}
+                    onChange={(spacing) => setFill({ spacing })}
                   />
-                  {fill.centerX || fill.centerY ? (
-                    <button
-                      onClick={() => setFill({ centerX: undefined, centerY: undefined })}
-                      title="Back to the shape's center"
-                    >
-                      Reset
-                    </button>
-                  ) : null}
+                  <span className={styles.muted} title="Per centimeter">
+                    {(10 / fill.spacing).toFixed(1)} /cm
+                  </span>
                 </Row>
-                <Row label="">
-                  <button
-                    className={placing ? styles.active : undefined}
-                    aria-pressed={placing}
-                    onClick={() => setAdjustSpiral(placing ? null : layer.id)}
-                    title="Drag the centers in the preview"
-                  >
-                    {placing ? 'Done placing' : 'Place in preview'}
-                  </button>
+                {USES_ANGLE.has(type) && (
+                  <Row label={type === 'spiral' ? 'Start angle' : 'Angle'}>
+                    <NumberField
+                      value={fill.angle}
+                      min={-360}
+                      max={360}
+                      step={5}
+                      suffix="°"
+                      onChange={(angle) => setFill({ angle })}
+                    />
+                  </Row>
+                )}
+                {CENTERED.has(type) && (
+                  <>
+                    <Row label="Center X / Y">
+                      <NumberField
+                        value={fill.centerX ?? 0}
+                        min={-1000}
+                        max={1000}
+                        step={1}
+                        width={52}
+                        title="Move the center, in mm from the shape's center (right is +)"
+                        onChange={(centerX) => setFill({ centerX })}
+                      />
+                      <NumberField
+                        value={fill.centerY ?? 0}
+                        min={-1000}
+                        max={1000}
+                        step={1}
+                        width={52}
+                        suffix="mm"
+                        title="Down is +"
+                        onChange={(centerY) => setFill({ centerY })}
+                      />
+                      {fill.centerX || fill.centerY ? (
+                        <button
+                          onClick={() => setFill({ centerX: undefined, centerY: undefined })}
+                          title="Back to the shape's center"
+                        >
+                          Reset
+                        </button>
+                      ) : null}
+                    </Row>
+                    <Row label="">
+                      <button
+                        className={placing ? styles.active : undefined}
+                        aria-pressed={placing}
+                        onClick={() => setAdjustSpiral(placing ? null : layer.id)}
+                        title="Drag the centers in the preview"
+                      >
+                        {placing ? 'Done placing' : 'Place in preview'}
+                      </button>
+                    </Row>
+                    <Row label="">
+                      <label
+                        className={styles.check}
+                        title="All shapes in the layer share one center (the center of them all), so the pattern continues from shape to shape"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={!!fill.sharedCenter}
+                          onChange={(e) => setFill({ sharedCenter: e.target.checked })}
+                        />
+                        Same center for all shapes
+                      </label>
+                    </Row>
+                  </>
+                )}
+                {(type === 'waves' || type === 'noise') && (
+                  <WavyFields fill={fill} type={type} setFill={setFill} />
+                )}
+                {type === 'flow' && <FlowFields fill={fill} setFill={setFill} />}
+                {(type === 'dots' || type === 'stipple') && (
+                  <Row label="Dash length">
+                    <NumberField
+                      value={fill.dashLength ?? 0}
+                      min={0}
+                      max={50}
+                      step={0.25}
+                      suffix="mm"
+                      title="Draw each dot as a short line this long, along the angle. 0: dots."
+                      onChange={(dashLength) => setFill({ dashLength })}
+                    />
+                  </Row>
+                )}
+                {(type === 'dots' || type === 'stipple') && (fill.dashLength ?? 0) > 0 && (
+                  <Row label="Dash angle">
+                    <NumberField
+                      value={fill.dashAngle ?? fill.angle}
+                      min={-360}
+                      max={360}
+                      step={5}
+                      suffix="°"
+                      title="Which way the dashes point"
+                      onChange={(dashAngle) => setFill({ dashAngle })}
+                    />
+                  </Row>
+                )}
+                {type === 'stipple' && (
+                  <>
+                    <SeedField fill={fill} setFill={setFill} />
+                    {!fill.densityFromColor && (
+                      <p className={styles.muted}>
+                        Tick Spacing from fill color below to stipple by tone: darker shapes get
+                        more dots.
+                      </p>
+                    )}
+                  </>
+                )}
+                {type === 'dots' && (
+                  <Row label="Jitter">
+                    <NumberField
+                      value={Math.round((fill.jitter ?? 0) * 100)}
+                      min={0}
+                      max={100}
+                      step={5}
+                      suffix="%"
+                      onChange={(j) => setFill({ jitter: j / 100 })}
+                      title="Move each dot randomly by up to this share of the spacing"
+                    />
+                  </Row>
+                )}
+                {type === 'crosshatch' && (
+                  <Row label="Second angle">
+                    <NumberField
+                      value={fill.crossAngle ?? fill.angle + 90}
+                      min={-360}
+                      max={450}
+                      step={5}
+                      suffix="°"
+                      onChange={(crossAngle) => setFill({ crossAngle })}
+                    />
+                    {fill.crossAngle !== undefined && (
+                      <button
+                        onClick={() => setFill({ crossAngle: undefined })}
+                        title="Back to angle + 90°"
+                      >
+                        Reset
+                      </button>
+                    )}
+                  </Row>
+                )}
+                <Row label="Inset">
+                  <NumberField
+                    value={fill.inset}
+                    min={0}
+                    max={20}
+                    step={0.05}
+                    suffix="mm"
+                    onChange={(inset) => setFill({ inset })}
+                    title="Pull the fill in from the outline"
+                  />
                 </Row>
                 <Row label="">
                   <label
                     className={styles.check}
-                    title="All shapes in the layer share one center (the center of them all), so the pattern continues from shape to shape"
+                    title="Darker shapes get tighter spacing, lighter ones wider (up to 10×). Very light shapes are left empty."
                   >
                     <input
                       type="checkbox"
-                      checked={!!fill.sharedCenter}
-                      onChange={(e) => setFill({ sharedCenter: e.target.checked })}
+                      checked={!!fill.densityFromColor}
+                      onChange={(e) => setFill({ densityFromColor: e.target.checked })}
                     />
-                    Same center for all shapes
+                    Spacing from fill color
                   </label>
                 </Row>
-              </>
-            )}
-            {(type === 'waves' || type === 'noise') && (
-              <WavyFields fill={fill} type={type} setFill={setFill} />
-            )}
-            {type === 'flow' && <FlowFields fill={fill} setFill={setFill} />}
-            {(type === 'dots' || type === 'stipple') && (
-              <Row label="Dash length">
-                <NumberField
-                  value={fill.dashLength ?? 0}
-                  min={0}
-                  max={50}
-                  step={0.25}
-                  suffix="mm"
-                  title="Draw each dot as a short line this long, along the angle. 0: dots."
-                  onChange={(dashLength) => setFill({ dashLength })}
-                />
-              </Row>
-            )}
-            {(type === 'dots' || type === 'stipple') && (fill.dashLength ?? 0) > 0 && (
-              <Row label="Dash angle">
-                <NumberField
-                  value={fill.dashAngle ?? fill.angle}
-                  min={-360}
-                  max={360}
-                  step={5}
-                  suffix="°"
-                  title="Which way the dashes point"
-                  onChange={(dashAngle) => setFill({ dashAngle })}
-                />
-              </Row>
-            )}
-            {type === 'stipple' && (
-              <>
-                <SeedField fill={fill} setFill={setFill} />
-                {!fill.densityFromColor && (
-                  <p className={styles.muted}>
-                    Tick Spacing from fill color below to stipple by tone: darker shapes get more
-                    dots.
-                  </p>
+                {USES_CONNECT.has(type) && (
+                  <Row label="">
+                    <label
+                      className={styles.check}
+                      title="Join neighboring lines end to end (a zigzag) without lifting the pen, where the join stays inside the shape. Off lifts the pen after every line."
+                    >
+                      <input
+                        type="checkbox"
+                        checked={fill.connect}
+                        onChange={(e) => setFill({ connect: e.target.checked })}
+                      />
+                      Keep pen down between lines
+                    </label>
+                  </Row>
                 )}
               </>
             )}
-            {type === 'dots' && (
-              <Row label="Jitter">
-                <NumberField
-                  value={Math.round((fill.jitter ?? 0) * 100)}
-                  min={0}
-                  max={100}
-                  step={5}
-                  suffix="%"
-                  onChange={(j) => setFill({ jitter: j / 100 })}
-                  title="Move each dot randomly by up to this share of the spacing"
+            <Row label="">
+              <label
+                className={styles.check}
+                title="Draw the outline around each filled shape. Outlines that came with the file (or a doodle) are on this switch too."
+              >
+                <input
+                  type="checkbox"
+                  checked={layer.settings.drawOutline}
+                  onChange={(e) =>
+                    setLayer(layer.id, { settings: { drawOutline: e.target.checked } })
+                  }
                 />
-              </Row>
-            )}
-            {type === 'crosshatch' && (
-              <Row label="Second angle">
-                <NumberField
-                  value={fill.crossAngle ?? fill.angle + 90}
-                  min={-360}
-                  max={450}
-                  step={5}
-                  suffix="°"
-                  onChange={(crossAngle) => setFill({ crossAngle })}
-                />
-                {fill.crossAngle !== undefined && (
-                  <button
-                    onClick={() => setFill({ crossAngle: undefined })}
-                    title="Back to angle + 90°"
-                  >
-                    Reset
-                  </button>
-                )}
-              </Row>
-            )}
-            <Row label="Inset">
-              <NumberField
-                value={fill.inset}
-                min={0}
-                max={20}
-                step={0.05}
-                suffix="mm"
-                onChange={(inset) => setFill({ inset })}
-                title="Pull the fill in from the outline"
-              />
+                Draw outlines of filled shapes
+              </label>
             </Row>
             <Row label="">
               <label
                 className={styles.check}
-                title="Darker shapes get tighter spacing, lighter ones wider (up to 10×). Very light shapes are left empty."
+                title="Shapes on top hide the parts of shapes under them, like in the file. White shapes hide what's under them without being drawn."
               >
                 <input
                   type="checkbox"
-                  checked={!!fill.densityFromColor}
-                  onChange={(e) => setFill({ densityFromColor: e.target.checked })}
+                  checked={layer.settings.hideCovered ?? true}
+                  onChange={(e) =>
+                    setLayer(layer.id, { settings: { hideCovered: e.target.checked } })
+                  }
                 />
-                Spacing from fill color
+                Hide parts covered by shapes on top
               </label>
             </Row>
-            {USES_CONNECT.has(type) && (
-              <Row label="">
-                <label
-                  className={styles.check}
-                  title="Join neighboring lines end to end (a zigzag) without lifting the pen, where the join stays inside the shape. Off lifts the pen after every line."
-                >
-                  <input
-                    type="checkbox"
-                    checked={fill.connect}
-                    onChange={(e) => setFill({ connect: e.target.checked })}
-                  />
-                  Keep pen down between lines
-                </label>
-              </Row>
+            {knockouts > 0 && (
+              <p className={styles.muted}>
+                {knockouts} white {knockouts === 1 ? 'shape is' : 'shapes are'} not drawn but hide
+                what's under them.
+              </p>
             )}
-          </>
-        )}
-        <Row label="">
-          <label
-            className={styles.check}
-            title="Draw the outline around each filled shape. Outlines that came with the file (or a doodle) are on this switch too."
-          >
-            <input
-              type="checkbox"
-              checked={layer.settings.drawOutline}
-              onChange={(e) => setLayer(layer.id, { settings: { drawOutline: e.target.checked } })}
-            />
-            Draw outlines of filled shapes
-          </label>
-        </Row>
-        <Row label="">
-          <label
-            className={styles.check}
-            title="Shapes on top hide the parts of shapes under them, like in the file. White shapes hide what's under them without being drawn."
-          >
-            <input
-              type="checkbox"
-              checked={layer.settings.hideCovered ?? true}
-              onChange={(e) => setLayer(layer.id, { settings: { hideCovered: e.target.checked } })}
-            />
-            Hide parts covered by shapes on top
-          </label>
-        </Row>
-        {knockouts > 0 && (
-          <p className={styles.muted}>
-            {knockouts} white {knockouts === 1 ? 'shape is' : 'shapes are'} not drawn but hide
-            what's under them.
-          </p>
-        )}
-      </Section>
+          </Section>
+        </>
+      )}
       <PositionSection layerId={layer.id} placement={layer.settings.placement ?? null} />
       <PassesSection layer={layer} />
       <SpeedSection layer={layer} />
@@ -653,5 +665,83 @@ function FlowFields({
       </Row>
       <SeedField fill={fill} setFill={setFill} />
     </>
+  );
+}
+
+/** LATER-6: a text layer's text and style (it has no fill). */
+function TextSection({ item }: { item: TextItem }) {
+  const updateText = useStore((s) => s.updateText);
+  const set = (patch: Partial<TextItem>) => updateText(item.id, patch);
+  return (
+    <Section title="Text" help="text">
+      <textarea
+        className={styles.text}
+        aria-label="Text"
+        value={item.text}
+        rows={Math.min(8, Math.max(2, item.text.split('\n').length + 1))}
+        onChange={(e) => set({ text: e.target.value })}
+      />
+      <Row label="Style">
+        <select
+          aria-label="Text style"
+          value={item.font}
+          onChange={(e) => set({ font: e.target.value })}
+        >
+          {HERSHEY_FONTS.map((f) => (
+            <option key={f.id} value={f.id}>
+              {f.name}
+            </option>
+          ))}
+        </select>
+      </Row>
+      <Row label="Size">
+        <NumberField
+          value={item.size}
+          min={0.5}
+          max={1000}
+          step={0.5}
+          suffix="mm"
+          title="Height of capital letters"
+          onChange={(size) => set({ size })}
+        />
+      </Row>
+      <Row label="Line spacing">
+        <NumberField
+          value={item.lineSpacing * 100}
+          min={10}
+          max={1000}
+          step={5}
+          suffix="%"
+          digits={0}
+          onChange={(v) => set({ lineSpacing: v / 100 })}
+        />
+      </Row>
+      <Row label="Letter spacing">
+        <NumberField
+          value={item.letterSpacing}
+          min={-100}
+          max={100}
+          step={0.1}
+          suffix="mm"
+          title="Extra space between letters"
+          onChange={(letterSpacing) => set({ letterSpacing })}
+        />
+      </Row>
+      <Row label="Align">
+        <Segmented
+          value={item.align}
+          options={[
+            { value: 'left', label: 'Left' },
+            { value: 'center', label: 'Center' },
+            { value: 'right', label: 'Right' },
+          ]}
+          onChange={(align) => set({ align })}
+        />
+      </Row>
+      <p className={styles.muted}>
+        Single-stroke Hershey lettering: each letter is drawn once with the pen. Move, resize or
+        turn it with ✥ Arrange.
+      </p>
+    </Section>
   );
 }

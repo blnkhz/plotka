@@ -18,6 +18,7 @@ const projectParts = (s: State) =>
     s.profileId,
     s.pipeline,
     s.plotSkip,
+    s.texts,
     s.doodle.strokes,
     s.doodle.settings,
     s.doodle.size,

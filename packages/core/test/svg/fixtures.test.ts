@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { importFile, svgImporter, supportedExtensions, TEXT_WARNING } from '../../src';
+import { importFile, layoutText, svgImporter, supportedExtensions, TEXT_WARNING } from '../../src';
 import { roundDoc } from '../helpers';
 import illustrator from '../fixtures/svg/illustrator.svg?raw';
 import inkscape from '../fixtures/svg/inkscape.svg?raw';
@@ -21,7 +21,7 @@ describe('importer registry (IMPORT-6)', () => {
 });
 
 describe('fixtures (IMPORT-1)', () => {
-  it('Illustrator: px are points, classes from CDATA style, text warning', async () => {
+  it('Illustrator: px are points, classes from CDATA style, text in a single-stroke font', async () => {
     const doc = await load(illustrator, 'illustrator.svg');
     expect(doc.source?.generator).toBe('illustrator');
     // A4 artboard: 595.28 x 841.89 pt
@@ -31,7 +31,9 @@ describe('fixtures (IMPORT-1)', () => {
     const layer = doc.layers[0]!;
     expect(layer.fills).toHaveLength(1); // the red circle
     expect(layer.fills[0]!.color).toBe('#e52421');
-    expect(layer.strokes).toHaveLength(3); // rect, wave, triangle
+    // Rect, wave, triangle, and "Title" in single-stroke sans (LATER-6).
+    const title = layoutText('Title', { font: 'sans', size: 1 }).lines.length;
+    expect(layer.strokes).toHaveLength(3 + title);
     expect(roundDoc(doc)).toMatchSnapshot();
   });
 

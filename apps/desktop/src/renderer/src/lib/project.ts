@@ -14,6 +14,8 @@ import {
   type PageSetup,
   type PassSettings,
   type PipelineStep,
+  type TextItem,
+  HERSHEY_FONTS,
 } from '@plotter-studio/core';
 
 /** Project files (PROJ-1). See docs/plans/epic-10-projects.md for the format. */
@@ -45,6 +47,8 @@ export type ProjectData = {
   } | null;
   plotSkip: Record<string, true>;
   view: { penWidth: number };
+  /** LATER-6: text typed in the app. */
+  texts: TextItem[];
 };
 
 export class ProjectError extends Error {
@@ -100,6 +104,7 @@ export function serializeProject(d: ProjectData, now = new Date()): string {
       doodle: d.doodle,
       plotSkip: d.plotSkip,
       view: d.view,
+      texts: d.texts,
     },
     null,
     1,
@@ -311,5 +316,35 @@ export function parseProject(text: string): ProjectData {
     doodle,
     plotSkip,
     view: mergeDefaults({ penWidth: 0.4 }, raw['view']),
+    texts: parseTexts(raw['texts']),
   };
+}
+
+const ALIGNS = ['left', 'center', 'right'] as const;
+
+/** Text blocks; anything damaged is dropped (an unknown style falls back to Sans). */
+function parseTexts(v: unknown): TextItem[] {
+  if (!Array.isArray(v)) return [];
+  const fonts = new Set<string>(HERSHEY_FONTS.map((f) => f.id));
+  const out: TextItem[] = [];
+  for (const t of v) {
+    if (!isObj(t) || typeof t['id'] !== 'string' || typeof t['text'] !== 'string') continue;
+    if (!/^[\w-]{1,40}$/.test(t['id']) || out.some((o) => o.id === t['id'])) continue;
+    const num = (k: string, d: number, min: number, max: number) =>
+      isNum(t[k]) ? Math.min(max, Math.max(min, t[k] as number)) : d;
+    out.push({
+      id: t['id'],
+      text: t['text'].slice(0, 10000),
+      font: typeof t['font'] === 'string' && fonts.has(t['font']) ? t['font'] : 'sans',
+      size: num('size', 10, 0.5, 1000),
+      lineSpacing: num('lineSpacing', 1, 0.1, 10),
+      letterSpacing: num('letterSpacing', 0, -100, 100),
+      align: ALIGNS.includes(t['align'] as (typeof ALIGNS)[number])
+        ? (t['align'] as TextItem['align'])
+        : 'left',
+      x: num('x', 0, -10000, 10000),
+      y: num('y', 0, -10000, 10000),
+    });
+  }
+  return out;
 }

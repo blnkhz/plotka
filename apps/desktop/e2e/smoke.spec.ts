@@ -155,7 +155,7 @@ test('passes: repeat a layer with slight shifts in several pen colors', async ()
 
   await page.getByRole('tab', { name: 'Plot' }).click();
   await expect(page.getByLabel('Layer 1 · pass 3')).toBeChecked();
-  for (let i = 0; i < 4; i++) await page.getByRole('button', { name: '+' }).click();
+  for (let i = 0; i < 4; i++) await page.getByRole('button', { name: 'Zoom in' }).click();
   if (shots) await page.screenshot({ path: join(shots, 'passes-zoom.png') });
   await app.close();
 });
@@ -1386,5 +1386,45 @@ test('more fills: triangles, hexagons, wave shapes, flow, ripples, stipple', asy
   await expect(page.getByRole('button', { name: 'Place in preview' })).toBeVisible();
   await settle();
   if (shots) await page.screenshot({ path: join(shots, 'fill-ripples.png') });
+  await app.close();
+});
+
+test('text: type it in a single-stroke font, style it, delete and undo (LATER-6)', async () => {
+  const app = await launch();
+  const page = await app.firstWindow();
+  await page.setViewportSize({ width: 1400, height: 900 });
+  await page.locator('#root > div').waitFor();
+  const draw = async () =>
+    Number(
+      (await page.getByText(/\d+ paths · draw/).textContent())!.match(/draw ([\d.]+) m?m/)![1],
+    );
+
+  // No file open: text still works.
+  await page.getByRole('button', { name: '+ Add text' }).click();
+  const text = page.getByLabel('Text', { exact: true });
+  await expect(text).toHaveValue('Text');
+  await expect(page.getByTitle('“Text”')).toBeVisible(); // its layer
+  await text.fill('Hello\nplotter');
+  await expect(page.getByTitle('“Hello”')).toBeVisible();
+  await expect(page.getByText(/\d+ paths · draw/)).toBeVisible();
+  const sans = await draw();
+  await page.getByLabel('Text style').selectOption({ label: 'Script' });
+  await expect.poll(draw).not.toBe(sans);
+  const size = page.getByRole('spinbutton', { name: 'Size', exact: true });
+  await size.fill('20');
+  await size.press('Enter');
+  await expect(page.getByText('Updating…')).toHaveCount(0);
+  if (shots) await page.screenshot({ path: join(shots, 'text.png') });
+
+  // ✕ deletes it; Undo brings it back.
+  await page.getByRole('button', { name: 'Remove “Hello”' }).click();
+  await expect(page.getByTitle('“Hello”')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Undo' }).click();
+  await expect(page.getByTitle('“Hello”')).toBeVisible();
+
+  // Dropping in new artwork starts a new project: the text stays with the old one.
+  await dropFile(page, 'motif.svg');
+  await expect(page.getByTitle('Layer 1', { exact: true })).toBeVisible();
+  await expect(page.getByTitle('“Hello”')).toHaveCount(0);
   await app.close();
 });

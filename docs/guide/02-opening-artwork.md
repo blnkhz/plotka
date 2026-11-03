@@ -18,8 +18,9 @@ can't see the difference.
 - **Filled shapes that won't be drawn** (no fill type and no outlines) show faintly in the
   preview with a dashed edge, and a message offers **Fill them** (with your default fill) or
   **Draw their outlines**. **Leave them** hides the message for that file.
-- **Text** can't be plotted directly. Convert text to outlines (paths) in your design app first.
-  The app warns you when a file contains text.
+- **Text** is drawn in a single-stroke font (the closest of the app's styles), not its own
+  typeface, and a note says so. To keep the typeface, convert the text to outlines (paths) in
+  your design app first. See [Text](07-text.md).
 - **Images** (photos, bitmaps) are ignored.
 - **Size**: the file's own size is kept (mm, inches, points or pixels). Illustrator's pixels are
   read as points, so its artboards come in at exactly the right size.

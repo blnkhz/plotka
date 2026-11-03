@@ -136,6 +136,29 @@ export type Layer = {
   settings: LayerSettings;
   /** Set on layers made by the passes step: which layer and pass they came from. */
   passOf?: { layerId: string; index: number; count: number };
+  /**
+   * LATER-6: a text layer, typed in the app. Its strokes are already on the paper (mm): the
+   * page fit and transforms leave it alone, and it doesn't count toward the artwork's size.
+   */
+  text?: TextItem;
+};
+
+/** A block of single-stroke text on the paper. */
+export type TextItem = {
+  id: string;
+  text: string;
+  /** A Hershey style: 'sans', 'sansBold', 'serif', 'serifItalic', 'script', 'gothic'. */
+  font: string;
+  /** Height of capital letters, mm. */
+  size: number;
+  /** Multiple of the normal line height. */
+  lineSpacing: number;
+  /** Extra mm between letters. */
+  letterSpacing: number;
+  align: 'left' | 'center' | 'right';
+  /** Where the text block's top-left corner sits on the paper, mm. */
+  x: number;
+  y: number;
 };
 
 export type Bounds = { minX: number; minY: number; maxX: number; maxY: number };

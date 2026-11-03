@@ -234,9 +234,46 @@ describe('importSvg: styles, visibility and warnings', () => {
     const strokes = importSvg(s).layers[0]!.strokes.map(roundLine);
     expect(strokes.map((l) => l.points[1])).toEqual([[3, 3]]);
   });
-  it('warns once about text', () => {
+  it('draws text in a single-stroke font, with one note about the typeface', () => {
     const doc = importSvg(svg('<text>Hi</text><text>There</text>'));
     expect(doc.warnings).toEqual([TEXT_WARNING]);
+    expect(doc.layers[0]!.strokes.length).toBeGreaterThan(5);
+  });
+  it('text: baseline at y, capitals 70% of the font size, anchored, in the file units', () => {
+    const box = (body: string) => {
+      const p = importSvg(svg(body)).layers[0]!.strokes.flatMap((l) => l.points);
+      const r = (n: number) => Math.round(n * 100) / 100;
+      return {
+        minX: r(Math.min(...p.map((q) => q.x))),
+        maxX: r(Math.max(...p.map((q) => q.x))),
+        minY: r(Math.min(...p.map((q) => q.y))),
+        maxY: r(Math.max(...p.map((q) => q.y))),
+      };
+    };
+    const h = box('<text x="10" y="50" font-size="20">H</text>');
+    expect(h.maxY).toBe(50);
+    expect(h.minY).toBe(36); // 50 − 0.7 × 20
+    expect(h.minX).toBeGreaterThanOrEqual(10);
+    const mid = box('<text x="50" y="50" font-size="20" text-anchor="middle">H</text>');
+    expect((mid.minX + mid.maxX) / 2).toBeCloseTo(50, 0);
+    const end = box('<text x="50" y="50" font-size="20" text-anchor="end">H</text>');
+    expect(end.maxX).toBeLessThanOrEqual(50);
+    // tspans with their own y are separate lines.
+    const two = box(
+      '<text x="10" y="20" font-size="10"><tspan x="10" y="20">A</tspan><tspan x="10" y="40">B</tspan></text>',
+    );
+    expect(two.minY).toBe(13);
+    expect(two.maxY).toBe(40);
+  });
+  it('text picks the closest style, and skips hidden or unpainted text', () => {
+    const strokes = (attrs: string) =>
+      importSvg(svg(`<text x="0" y="20" ${attrs}>Ag</text>`)).layers[0]?.strokes ?? [];
+    const sans = strokes('');
+    expect(strokes('font-family="Times New Roman, serif"')).not.toEqual(sans);
+    expect(strokes('font-family="Helvetica" font-weight="bold"')).not.toEqual(sans);
+    expect(strokes('font-family="Arial"')).toEqual(sans);
+    expect(strokes('visibility="hidden"')).toHaveLength(0);
+    expect(strokes('fill="none"')).toHaveLength(0);
   });
   it('stylesheet classes, ids and inline style cascade', () => {
     const s = svg(

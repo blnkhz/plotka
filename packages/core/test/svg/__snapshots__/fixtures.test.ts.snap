@@ -488,7 +488,7 @@ exports[`fixtures (IMPORT-1) > Figma: px size at 96 dpi, clip-path warning, whit
 }
 `;
 
-exports[`fixtures (IMPORT-1) > Illustrator: px are points, classes from CDATA style, text warning 1`] = `
+exports[`fixtures (IMPORT-1) > Illustrator: px are points, classes from CDATA style, text in a single-stroke font 1`] = `
 {
   "height": 297,
   "layers": [
@@ -1049,6 +1049,194 @@ exports[`fixtures (IMPORT-1) > Illustrator: px are points, classes from CDATA st
             ],
           ],
         },
+        {
+          "closed": false,
+          "points": [
+            [
+              37.536,
+              276.296,
+            ],
+            [
+              37.536,
+              282.222,
+            ],
+          ],
+        },
+        {
+          "closed": false,
+          "points": [
+            [
+              35.56,
+              276.296,
+            ],
+            [
+              39.511,
+              276.296,
+            ],
+          ],
+        },
+        {
+          "closed": false,
+          "points": [
+            [
+              40.64,
+              276.296,
+            ],
+            [
+              40.922,
+              276.578,
+            ],
+            [
+              41.204,
+              276.296,
+            ],
+            [
+              40.922,
+              276.013,
+            ],
+            [
+              40.64,
+              276.296,
+            ],
+          ],
+        },
+        {
+          "closed": false,
+          "points": [
+            [
+              40.922,
+              278.271,
+            ],
+            [
+              40.922,
+              282.222,
+            ],
+          ],
+        },
+        {
+          "closed": false,
+          "points": [
+            [
+              43.462,
+              276.296,
+            ],
+            [
+              43.462,
+              281.093,
+            ],
+            [
+              43.744,
+              281.94,
+            ],
+            [
+              44.309,
+              282.222,
+            ],
+            [
+              44.873,
+              282.222,
+            ],
+          ],
+        },
+        {
+          "closed": false,
+          "points": [
+            [
+              42.616,
+              278.271,
+            ],
+            [
+              44.591,
+              278.271,
+            ],
+          ],
+        },
+        {
+          "closed": false,
+          "points": [
+            [
+              46.567,
+              276.296,
+            ],
+            [
+              46.567,
+              282.222,
+            ],
+          ],
+        },
+        {
+          "closed": false,
+          "points": [
+            [
+              48.542,
+              279.964,
+            ],
+            [
+              51.929,
+              279.964,
+            ],
+            [
+              51.929,
+              279.4,
+            ],
+            [
+              51.647,
+              278.836,
+            ],
+            [
+              51.364,
+              278.553,
+            ],
+            [
+              50.8,
+              278.271,
+            ],
+            [
+              49.953,
+              278.271,
+            ],
+            [
+              49.389,
+              278.553,
+            ],
+            [
+              48.824,
+              279.118,
+            ],
+            [
+              48.542,
+              279.964,
+            ],
+            [
+              48.542,
+              280.529,
+            ],
+            [
+              48.824,
+              281.376,
+            ],
+            [
+              49.389,
+              281.94,
+            ],
+            [
+              49.953,
+              282.222,
+            ],
+            [
+              50.8,
+              282.222,
+            ],
+            [
+              51.364,
+              281.94,
+            ],
+            [
+              51.929,
+              281.376,
+            ],
+          ],
+        },
       ],
     },
   ],
@@ -1058,7 +1246,7 @@ exports[`fixtures (IMPORT-1) > Illustrator: px are points, classes from CDATA st
     "importer": "svg",
   },
   "warnings": [
-    "Text isn't supported, convert to paths first",
+    "Text is drawn in a single-stroke font, not its own typeface. To keep the typeface, convert the text to paths before saving.",
   ],
   "width": 210.002,
 }

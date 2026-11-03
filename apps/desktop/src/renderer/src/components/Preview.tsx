@@ -504,13 +504,13 @@ export function Preview() {
       <PlaybackBar />
       <ViewToggles />
       <div className={styles.zoom}>
-        <button onClick={() => zoomButton(1 / 1.25)} title="Zoom out">
+        <button onClick={() => zoomButton(1 / 1.25)} title="Zoom out" aria-label="Zoom out">
           −
         </button>
         <button onClick={fit} title="Fit (F)">
           Fit
         </button>
-        <button onClick={() => zoomButton(1.25)} title="Zoom in">
+        <button onClick={() => zoomButton(1.25)} title="Zoom in" aria-label="Zoom in">
           +
         </button>
       </div>

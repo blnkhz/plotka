@@ -61,6 +61,15 @@ export function applyTransformsWithGuide(
   doc: PlotDocument,
   steps: readonly PipelineStep[],
 ): { doc: PlotDocument; guide: StepGuide | null } {
+  // Text layers are already on the paper: transforms work on the artwork only.
+  const texts = doc.layers.filter((l) => l.text);
+  if (texts.length) {
+    const r = applyTransformsWithGuide(
+      { ...doc, layers: doc.layers.filter((l) => !l.text) },
+      steps,
+    );
+    return { ...r, doc: { ...r.doc, layers: [...r.doc.layers, ...texts] } };
+  }
   let out = doc;
   let guide: StepGuide | null = null;
   for (const step of steps) {

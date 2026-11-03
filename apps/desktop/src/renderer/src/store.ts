@@ -7,7 +7,11 @@ import {
   defaultPageSetup,
   doodleToSvg,
   importFile,
+  marginBox,
+  paperSize,
+  withTexts,
   type DoodleSettings,
+  type TextItem,
   type FillSettings,
   type DoodleStroke,
   type ParamValues,
@@ -50,8 +54,9 @@ export type Tab = 'page' | 'fill' | 'machine' | 'plot';
 type Source = { name: string; path?: string; bytes: Uint8Array };
 
 /** Same artwork file (a reload or re-import), as opposed to a different file being opened. */
+/** Same artwork file (or both none, e.g. only typed text). */
 export const sameArtwork = (a: Source | null, b: Source | null) =>
-  !!a && !!b && a.name === b.name && a.path === b.path;
+  (!a && !b) || (!!a && !!b && a.name === b.name && a.path === b.path);
 
 export type DoodleState = {
   open: boolean;
@@ -78,6 +83,12 @@ type State = {
   selectedLayerId: string | null;
   /** The transform step being adjusted by dragging in the preview, if any. */
   adjustStepId: string | null;
+  /** LATER-6: text typed in the app, each shown as a layer of `doc` (id `text-<id>`). */
+  texts: TextItem[];
+  /** Adds a text block (on the paper's top-left margin) and selects it. Returns its id. */
+  addText(): string;
+  updateText(id: string, patch: Partial<TextItem>): void;
+  removeText(id: string): void;
   /** The layer whose spiral fill center is being placed in the preview, if any. */
   adjustSpiralId: string | null;
   /**
@@ -279,6 +290,18 @@ function loadPenHeights(): { up: number; down: number } {
 /** The doodle as an SVG, with the current settings. */
 export const doodleSvg = (d: DoodleState) => doodleToSvg(d.strokes, d.settings, d.size);
 
+/** The drawing with its text layers; with no file open, an empty paper-sized one. */
+export function docWithTexts(
+  doc: PlotDocument | null,
+  texts: TextItem[],
+  page: PageSetup,
+): PlotDocument | null {
+  if (doc) return withTexts(doc, texts);
+  if (!texts.length) return null;
+  const { width, height } = paperSize(page);
+  return withTexts({ width, height, layers: [], warnings: [] }, texts);
+}
+
 export const useStore = create<State>()((set, get) => ({
   source: null,
   layerMode: 'auto',
@@ -290,6 +313,44 @@ export const useStore = create<State>()((set, get) => ({
   selectedLayerId: null,
   adjustStepId: null,
   adjustSpiralId: null,
+  texts: [],
+  addText() {
+    const s = get();
+    const m = marginBox(s.page);
+    const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+    const item: TextItem = {
+      id,
+      text: 'Text',
+      font: 'sans',
+      size: 10,
+      lineSpacing: 1,
+      letterSpacing: 0,
+      align: 'left',
+      x: m.x,
+      y: m.y,
+    };
+    const texts = [...s.texts, item];
+    set({ texts, doc: docWithTexts(s.doc, texts, s.page), selectedLayerId: `text-${id}` });
+    return id;
+  },
+  updateText(id, patch) {
+    set((s) => {
+      const texts = s.texts.map((t) => (t.id === id ? { ...t, ...patch } : t));
+      return { texts, doc: docWithTexts(s.doc, texts, s.page) };
+    });
+  },
+  removeText(id) {
+    set((s) => {
+      const texts = s.texts.filter((t) => t.id !== id);
+      const doc = docWithTexts(s.doc, texts, s.page);
+      const gone = s.selectedLayerId === `text-${id}`;
+      return {
+        texts,
+        doc: doc && (doc.layers.length || s.source) ? doc : null,
+        selectedLayerId: gone ? (doc?.layers[0]?.id ?? null) : s.selectedLayerId,
+      };
+    });
+  },
   arrange: { on: false, target: null },
   page: defaultPageSetup(),
   optimize: defaultOptimizeSettings(),
@@ -377,14 +438,22 @@ export const useStore = create<State>()((set, get) => ({
   async openFile(source) {
     set({ loading: true, error: null });
     try {
-      const doc = await importFile(source.bytes, source.name, {
+      const imported = await importFile(source.bytes, source.name, {
         layerMode: get().layerMode,
         defaultFill: get().defaultFill,
       });
       set((s) => {
-        // Re-importing the same file (a layer mode switch) brings back that mode's edits.
+        const doc = withTexts(imported, s.texts);
+        // Re-importing the same file (a layer mode switch) brings back that mode's edits. Text
+        // layers are the same in every mode, so their edits stay.
         const same = s.source === source;
-        const layerOverrides = (same && s.overridesByMode[s.layerMode]) || {};
+        const textEdits = Object.fromEntries(
+          Object.entries(s.layerOverrides).filter(([id]) => id.startsWith('text-')),
+        );
+        const layerOverrides = {
+          ...((same && s.overridesByMode[s.layerMode]) || {}),
+          ...textEdits,
+        };
         return {
           source,
           doc,
@@ -405,10 +474,11 @@ export const useStore = create<State>()((set, get) => ({
     const { source, layerMode } = get();
     if (!source) return;
     try {
-      const doc = await importFile(bytes, source.name, {
+      const imported = await importFile(bytes, source.name, {
         layerMode,
         defaultFill: get().defaultFill,
       });
+      const doc = withTexts(imported, get().texts);
       set((s) => ({
         source: { ...source, bytes },
         doc,

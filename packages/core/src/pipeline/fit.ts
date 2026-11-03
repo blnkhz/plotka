@@ -8,7 +8,7 @@ import {
   translate,
   type Matrix,
 } from '../geometry/matrix';
-import { transformDocument, transformLayer } from '../geometry/transform-doc';
+import { transformLayer } from '../geometry/transform-doc';
 import type { Bounds, Layer, LayerPlacement, PlotDocument } from '../model';
 import { marginBox, paperSize, type Alignment, type PageSetup, type Rect } from '../page/paper';
 
@@ -129,8 +129,15 @@ export type PagePlacement = {
  * overflow outside the margins is cropped after that.
  */
 export function placeOnPage(doc: PlotDocument, page: PageSetup): PagePlacement {
-  const matrix = fitMatrix(doc, page);
-  const fitted = transformDocument(doc, matrix);
+  // Text layers are already on the paper: the fit places (and is sized by) the artwork only.
+  const art = doc.layers.some((l) => l.text)
+    ? { ...doc, layers: doc.layers.filter((l) => !l.text) }
+    : doc;
+  const matrix = fitMatrix(art, page);
+  const fitted = {
+    ...doc,
+    layers: doc.layers.map((l) => (l.text ? l : transformLayer(l, matrix))),
+  };
   const bounds: Record<string, Bounds> = {};
   const layers = fitted.layers.map((l) => {
     const b = layerBounds(l);

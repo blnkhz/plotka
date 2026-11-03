@@ -1,6 +1,14 @@
 import { append } from '../util/array';
 import { defaultFillSettings } from '../fills/apply';
-import { IDENTITY, multiply, scaleMatrix, translate, type Matrix } from '../geometry/matrix';
+import {
+  applyToPoint,
+  IDENTITY,
+  multiply,
+  scaleMatrix,
+  translate,
+  type Matrix,
+} from '../geometry/matrix';
+import { layoutText, type HersheyFont } from '../text/text';
 import {
   createLayer,
   type FillRegion,
@@ -23,6 +31,12 @@ type Style = {
   fillRule: 'nonzero' | 'evenodd';
   visibility: string;
   color: string;
+  /** In user units. */
+  fontSize: number;
+  fontFamily: string;
+  fontWeight: string;
+  fontStyle: string;
+  textAnchor: string;
 };
 
 const ROOT_STYLE: Style = {
@@ -31,6 +45,11 @@ const ROOT_STYLE: Style = {
   fillRule: 'nonzero',
   visibility: 'visible',
   color: 'black',
+  fontSize: 16,
+  fontFamily: 'sans-serif',
+  fontWeight: 'normal',
+  fontStyle: 'normal',
+  textAnchor: 'start',
 };
 
 const SKIP = new Set([
@@ -64,7 +83,8 @@ type Item = { strokes: Polyline[]; outline: Polyline[]; fill: FillRegion | null;
 
 type Bucket = { key: string; name: string; items: Item[] };
 
-export const TEXT_WARNING = "Text isn't supported, convert to paths first";
+export const TEXT_WARNING =
+  'Text is drawn in a single-stroke font, not its own typeface. To keep the typeface, convert the text to paths before saving.';
 
 export function importSvg(source: string, opts: ImportOptions = {}): PlotDocument {
   let root: XmlElement;
@@ -133,9 +153,20 @@ export function importSvg(source: string, opts: ImportOptions = {}): PlotDocumen
       warnings.add("Masks aren't supported and are ignored");
 
     switch (name) {
-      case 'text':
+      case 'text': {
+        // LATER-6: drawn in the closest single-stroke Hershey style.
+        const color =
+          resolvePaint(style.fill, style.color) ?? resolvePaint(style.stroke, style.color);
+        if (!color) return;
+        const lines = textLines(el, style, m, rules);
+        if (!lines.length) return;
         if (style.visibility === 'visible') warnings.add(TEXT_WARNING);
+        const item: Item = { strokes: lines, outline: [], fill: null, colorKey: color };
+        if (layerKey !== null) bucket(layerKey, '').items.push(item);
+        else if (opts.layerMode === 'byColor') bucket(`color:${color}`, color).items.push(item);
+        else bucket(UNLAYERED, hasSourceLayers ? 'Other' : 'Layer 1').items.push(item);
         return;
+      }
       case 'image':
         warnings.add('Images are ignored');
         return;
@@ -323,6 +354,11 @@ const STYLE_PROPS = [
   'color',
   'clip-path',
   'mask',
+  'font-size',
+  'font-family',
+  'font-weight',
+  'font-style',
+  'text-anchor',
 ];
 
 /** Presentation attributes < stylesheet rules < inline style. */
@@ -352,6 +388,11 @@ function inheritStyle(parent: Style, d: Record<string, string>): Style {
     fillRule: fr === 'evenodd' ? 'evenodd' : 'nonzero',
     visibility: pick('visibility', parent.visibility),
     color: pick('color', parent.color),
+    fontSize: fontSize(d['font-size'], parent.fontSize),
+    fontFamily: pick('font-family', parent.fontFamily),
+    fontWeight: pick('font-weight', parent.fontWeight),
+    fontStyle: pick('font-style', parent.fontStyle),
+    textAnchor: pick('text-anchor', parent.textAnchor),
   };
 }
 
@@ -503,4 +544,92 @@ function detectGenerator(root: XmlElement, comments: string[]): string | undefin
   if (root.attrs['xmlns:serif'] || comments.some((c) => /Affinity/i.test(c))) return 'affinity';
   if (comments.some((c) => /Figma/i.test(c))) return 'figma';
   return undefined;
+}
+
+// --- text (LATER-6) ---
+
+/** A font-size in user units (px), relative ones against the parent's. */
+function fontSize(v: string | undefined, parent: number): number {
+  if (!v || v === 'inherit') return parent;
+  const m = /^\s*([\d.]+)\s*(px|pt|mm|cm|in|em|%)?\s*$/.exec(v);
+  if (!m) {
+    const named: Record<string, number> = { smaller: parent / 1.2, larger: parent * 1.2 };
+    return named[v.trim()] ?? parent;
+  }
+  const n = parseFloat(m[1]!);
+  const unit: Record<string, number> = {
+    px: 1,
+    pt: 96 / 72,
+    mm: 96 / 25.4,
+    cm: 96 / 2.54,
+    in: 96,
+    em: parent,
+    '%': parent / 100,
+  };
+  return n * (unit[m[2] ?? 'px'] ?? 1);
+}
+
+/** The closest of the single-stroke styles to a CSS font. */
+function hersheyFor(s: Style): HersheyFont {
+  const f = s.fontFamily.toLowerCase();
+  const bold =
+    s.fontWeight === 'bold' || s.fontWeight === 'bolder' || parseInt(s.fontWeight) >= 600;
+  const italic = s.fontStyle === 'italic' || s.fontStyle === 'oblique';
+  if (/script|cursive|hand|brush|comic/.test(f)) return 'script';
+  if (/gothic|fraktur|blackletter|old english/.test(f)) return 'gothic';
+  if (/serif|times|georgia|garamond|roman|book/.test(f) && !/sans/.test(f))
+    return italic ? 'serifItalic' : 'serif';
+  return bold ? 'sansBold' : 'sans';
+}
+
+/** Capital letters are about this share of the font size in most typefaces. */
+const CAP_RATIO = 0.7;
+
+/**
+ * A <text> element's strokes: its text and <tspan>s, placed by x / y (absolute) and dx / dy,
+ * each run anchored by text-anchor, in the file's coordinates through `m`.
+ */
+function textLines(el: XmlElement, style: Style, m: Matrix, rules: CssRule[]): Polyline[] {
+  const out: Polyline[] = [];
+  const first = (v: string | undefined) => {
+    const n = parseFloat((v ?? '').trim().split(/[\s,]+/)[0] ?? '');
+    return Number.isFinite(n) ? n : null;
+  };
+  const cursor = { x: first(el.attrs['x']) ?? 0, y: first(el.attrs['y']) ?? 0 };
+  const visit = (node: XmlElement, s: Style) => {
+    for (const c of node.children) {
+      if (!isElement(c)) {
+        const text = c.text.replace(/\s+/g, ' ');
+        if (!text.trim() || s.visibility !== 'visible') continue;
+        const size = s.fontSize * CAP_RATIO;
+        const t = layoutText(text, { font: hersheyFor(s), size });
+        const shift =
+          s.textAnchor === 'middle' ? t.width / 2 : s.textAnchor === 'end' ? t.width : 0;
+        // Layout's y = 0 is the capitals' top; SVG's y is the baseline.
+        const x0 = cursor.x - shift;
+        const y0 = cursor.y - size;
+        for (const l of t.lines)
+          out.push({
+            points: l.points.map((p) => applyToPoint(m, x0 + p.x, y0 + p.y)),
+            closed: false,
+          });
+        cursor.x += t.width - shift;
+        continue;
+      }
+      if (localName(c.name) !== 'tspan') continue;
+      const cs = inheritStyle(s, computeDecls(c, rules));
+      if (cs.visibility === 'hidden' && !c.children.length) continue;
+      const x = first(c.attrs['x']);
+      const y = first(c.attrs['y']);
+      if (x !== null) cursor.x = x;
+      if (y !== null) cursor.y = y;
+      cursor.x += first(c.attrs['dx']) ?? 0;
+      cursor.y += first(c.attrs['dy']) ?? 0;
+      visit(c, cs);
+    }
+  };
+  cursor.x += first(el.attrs['dx']) ?? 0;
+  cursor.y += first(el.attrs['dy']) ?? 0;
+  visit(el, style);
+  return out;
 }

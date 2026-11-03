@@ -1,5 +1,5 @@
 import { DEFAULT_PROFILE_ID } from '@plotter-studio/plotter';
-import { knownProfile, sameArtwork, useStore } from '../store';
+import { docWithTexts, knownProfile, sameArtwork, useStore } from '../store';
 
 type State = ReturnType<typeof useStore.getState>;
 import {
@@ -46,6 +46,7 @@ export function currentProject(): ProjectData {
       : null,
     plotSkip: s.plotSkip,
     view: { penWidth: s.view.penWidth },
+    texts: s.texts,
   };
 }
 
@@ -56,7 +57,14 @@ const baseName = (file: string) => file.replace(/^.*[\\/]/, '').replace(/\.[^.]+
 /** The settings undo covers. Doodle strokes have their own undo in the pad. */
 type Snapshot = Pick<
   State,
-  'layerMode' | 'layerOverrides' | 'page' | 'optimize' | 'pipeline' | 'plotSkip' | 'profileId'
+  | 'layerMode'
+  | 'layerOverrides'
+  | 'page'
+  | 'optimize'
+  | 'pipeline'
+  | 'plotSkip'
+  | 'profileId'
+  | 'texts'
 > & { penWidth: number };
 
 const MAX_HISTORY = 200;
@@ -76,6 +84,7 @@ const snapshot = (s: State): Snapshot => ({
   plotSkip: s.plotSkip,
   profileId: s.profileId,
   penWidth: s.view.penWidth,
+  texts: s.texts,
 });
 
 /** Which settings changed, as a key (empty if none). */
@@ -87,6 +96,8 @@ function changedKey(s: State, p: State): string {
   if (s.optimize !== p.optimize) keys.push('optimize');
   if (s.pipeline !== p.pipeline) keys.push('pipeline');
   if (s.plotSkip !== p.plotSkip) keys.push('plotSkip');
+  // Adding or deleting text is a step of its own, never merged with typing in it.
+  if (s.texts !== p.texts) keys.push(s.texts.length !== p.texts.length ? 'textList' : 'texts');
   if (s.profileId !== p.profileId) keys.push('profile');
   if (s.view.penWidth !== p.view.penWidth) keys.push('penWidth');
   return keys.join(',');
@@ -149,6 +160,8 @@ async function restore(target: Snapshot) {
       plotSkip: target.plotSkip,
       profileId: target.profileId,
       view: { ...cur.view, penWidth: target.penWidth },
+      texts: target.texts,
+      doc: docWithTexts(cur.doc, target.texts, target.page),
       dirty: true,
     }));
   });
@@ -173,7 +186,11 @@ export async function redo() {
 /** Opens artwork (an SVG) as a new, untitled project. */
 export async function openArtwork(source: Source, { forget }: { forget: boolean }) {
   if (forget) await window.api.invoke('project:forget');
-  await quietly(() => useStore.getState().openFile(source));
+  await quietly(async () => {
+    // New artwork is a new project: no text from the last one.
+    useStore.setState({ texts: [] });
+    await useStore.getState().openFile(source);
+  });
   if (!useStore.getState().error) {
     useStore.setState({ projectName: baseName(source.name) || 'Untitled', dirty: false });
     resetHistory();
@@ -209,10 +226,15 @@ export async function openProject(
         ...(d.doodle ?? { strokes: [] }),
       },
       view: { ...s.view, penWidth: d.view.penWidth },
+      texts: d.texts,
       error: null,
     });
     if (d.source) await useStore.getState().openFile(d.source);
-    else useStore.setState({ source: null, doc: null, selectedLayerId: null });
+    else {
+      // Text only (or nothing): an empty paper with the text layers.
+      const doc = docWithTexts(null, d.texts, d.page);
+      useStore.setState({ source: null, doc, selectedLayerId: doc?.layers[0]?.id ?? null });
+    }
     // openFile resets these, so they go last.
     useStore.setState({ layerOverrides: d.layerOverrides, plotSkip: d.plotSkip });
   });
@@ -249,7 +271,8 @@ export function trackProject(): () => void {
       // Undo history. New artwork (a doodle, a dropped file) starts over; the layer changes
       // that come with any import (e.g. after a layer mode change) aren't steps of their own.
       if (!sameArtwork(s.source, p.source)) resetHistory();
-      else if (s.doc === p.doc) {
+      // Text edits change the drawing too (its text layers), but they're the user's own steps.
+      else if (s.doc === p.doc || s.texts !== p.texts) {
         const key = changedKey(s, p);
         if (key && gesture) {
           if (!gesture.recorded) record(gesture.before, 'gesture');
@@ -270,6 +293,7 @@ export function trackProject(): () => void {
         s.doodle.settings !== p.doodle.settings ||
         s.doodle.size !== p.doodle.size ||
         s.plotSkip !== p.plotSkip ||
+        s.texts !== p.texts ||
         s.view.penWidth !== p.view.penWidth;
       if (changed) useStore.setState({ dirty: true });
     }

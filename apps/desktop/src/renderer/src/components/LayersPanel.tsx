@@ -12,10 +12,24 @@ export function LayersPanel() {
   const layerMode = useStore((s) => s.layerMode);
   const setLayerMode = useStore((s) => s.setLayerMode);
 
+  const addText = () => {
+    useStore.getState().addText();
+    useStore.getState().setTab('fill');
+  };
+  const addTextButton = (
+    <button
+      className={styles.addText}
+      onClick={addText}
+      title="Type text to plot in a single-stroke font"
+    >
+      + Add text
+    </button>
+  );
   if (!doc) {
     return (
       <Section title="Layers" help="opening-artwork#layers">
         <p className={styles.muted}>No file open.</p>
+        {addTextButton}
       </Section>
     );
   }
@@ -84,7 +98,9 @@ export function LayersPanel() {
               aria-label={`Remove ${l.name}`}
               onClick={(e) => {
                 e.stopPropagation();
-                setLayer(l.id, { removed: true });
+                // Text is deleted (Undo brings it back); other layers are hidden away.
+                if (l.text) useStore.getState().removeText(l.text.id);
+                else setLayer(l.id, { removed: true });
                 if (selected === l.id) selectLayer(layers.find((x) => x.id !== l.id)?.id ?? null);
               }}
             >
@@ -111,6 +127,7 @@ export function LayersPanel() {
           </button>
         </p>
       )}
+      {addTextButton}
     </Section>
   );
 }

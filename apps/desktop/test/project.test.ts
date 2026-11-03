@@ -61,6 +61,19 @@ const sample = (): ProjectData => ({
   },
   plotSkip: { 'layer-1~2': true },
   view: { penWidth: 0.3 },
+  texts: [
+    {
+      id: 'note1',
+      text: 'Hello\nworld',
+      font: 'script',
+      size: 8,
+      lineSpacing: 1.2,
+      letterSpacing: 0.5,
+      align: 'center',
+      x: 20,
+      y: 250,
+    },
+  ],
 });
 
 describe('project files (PROJ-1)', () => {
@@ -153,6 +166,30 @@ describe('project files (PROJ-1)', () => {
     const fixed = parseProject(JSON.stringify(raw)).layerOverrides['layer-1']?.settings?.placement;
     expect(fixed!.sx).toBeGreaterThan(0);
     expect(fixed!.sy).toBeGreaterThan(0);
+  });
+
+  it('keeps text, and cleans up damaged text', () => {
+    expect(parseProject(serializeProject(sample())).texts).toEqual(sample().texts);
+    const raw = JSON.parse(serializeProject(sample()));
+    raw.texts = [
+      { id: 'a', text: 'ok', font: 'nope', size: -5, align: 'sideways', x: 'x' },
+      { id: 'a', text: 'duplicate id' },
+      { id: '../bad', text: 'bad id' },
+      'not text',
+    ];
+    expect(parseProject(JSON.stringify(raw)).texts).toEqual([
+      {
+        id: 'a',
+        text: 'ok',
+        font: 'sans',
+        size: 0.5,
+        lineSpacing: 1,
+        letterSpacing: 0,
+        align: 'left',
+        x: 0,
+        y: 0,
+      },
+    ]);
   });
 
   it('reads the old Zigzag fill as Lines with the pen kept down', () => {

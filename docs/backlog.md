@@ -6,8 +6,9 @@ building. Each item gets a plan in `docs/plans/` when it's picked up.
 ## Remaining spec stories (P2 and later)
 
 - PROJ-3 pen library (name, color, tip width, preferred speed, pen heights)
-- LATER-1 to LATER-8: multi-pen plotting with pen-swap prompts, split by color, registration
-  marks, single-stroke text, more import formats, a browser version, signed builds
+- LATER-1 to LATER-8 (LATER-6 single-stroke text is done): multi-pen plotting with pen-swap
+  prompts, split by color, registration marks, more import formats, a browser version, signed
+  builds
 
 ## Needs a decision
 

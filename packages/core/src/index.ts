@@ -28,3 +28,4 @@ export * from './doodle/fit';
 export * from './optimize/clean';
 export * from './pipeline/resume';
 export * from './export/export';
+export * from './text/text';

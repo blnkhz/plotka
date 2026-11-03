@@ -15,6 +15,7 @@ extension needed.
 - Open SVGs from Illustrator, Inkscape, Figma, Affinity Designer and code, or draw a doodle and
   turn it into clean curves or straight lines
 - Paper presets, margins, fit and alignment
+- Text in single-stroke Hershey fonts (six styles), typed in the app or from SVG text
 - Fills: lines (or a zigzag), crosshatch, triangles, hexagons, waves (smooth, zigzag, square),
   noise, flow, concentric, spiral, ripples, dots and stipple, with spacing from the fill color;
   shapes on top hide the ones underneath, like in the file

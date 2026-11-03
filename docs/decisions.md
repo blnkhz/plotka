@@ -11,3 +11,4 @@
 | 2026-11-02 | Kaleidoscope: cuts a wedge by default (squeeze is an option); adjustable by dragging.         |
 | 2026-11-02 | Only the AxiDraw V3/A3 is tested; other machines are community-tested through PRs.            |
 | 2026-11-02 | macOS only for now: no Windows or Linux builds.                                               |
+| 2026-11-02 | Text uses the Hershey fonts (Usenet distribution, credited); SVG text is drawn with them.     |
