@@ -7,6 +7,7 @@ import { isProjectPath, project, projectName, updateWindow } from './project';
 import { listPorts } from './serial';
 import { checkRecovery, clearRecovery, readRecovery, writeRecovery } from './autosave';
 import { addRecent } from './recent';
+import { deletePlotLog, plotLogEntries, plotLogProject, setPlotLogNote } from './plotLog';
 import { allowWatch, allowWatchFromProject, startWatch, stopWatch } from './watch';
 import { existsSync } from 'node:fs';
 
@@ -33,6 +34,10 @@ export function registerIpcHandlers(
   handle('plot:start', (_e, req) => plotter.start(req));
   handle('plot:dryRun', (_e, profile, bounds) => plotter.dryRun(profile, bounds));
   handle('plot:control', (_e, action) => plotter.control(action));
+  handle('plotLog:list', () => plotLogEntries());
+  handle('plotLog:project', (_e, id) => plotLogProject(id));
+  handle('plotLog:note', (_e, id, note) => setPlotLogNote(id, note));
+  handle('plotLog:delete', (_e, id) => deletePlotLog(id));
 
   handle('app:getInfo', () => ({
     version: app.getVersion(),

@@ -988,3 +988,48 @@ test('fractal: presets and per-copy settings (GEN-3)', async () => {
   if (shots) await page.screenshot({ path: join(shots, 'fractal-spiral.png') });
   await app.close();
 });
+
+test('plot log: a finished plot is logged with a note, and opens with its settings (PLOT-7)', async () => {
+  test.setTimeout(90000);
+  const app = await launch({ PLOTTER_SIM_SPEED: '8' });
+  const page = await app.firstWindow();
+  await page.setViewportSize({ width: 1400, height: 900 });
+  await dropFile(page, 'motif.svg');
+  await page.getByRole('tab', { name: 'Plot' }).click();
+  await expect(page.getByText('Plots you make are listed here', { exact: false })).toBeVisible();
+  await page.getByRole('tab', { name: 'Machine' }).click();
+  await page.getByLabel('Port').selectOption('simulated');
+  await page.getByRole('button', { name: 'Connect' }).click();
+  await page.getByRole('tab', { name: 'Plot' }).click();
+  await page.getByRole('button', { name: 'Start plot' }).click();
+  await expect(page.getByText('In progress', { exact: true })).toBeVisible();
+  await expect(page.getByText('Finished', { exact: true })).toBeVisible({ timeout: 60000 });
+
+  const note = page.getByPlaceholder('Add a note (pen, paper…)');
+  await note.fill('0.3 fineliner, Bristol');
+  await note.press('Enter');
+  await expect(note).toHaveValue('0.3 fineliner, Bristol');
+  if (shots) await page.screenshot({ path: join(shots, 'plot-log.png') });
+
+  // Change a setting, then open the logged plot: its settings come back.
+  await page.getByRole('tab', { name: 'Page' }).click();
+  await page.getByRole('button', { name: 'Landscape' }).click();
+  await page.getByRole('tab', { name: 'Plot' }).click();
+  page.once('dialog', (d) => void d.accept());
+  await page.getByRole('button', { name: 'Open', exact: true }).click();
+  await page.getByRole('tab', { name: 'Page' }).click();
+  await expect(page.getByRole('button', { name: 'Portrait' })).toHaveClass(/active/);
+  const title = () =>
+    app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]!.getTitle());
+  await expect.poll(title).toMatch(/^motif \(plotted \d{4}-\d\d-\d\d\) — /);
+
+  // The note survives a restart of the window's view of the log.
+  await page.reload();
+  await page.getByRole('tab', { name: 'Plot' }).click();
+  await expect(page.getByPlaceholder('Add a note (pen, paper…)')).toHaveValue(
+    '0.3 fineliner, Bristol',
+  );
+  await page.getByRole('button', { name: /Delete log entry/ }).click();
+  await expect(page.getByText('Plots you make are listed here', { exact: false })).toBeVisible();
+  await app.close();
+});

@@ -57,6 +57,40 @@ export type PlotRequest = {
   profile: MachineProfile;
   toolpath: Toolpath;
   settings: Record<string, LayerMotionSettings>;
+  /** PLOT-7: recorded in the plot log when given. */
+  log?: PlotLogStart;
+};
+
+/** PLOT-7: what the renderer tells the log about a plot it starts. */
+export type PlotLogStart = {
+  /** The artwork's file name. */
+  file: string;
+  projectName: string;
+  /** The whole project as saved (settings and artwork), to open it again later. */
+  project: string;
+  profileName: string;
+  pathCount: number;
+  /** Pen-down distance, mm. */
+  drawMm: number;
+  /** Continues an earlier, stopped plot (PLOT-5). */
+  continued?: boolean;
+};
+
+/** PLOT-7: one plot in the log. */
+export type PlotLogEntry = Omit<PlotLogStart, 'project'> & {
+  id: string;
+  /** ISO dates. */
+  startedAt: string;
+  endedAt: string | null;
+  /** Time spent plotting, pauses excluded, ms. */
+  elapsedMs: number;
+  /** Share of the plot done, 0..1. */
+  done: number;
+  /** 'interrupted': the app quit or crashed during the plot. */
+  outcome: 'plotting' | 'done' | 'stopped' | 'error' | 'interrupted';
+  message?: string;
+  /** The user's own note (pen, paper…). */
+  note: string;
 };
 
 /** Result of a plotter action: errors come back as plain messages for the UI. */
@@ -113,6 +147,12 @@ export interface InvokeChannels {
     args: [defaultName: string, content: string, extensions: string[]];
     result: string | null;
   };
+  /** PLOT-7: the plot log, newest first. */
+  'plotLog:list': { args: []; result: PlotLogEntry[] };
+  /** The project as it was plotted, or null if it's gone. */
+  'plotLog:project': { args: [id: string]; result: string | null };
+  'plotLog:note': { args: [id: string, note: string]; result: void };
+  'plotLog:delete': { args: [id: string]; result: void };
 }
 
 export interface EventChannels {
@@ -124,6 +164,8 @@ export interface EventChannels {
   'file:opened': { path: string; name: string; bytes: Uint8Array };
   /** The watched artwork changed on disk (IMPORT-5). */
   'file:changed': { path: string; bytes: Uint8Array };
+  /** PLOT-7: the plot log changed (newest first). */
+  'plotLog:changed': PlotLogEntry[];
 }
 
 export type InvokeChannel = keyof InvokeChannels;
@@ -152,12 +194,17 @@ export const INVOKE_CHANNELS = [
   'plot:start',
   'plot:dryRun',
   'plot:control',
+  'plotLog:list',
+  'plotLog:project',
+  'plotLog:note',
+  'plotLog:delete',
 ] as const satisfies readonly InvokeChannel[];
 export const EVENT_CHANNELS = [
   'app:menu',
   'plotter:changed',
   'file:opened',
   'file:changed',
+  'plotLog:changed',
 ] as const satisfies readonly EventChannel[];
 
 /** The shape of `window.api` exposed by the preload script. */

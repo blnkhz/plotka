@@ -1,6 +1,20 @@
 import type { LayerMotionSettings } from '@plotter-studio/plotter';
-import type { ActionResult, ManualCommand, PlotRequest, PlotterStatus } from '@shared/ipc';
-import { distanceAlong, toolpathFrom, type ResumePoint } from '@plotter-studio/core';
+import type {
+  ActionResult,
+  ManualCommand,
+  PlotLogStart,
+  PlotRequest,
+  PlotterStatus,
+} from '@shared/ipc';
+import {
+  distanceAlong,
+  polylineLength,
+  toolpathFrom,
+  type ResumePoint,
+  type Toolpath,
+} from '@plotter-studio/core';
+import { currentProject } from './projectActions';
+import { serializeProject } from './project';
 import type { Processed } from './useProcessed';
 import { resolveProfile, useStore } from '../store';
 
@@ -53,7 +67,12 @@ function noteCheckpoint(prev: PlotterStatus | null, next: PlotterStatus) {
 /** Continues the last plot from a path (and offset along it), with the same settings. */
 export function continuePlot(from: ResumePoint) {
   if (!lastPlot) return Promise.resolve(false);
-  const req = { ...lastPlot, toolpath: toolpathFrom(lastPlot.toolpath, from) };
+  const toolpath = toolpathFrom(lastPlot.toolpath, from);
+  const req: PlotRequest = {
+    ...lastPlot,
+    toolpath,
+    ...(lastPlot.log && { log: { ...lastPlot.log, ...logCounts(toolpath), continued: true } }),
+  };
   useStore.setState({ checkpoint: null });
   return run(window.api.invoke('plot:start', req));
 }
@@ -109,7 +128,27 @@ export function startPlot(processed: Processed) {
       penPosDown: penHeights.down,
     };
   }
-  lastPlot = { profile: currentProfile(), toolpath: { layers }, settings };
+  const profile = currentProfile();
+  const toolpath: Toolpath = { layers };
+  lastPlot = { profile, toolpath, settings, log: logInfo(toolpath, profile.name) };
   useStore.setState({ checkpoint: null });
   return run(window.api.invoke('plot:start', lastPlot));
+}
+
+// --- PLOT-7: what the plot log records ---
+
+const logCounts = (tp: Toolpath) => ({
+  pathCount: tp.layers.reduce((n, l) => n + l.paths.length, 0),
+  drawMm: tp.layers.reduce((n, l) => n + l.paths.reduce((m, p) => m + polylineLength(p), 0), 0),
+});
+
+function logInfo(tp: Toolpath, profileName: string): PlotLogStart {
+  const s = useStore.getState();
+  return {
+    file: s.source?.name ?? 'Untitled',
+    projectName: s.projectName,
+    project: serializeProject(currentProject()),
+    profileName,
+    ...logCounts(tp),
+  };
 }

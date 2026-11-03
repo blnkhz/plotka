@@ -18,9 +18,11 @@ import {
   SIMULATED_PORT,
   type ActionResult,
   type ManualCommand,
+  type PlotLogEntry,
   type PlotRequest,
   type PlotterStatus,
 } from '@shared/ipc';
+import { beginPlotLog, updatePlotLog } from './plotLog';
 import { openSerial } from './serial';
 
 /** Simulated plotter speed (1 = real time). Tests set PLOTTER_SIM_SPEED to run faster. */
@@ -52,6 +54,8 @@ export class PlotterService {
   private plotKind: 'plot' | 'dryRun' | null = null;
   private profile: MachineProfile = getProfile(DEFAULT_PROFILE_ID)!;
   private pushQueued = false;
+  /** PLOT-7: the log entry of the running plot, and what it last recorded. */
+  private log: { id: string; outcome: PlotLogEntry['outcome'] } | null = null;
 
   status(): PlotterStatus {
     return {
@@ -193,6 +197,7 @@ export class PlotterService {
       if (plan.totalMs === 0) throw new Error('Nothing to plot.');
       this.runner = new PlotRunner(m, plan, { onProgress: () => this.onProgress() });
       this.plotKind = 'plot';
+      this.log = req.log ? { id: beginPlotLog(req.log), outcome: 'plotting' } : null;
       this.keepAwake(true);
       void this.runner.start().finally(() => this.onProgress());
     });
@@ -213,6 +218,7 @@ export class PlotterService {
       const plan = planDryRun(this.profile, bounds, m.steps ?? { x: 0, y: 0 });
       this.runner = new PlotRunner(m, plan, { onProgress: () => this.onProgress() });
       this.plotKind = 'dryRun';
+      this.log = null;
       void this.runner.start().finally(() => this.onProgress());
     });
   }
@@ -242,7 +248,25 @@ export class PlotterService {
     const s = this.runner?.state;
     // Keep the computer awake from start until the plot is done or stopped (also while paused).
     this.keepAwake(!!s && ACTIVE.has(s) && s !== 'error');
+    this.updateLog();
     this.push();
+  }
+
+  /** PLOT-7: records how the plot is going when that changes (not on every progress tick). */
+  private updateLog() {
+    const p = this.runner?.progress;
+    if (!this.log || !p) return;
+    const outcome: PlotLogEntry['outcome'] =
+      p.state === 'done' || p.state === 'stopped' || p.state === 'error' ? p.state : 'plotting';
+    if (outcome === this.log.outcome) return;
+    this.log.outcome = outcome;
+    updatePlotLog(this.log.id, {
+      outcome,
+      elapsedMs: p.elapsedMs,
+      done: p.state === 'done' ? 1 : p.totalMs > 0 ? Math.min(1, p.doneMs / p.totalMs) : 0,
+      ...(p.state === 'error' && p.message ? { message: p.message } : {}),
+    });
+    if (outcome === 'done' || outcome === 'stopped') this.log = null;
   }
 
   private keepAwake(on: boolean) {

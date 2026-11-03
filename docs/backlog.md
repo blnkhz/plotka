@@ -75,7 +75,6 @@ Previews and tests should check repeatability (same seed, same lines).
 ## Remaining spec stories (P2 and later)
 
 - PROJ-3 pen library (name, color, tip width, preferred speed, pen heights)
-- PLOT-7 plot log (date, file, duration, settings used)
 - DRIVER-6 full support for the brushless pen-lift upgrade on AxiDraws (the NextDraw profiles
   already send the servo pin; needs testing on hardware)
 - SETUP-6 Windows and Linux builds

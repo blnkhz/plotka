@@ -4,6 +4,7 @@ import { applyOverrides, useStore, type Tab } from '../store';
 import { Notice, Section } from './controls';
 import { FillTab } from './FillTab';
 import { MachineTab } from './MachineTab';
+import { PlotLog } from './PlotLog';
 import { PlotSection } from './PlotSection';
 import { exportPlot } from '../lib/exportPlot';
 import { OptimizeSection } from './OptimizeSection';
@@ -143,6 +144,7 @@ function PlotTab() {
         )}
       </Section>
       <OptimizeSection />
+      <PlotLog />
     </>
   );
 }

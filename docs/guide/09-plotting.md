@@ -74,6 +74,20 @@ for other plotting software or for keeping a record. **File → Export Toolpath 
 saves the same paths as JSON (mm from the paper's top-left corner, in plot order) for your own
 scripts. Both are also under the Stats table in the Plot tab.
 
+## Plot log
+
+Every plot is listed under **Plot log** at the bottom of the Plot tab, newest first: the file,
+when it was plotted, how it ended (finished, stopped or failed, and how far it got), how long it
+took, the number of paths, the drawing distance and the machine.
+
+- **Add a note** to remember what you used: the pen, the paper, what you'd change next time.
+- **Open** opens the artwork and every setting exactly as they were plotted, as a new project,
+  even if the file has changed or moved since.
+- **✕** deletes an entry.
+
+The log keeps the last 200 plots. A plot that was under way when the app closed shows as
+interrupted. Dry runs aren't logged.
+
 ## Multiple colors
 
 Plot one layer, pause or let it finish, change the pen, then plot the next layer. Don't turn the
