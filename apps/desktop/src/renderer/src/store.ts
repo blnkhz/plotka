@@ -70,6 +70,11 @@ type State = {
   error: string | null;
   loading: boolean;
   layerOverrides: Record<string, LayerOverride>;
+  /**
+   * Overrides of the other layer modes for the open file. Layer ids are positional per mode,
+   * so each mode keeps its own edits (removed layers, colors…) while the user switches.
+   */
+  overridesByMode: Partial<Record<LayerMode, Record<string, LayerOverride>>>;
   selectedLayerId: string | null;
   page: PageSetup;
   optimize: OptimizeSettings;
@@ -267,6 +272,7 @@ export const useStore = create<State>()((set, get) => ({
   error: null,
   loading: false,
   layerOverrides: {},
+  overridesByMode: {},
   selectedLayerId: null,
   page: defaultPageSetup(),
   optimize: defaultOptimizeSettings(),
@@ -358,15 +364,21 @@ export const useStore = create<State>()((set, get) => ({
         layerMode: get().layerMode,
         defaultFill: get().defaultFill,
       });
-      set((s) => ({
-        source,
-        doc,
-        loading: false,
-        layerOverrides: {},
-        undrawnNoticeHidden: s.source === source ? s.undrawnNoticeHidden : false,
-        selectedLayerId: doc.layers[0]?.id ?? null,
-        fitRequest: s.fitRequest + 1,
-      }));
+      set((s) => {
+        // Re-importing the same file (a layer mode switch) brings back that mode's edits.
+        const same = s.source === source;
+        const layerOverrides = (same && s.overridesByMode[s.layerMode]) || {};
+        return {
+          source,
+          doc,
+          loading: false,
+          layerOverrides,
+          overridesByMode: same ? s.overridesByMode : {},
+          undrawnNoticeHidden: same ? s.undrawnNoticeHidden : false,
+          selectedLayerId: doc.layers.find((l) => !layerOverrides[l.id]?.removed)?.id ?? null,
+          fitRequest: s.fitRequest + 1,
+        };
+      });
     } catch (e) {
       set({ loading: false, error: e instanceof Error ? e.message : String(e) });
     }
@@ -398,7 +410,12 @@ export const useStore = create<State>()((set, get) => ({
   },
 
   async setLayerMode(layerMode) {
-    set({ layerMode });
+    const prev = get();
+    if (layerMode === prev.layerMode) return;
+    set({
+      layerMode,
+      overridesByMode: { ...prev.overridesByMode, [prev.layerMode]: prev.layerOverrides },
+    });
     const { source } = get();
     if (source) await get().openFile(source);
   },
