@@ -19,8 +19,7 @@ export type FillRegion = {
   knockout?: boolean;
 };
 
-export type FillType =
-  'none' | 'lines' | 'crosshatch' | 'zigzag' | 'concentric' | 'spiral' | 'dots';
+export type FillType = 'none' | 'lines' | 'crosshatch' | 'concentric' | 'spiral' | 'dots';
 
 export type FillSettings = {
   type: FillType;

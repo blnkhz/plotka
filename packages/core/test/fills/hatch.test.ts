@@ -261,13 +261,13 @@ describe('connect / zigzag (HATCH-3)', () => {
       }
   });
 
-  it('zigzag type always connects; lines + connect does the same', () => {
+  it('lines with the pen kept down make one zigzag; without, one path per line', () => {
     const layer = createLayer('l', 'L');
     layer.fills.push({ outer: [rect(0, 0, 10, 10)], fillRule: 'nonzero' });
-    layer.settings.fill = { type: 'zigzag', spacing: 1, angle: 0, inset: 0, connect: false };
-    expect(layerHatches(layer)).toHaveLength(1);
     layer.settings.fill = { type: 'lines', spacing: 1, angle: 0, inset: 0, connect: true };
     expect(layerHatches(layer)).toHaveLength(1);
+    layer.settings.fill = { type: 'lines', spacing: 1, angle: 0, inset: 0, connect: false };
+    expect(layerHatches(layer).length).toBeGreaterThan(5);
   });
 });
 

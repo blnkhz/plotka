@@ -10,6 +10,7 @@ import {
   fromBase64,
   isProjectFile,
   mergeDefaults,
+  parseFill,
   parseProject,
   PROJECT_FORMAT,
   projectNameFromFile,
@@ -133,6 +134,11 @@ describe('project files (PROJ-1)', () => {
         }),
       ),
     ).toThrow(/artwork/);
+  });
+
+  it('reads the old Zigzag fill as Lines with the pen kept down', () => {
+    const f = parseFill({ type: 'zigzag', spacing: 0.8, angle: 30, inset: 0, connect: false });
+    expect(f).toMatchObject({ type: 'lines', connect: true, spacing: 0.8, angle: 30 });
   });
 
   it('mergeDefaults keeps nested defaults and only same-type values', () => {

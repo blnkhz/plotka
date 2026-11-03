@@ -87,7 +87,15 @@ test('crosshatch a layer (MVP fill setup)', async () => {
   await expect.poll(pathCount).toBeGreaterThan(before);
   if (shots) await page.screenshot({ path: join(shots, 'crosshatch.png') });
 
-  await page.getByLabel('Fill type').selectOption('zigzag');
+  // Lines with and without the pen kept down (a zigzag) differ.
+  const crosshatchPaths = await pathCount();
+  await page.getByLabel('Fill type').selectOption('lines');
+  await expect.poll(pathCount).toBeLessThan(crosshatchPaths);
+  const zigzagPaths = await pathCount();
+  await page.getByLabel('Keep pen down between lines').uncheck();
+  await expect.poll(pathCount).toBeGreaterThan(zigzagPaths);
+  await page.getByLabel('Keep pen down between lines').check();
+  await expect.poll(pathCount).toBe(zigzagPaths);
   if (shots) await page.screenshot({ path: join(shots, 'zigzag.png') });
 
   // Optimization: travel drops versus file order, and turning it off restores file order.

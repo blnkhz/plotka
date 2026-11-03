@@ -137,6 +137,8 @@ export function parseFill(v: unknown): FillSettings | null | undefined {
   if (v === null) return null;
   if (!isObj(v)) return undefined;
   const f = mergeDefaults(defaultFillSettings(), v);
+  // Zigzag was Lines with the pen kept down; it's that now.
+  if (v['type'] === 'zigzag') Object.assign(f, { type: 'lines', connect: true });
   if (!(SUPPORTED_FILL_TYPES as readonly string[]).includes(f.type)) return undefined;
   if (isNum(v['crossAngle'])) f.crossAngle = v['crossAngle'];
   if (isNum(v['jitter'])) f.jitter = v['jitter'];

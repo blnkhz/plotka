@@ -9,8 +9,6 @@ layers** copies them (and the layer's speeds) to the others.
 
 - **Lines**: parallel lines (hatching).
 - **Crosshatch**: two sets of lines. **Second angle** defaults to the first + 90°.
-- **Zigzag**: lines joined end to end so the pen stays down, where the join stays inside the
-  shape.
 - **Concentric**: rings following the outline inward, like contour lines.
 - **Spiral**: a spiral from the shape's center outward, cut to the shape. Best on round shapes.
 - **Dots**: a grid of pen taps. **Jitter** moves each dot randomly by up to that share of the
@@ -32,8 +30,9 @@ layers** copies them (and the layer's speeds) to the others.
 - **Inset**: pulls the fill in from the outline, so it doesn't overrun a drawn outline.
 - **Spacing from fill color**: darker shapes get tighter spacing, lighter ones wider (up to 10×).
   Very light shapes are left empty. Turns grayscale art into tones.
-- **Keep pen down between lines**: joins neighboring lines (or rings) without lifting the pen,
-  where the join stays inside the shape. Faster, and fewer pen lifts.
+- **Keep pen down between lines**: joins neighboring lines end to end (a zigzag), or rings,
+  without lifting the pen, where the join stays inside the shape. Faster, and fewer pen lifts.
+  Turn it off for separate strokes, with the pen lifted after each line.
 - **Draw outlines of filled shapes**: also draws each shape's outline.
 - **Hide parts covered by shapes on top**: where shapes overlap, only the top one is filled and
   outlined, as in the file. Turn it off to fill every shape completely.

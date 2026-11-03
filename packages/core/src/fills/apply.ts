@@ -18,7 +18,6 @@ export const SUPPORTED_FILL_TYPES = [
   'none',
   'lines',
   'crosshatch',
-  'zigzag',
   'concentric',
   'spiral',
   'dots',
@@ -66,8 +65,6 @@ export function fillRegion(region: FillRegion, f: FillSettings, center?: Vec2): 
   switch (f.type) {
     case 'lines':
       return hatchRegion(region, base);
-    case 'zigzag':
-      return hatchRegion(region, { ...base, connect: true });
     case 'crosshatch':
       return [
         ...hatchRegion(region, base),

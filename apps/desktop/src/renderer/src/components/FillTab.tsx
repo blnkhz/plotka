@@ -9,14 +9,13 @@ const TYPES: { value: FillType; label: string }[] = [
   { value: 'none', label: 'None' },
   { value: 'lines', label: 'Lines' },
   { value: 'crosshatch', label: 'Crosshatch' },
-  { value: 'zigzag', label: 'Zigzag' },
   { value: 'concentric', label: 'Concentric' },
   { value: 'spiral', label: 'Spiral' },
   { value: 'dots', label: 'Dots' },
 ];
 
 /** Which controls apply to each fill type. */
-const USES_ANGLE = new Set<FillType>(['lines', 'crosshatch', 'zigzag', 'spiral', 'dots']);
+const USES_ANGLE = new Set<FillType>(['lines', 'crosshatch', 'spiral', 'dots']);
 const USES_CONNECT = new Set<FillType>(['lines', 'crosshatch', 'concentric']);
 const SPACING_LABEL: Partial<Record<FillType, string>> = {
   concentric: 'Ring spacing',
@@ -215,7 +214,7 @@ export function FillTab() {
               <Row label="">
                 <label
                   className={styles.check}
-                  title="Join neighboring lines without lifting the pen, where the join stays inside the shape"
+                  title="Join neighboring lines end to end (a zigzag) without lifting the pen, where the join stays inside the shape. Off lifts the pen after every line."
                 >
                   <input
                     type="checkbox"
