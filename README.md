@@ -4,7 +4,7 @@ A desktop app for pen plotters. Load SVG artwork, set up the paper and fills, pr
 what the pen will draw, and plot directly over USB, with no vendor software or Inkscape
 extension needed.
 
-![Plotka welcome screen: an example plot and Open…, Doodle… and + Text](docs/screenshot.png)
+![Plotka welcome screen: an example plot and Open…, Doodle… and + Text](docs/screenshots/welcome.png)
 
 **Status:** in development, plotting on an AxiDraw V3/A3. No installable release yet.
 
@@ -12,28 +12,57 @@ extension needed.
 
 - Open SVGs from Illustrator, Inkscape, Figma, Affinity Designer and code, or draw a doodle and
   turn it into clean curves or straight lines (and merge, cut or intersect its shapes)
+
+  ![Doodle pad: a hand-drawn circle and zigzag turned into curves, with shape and vector settings](docs/screenshots/doodle.png)
+
 - Pictures (PNG, JPEG, WebP...) become pen marks: ordered or diffusion dithering, or halftone,
   with circles, squares, dots, lines, × or +
+
+  ![Image pad: a gradient picture turned into halftone circles](docs/screenshots/image.png)
+
 - 3D models (OBJ, STL, PLY, glTF / GLB, 3MF) become parallel slices drawn from any angle, with
   hidden lines removed or the full mesh
+
+  ![3D model pad: a cube on the left, its parallel slices as they will be plotted on the right](docs/screenshots/3d-model.png)
+
 - Paper presets, margins, fit and alignment
 - Text in single-stroke Hershey fonts (six styles), typed in the app or from SVG text
+
+  !["Hello plotter" in the Script Hershey font, with the text settings](docs/screenshots/text.png)
+
 - Fills: lines (or a zigzag), crosshatch, triangles, hexagons, waves (smooth, zigzag, square),
   noise, flow, concentric, spiral, ripples, dots and stipple, with spacing from the fill color;
   shapes on top hide the ones underneath, like in the file
+
+  ![A circle and a triangle filled with ripples, with the fill settings](docs/screenshots/fill.png)
+
 - Passes: plot a layer several times with slight shifts in different colors, for gradients and
   moiré
+
+  ![A shape filled with lines and plotted in three passes, in blue, black and red](docs/screenshots/passes.png)
+
 - Transforms: tile on a grid, or tessellate with all 17 wallpaper patterns (square, triangle and
   hexagon rotations, kaleidoscopes, glides)
+
+  ![Artwork tessellated with a hexagonal kaleidoscope pattern across the page](docs/screenshots/tessellate.png)
+
 - Path optimization to cut pen-up travel
 - Accurate preview with a time estimate from the same motion plan the plotter follows
+
+  ![A paused plot: the pen position in the preview, progress, stats per layer and path optimization](docs/screenshots/plot.png)
+
 - Direct USB control: connect, jog, pen-height sliders, start / pause / resume / stop, the
   machine's pause button
+
+  ![Machine tab: connection, jog buttons, pen height sliders and the machine profile](docs/screenshots/machine.png)
+
 - Projects with undo and redo, and a searchable help guide built in
 
 ## User guide
 
 The guide is in the app (**Help**, ⌘?) and in [docs/guide](docs/guide/01-getting-started.md).
+
+![The help guide open on Getting started, with the list of topics and a search box](docs/screenshots/help.png)
 
 ## Supported machines
 

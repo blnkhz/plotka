@@ -1,27 +1,33 @@
-import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { _electron as electron, expect, test, type Page } from '@playwright/test';
 
 const fixtures = join(__dirname, '../../../packages/core/test/fixtures/svg');
 const shots = process.env['SCREENSHOT_DIR'];
+/** With SCREENSHOT_DIR: the appearance to take them in (e.g. `matcha`), instead of the system's. */
+const shotTheme = process.env['SCREENSHOT_THEME'];
 
 /**
  * Launches the app with a fresh, temporary data folder (never the user's own settings).
  * PLOTKA_E2E skips the "unsaved changes" question on close; PLOTKA_NO_SPLASH
  * skips the splash screen (the splash test turns it back on).
  */
-const launch = (env: Record<string, string> = {}) =>
-  electron.launch({
+const launch = (env: Record<string, string> = {}) => {
+  const data = env['PLOTKA_USER_DATA'] ?? mkdtempSync(join(tmpdir(), 'plotka-e2e-'));
+  const saved = join(data, 'appearance.json');
+  if (shotTheme && !existsSync(saved)) writeFileSync(saved, JSON.stringify({ theme: shotTheme }));
+  return electron.launch({
     args: [join(__dirname, '..')],
     env: {
       ...process.env,
       PLOTKA_E2E: '1',
       PLOTKA_NO_SPLASH: '1',
-      PLOTKA_USER_DATA: mkdtempSync(join(tmpdir(), 'plotka-e2e-')),
       ...env,
+      PLOTKA_USER_DATA: data,
     },
   });
+};
 
 async function dropFile(page: Page, name: string) {
   const content = readFileSync(join(fixtures, name), 'utf8');
