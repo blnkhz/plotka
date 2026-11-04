@@ -35,6 +35,8 @@ extension needed.
 
   !["Hello plotter" in the Script Hershey font, with the text settings](docs/screenshots/text.png)
 
+  !["Plotka, Anno Domini, minimum" in the Gothic for a parallel pen, a 3.8 mm nib at 40°, with the nib preview](docs/screenshots/pen-gothic.png)
+
 - Fills: lines (or a zigzag), crosshatch, triangles, hexagons, waves (smooth, zigzag, square),
   noise, flow, concentric, spiral, ripples, dots and stipple, with spacing from the fill color;
   shapes on top hide the ones underneath, like in the file
