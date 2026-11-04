@@ -29,7 +29,9 @@ extension needed.
   ![3D model pad: a cube on the left, its parallel slices as they will be plotted on the right](docs/screenshots/3d-model.png)
 
 - Paper presets, margins, fit and alignment
-- Text in single-stroke Hershey fonts (six styles), typed in the app or from SVG text
+- Text in single-stroke Hershey fonts (six styles), typed in the app or from SVG text, and a
+  blackletter (plain or ornate) and a Gothic made of broad-nib strokes for a parallel pen, sized
+  from the nib
 
   !["Hello plotter" in the Script Hershey font, with the text settings](docs/screenshots/text.png)
 

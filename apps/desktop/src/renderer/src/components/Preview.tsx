@@ -714,7 +714,20 @@ const PARALLEL_HINT =
   'nib, a hairline along it. Only the preview changes.';
 
 /** Parallel pen: nib width (a Pilot Parallel size or your own) and the angle it's held at. */
-function NibControls() {
+export function NibControls() {
+  return (
+    <>
+      <NibWidth />
+      <label className={styles.toggle} title="The nib’s angle, counterclockwise from horizontal">
+        Angle
+        <NibAngle />
+      </label>
+    </>
+  );
+}
+
+/** The nib's width: a Pilot Parallel size, or Custom… with a number. */
+export function NibWidth() {
   const nib = useStore((s) => s.view.nib);
   const setView = useStore((s) => s.setView);
   const preset = PARALLEL_SIZES.includes(nib.width);
@@ -756,23 +769,31 @@ function NibControls() {
           mm
         </label>
       )}
-      <label className={styles.toggle} title="The nib’s angle, counterclockwise from horizontal">
-        Angle
-        <input
-          type="number"
-          aria-label="Nib angle"
-          min={-180}
-          max={180}
-          step={5}
-          value={nib.angle}
-          onChange={(e) => {
-            const v = parseFloat(e.target.value);
-            if (Number.isFinite(v)) set({ angle: v });
-          }}
-        />
-        °
-      </label>
     </>
+  );
+}
+
+/** The nib's angle in degrees, counterclockwise from horizontal (the input and its "°"). */
+export function NibAngle() {
+  const nib = useStore((s) => s.view.nib);
+  const setView = useStore((s) => s.setView);
+  return (
+    <span className={styles.toggle}>
+      <input
+        type="number"
+        aria-label="Nib angle"
+        title="The nib’s angle, counterclockwise from horizontal"
+        min={-180}
+        max={180}
+        step={5}
+        value={nib.angle}
+        onChange={(e) => {
+          const v = parseFloat(e.target.value);
+          if (Number.isFinite(v)) setView({ nib: { ...nib, angle: v } });
+        }}
+      />
+      °
+    </span>
   );
 }
 

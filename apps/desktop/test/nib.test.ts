@@ -54,3 +54,31 @@ describe('parallel pen preview (flat nib)', () => {
     expect(new Set(signs).size).toBe(1);
   });
 });
+
+describe('blackletter sized from the nib', () => {
+  it('follows the nib width, and leaves text with its own size alone', async () => {
+    const { useStore } = await import('../src/renderer/src/store');
+    const s = useStore.getState();
+    const a = s.addText();
+    const b = s.addText();
+    s.updateText(a, { font: 'blackletter', matchNib: true, size: 7 * s.view.nib.width });
+    s.updateText(b, { font: 'blackletterOrnate', size: 12 });
+    const c = s.addText();
+    s.updateText(c, { font: 'blackletterOrnate', matchNib: true, size: 1 });
+    s.setView({ nib: { ...useStore.getState().view.nib, width: 2.4 } });
+    const texts = useStore.getState().texts;
+    expect(texts.find((t) => t.id === a)!.size).toBeCloseTo(16.8);
+    expect(texts.find((t) => t.id === b)!.size).toBe(12);
+    expect(texts.find((t) => t.id === c)!.size).toBeCloseTo(16.8);
+    // Each font by its own proportion: the Gothic's capitals are 6 nib widths.
+    const g = s.addText();
+    s.updateText(g, { font: 'penGothic', matchNib: true, size: 1 });
+    s.setView({ nib: { ...useStore.getState().view.nib, width: 3 } });
+    expect(useStore.getState().texts.find((t) => t.id === g)!.size).toBeCloseTo(18);
+    expect(useStore.getState().texts.find((t) => t.id === a)!.size).toBeCloseTo(21);
+    // The document's text layer was redrawn at the new size.
+    const layer = useStore.getState().doc!.layers.find((l) => l.id === `text-${a}`)!;
+    const ys = layer.strokes.flatMap((l) => l.points.map((p) => p.y));
+    expect(Math.max(...ys) - Math.min(...ys)).toBeGreaterThan(16);
+  });
+});

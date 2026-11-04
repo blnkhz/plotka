@@ -147,10 +147,15 @@ export type Layer = {
 export type TextItem = {
   id: string;
   text: string;
-  /** A Hershey style: 'sans', 'sansBold', 'serif', 'serifItalic', 'script', 'gothic'. */
+  /**
+   * A style: a Hershey one ('sans', 'sansBold', 'serif', 'serifItalic', 'script', 'gothic') or
+   * one drawn for a parallel pen ('blackletter', 'blackletterOrnate', 'penGothic').
+   */
   font: string;
   /** Height of capital letters, mm. */
   size: number;
+  /** Parallel-pen fonts: the size follows the nib (capitals 7 or 6 nib widths tall). */
+  matchNib?: boolean;
   /** Multiple of the normal line height. */
   lineSpacing: number;
   /** Extra mm between letters. */

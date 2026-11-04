@@ -22,7 +22,7 @@ import {
   type PassSettings,
   type PipelineStep,
   type TextItem,
-  HERSHEY_FONTS,
+  TEXT_FONTS,
 } from '@plotka/core';
 import { DEFAULT_NIB } from './nib';
 import type { ViewOptions } from '../store';
@@ -399,7 +399,7 @@ const ALIGNS = ['left', 'center', 'right'] as const;
 /** Text blocks; anything damaged is dropped (an unknown style falls back to Sans). */
 function parseTexts(v: unknown): TextItem[] {
   if (!Array.isArray(v)) return [];
-  const fonts = new Set<string>(HERSHEY_FONTS.map((f) => f.id));
+  const fonts = new Set<string>(TEXT_FONTS.map((f) => f.id));
   const out: TextItem[] = [];
   for (const t of v) {
     if (!isObj(t) || typeof t['id'] !== 'string' || typeof t['text'] !== 'string') continue;
@@ -411,6 +411,7 @@ function parseTexts(v: unknown): TextItem[] {
       text: t['text'].slice(0, 10000),
       font: typeof t['font'] === 'string' && fonts.has(t['font']) ? t['font'] : 'sans',
       size: num('size', 10, 0.5, 1000),
+      ...(t['matchNib'] === true ? { matchNib: true } : {}),
       lineSpacing: num('lineSpacing', 1, 0.1, 10),
       letterSpacing: num('letterSpacing', 0, -100, 100),
       align: ALIGNS.includes(t['align'] as (typeof ALIGNS)[number])

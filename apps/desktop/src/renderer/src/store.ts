@@ -11,7 +11,9 @@ import {
   defaultPageSetup,
   doodleToSvg,
   importFile,
+  isNibFont,
   marginBox,
+  nibTextSize,
   paperSize,
   withTexts,
   type DoodleSettings,
@@ -599,7 +601,21 @@ export const useStore = create<State>()((set, get) => ({
       arrange: { ...s.arrange, target },
       ...(target ? { selectedLayerId: target } : {}),
     })),
-  setView: (patch) => set((s) => ({ view: { ...s.view, ...patch } })),
+  setView: (patch) =>
+    set((s) => {
+      const view = { ...s.view, ...patch };
+      // Blackletter sized from the nib follows a new nib width.
+      if (view.nib.width === s.view.nib.width) return { view };
+      let changed = false;
+      const texts = s.texts.map((t) => {
+        if (!t.matchNib || !isNibFont(t.font)) return t;
+        const size = nibTextSize(view.nib.width, t.font);
+        if (t.size === size) return t;
+        changed = true;
+        return { ...t, size };
+      });
+      return changed ? { view, texts, doc: docWithTexts(s.doc, texts, s.page) } : { view };
+    }),
   setTab: (tab) => set({ tab }),
   requestFit: () => set((s) => ({ fitRequest: s.fitRequest + 1 })),
 

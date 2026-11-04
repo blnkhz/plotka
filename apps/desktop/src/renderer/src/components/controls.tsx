@@ -16,6 +16,7 @@ export function NumberField({
   digits = 2,
   width,
   title,
+  disabled,
 }: {
   value: number;
   onChange: (v: number) => void;
@@ -26,6 +27,7 @@ export function NumberField({
   digits?: number;
   width?: number;
   title?: string;
+  disabled?: boolean;
 }) {
   const label = useContext(RowLabel);
   const shown = String(Number(value.toFixed(digits)));
@@ -47,6 +49,7 @@ export function NumberField({
         min={min}
         max={max}
         step={step}
+        disabled={disabled}
         style={width ? { width } : undefined}
         onChange={(e) => {
           // Spinner clicks and arrow keys commit right away; typing waits for blur/Enter.

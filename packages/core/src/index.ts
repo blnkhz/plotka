@@ -29,5 +29,6 @@ export * from './optimize/clean';
 export * from './pipeline/resume';
 export * from './export/export';
 export * from './text/text';
+export { BLACKLETTER_CAP_NIBS, BLACKLETTER_NIB_ANGLE } from './text/blackletter';
 export * from './raster/dither';
 export * from './mesh/slice';

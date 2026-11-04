@@ -5,12 +5,19 @@ import {
   type FillSettings,
   type FillType,
   type LayerPlacement,
+  type NibFont,
   type TextItem,
-  HERSHEY_FONTS,
+  BLACKLETTER_NIB_ANGLE,
+  isNibFont,
+  nibProportions,
+  nibTextSize,
+  TEXT_FONTS,
 } from '@plotka/core';
 import { applyOverrides, currentLayerSettings, useStore } from '../store';
 import { Notice, NumberField, Row, Section, Segmented } from './controls';
+import { NibTextPreview } from './NibTextPreview';
 import { PassesSection } from './PassesSection';
+import { NibAngle, NibWidth } from './Preview';
 import { SpeedSection } from './SpeedSection';
 import styles from './FillTab.module.css';
 
@@ -98,7 +105,7 @@ export function FillTab() {
   return (
     <>
       {layer.text ? (
-        <TextSection item={layer.text} />
+        <TextSection item={layer.text} color={layer.color} />
       ) : (
         <>
           <Section title={`Fill · ${layer.name}`} help="fills">
@@ -669,9 +676,15 @@ function FlowFields({
 }
 
 /** LATER-6: a text layer's text and style (it has no fill). */
-function TextSection({ item }: { item: TextItem }) {
+function TextSection({ item, color }: { item: TextItem; color: string }) {
   const updateText = useStore((s) => s.updateText);
+  const nib = useStore((s) => s.view.nib);
+  const setView = useStore((s) => s.setView);
   const set = (patch: Partial<TextItem>) => updateText(item.id, patch);
+  const nibFont = isNibFont(item.font) ? item.font : null;
+  const blackletter = nibFont !== null;
+  const fromNib = blackletter && !!item.matchNib;
+  const caps = nibFont ? nibProportions(nibFont) : null;
   return (
     <Section title="Text" help="text">
       <textarea
@@ -685,15 +698,37 @@ function TextSection({ item }: { item: TextItem }) {
         <select
           aria-label="Text style"
           value={item.font}
-          onChange={(e) => set({ font: e.target.value })}
+          onChange={(e) => {
+            const font = e.target.value;
+            // Your own size stays yours; Hershey fonts aren't sized from a nib.
+            if (!isNibFont(font) || (blackletter && !item.matchNib)) return set({ font });
+            // Drawn for the parallel pen: size it from the nib (each font its own proportion)
+            // and show the nib.
+            set({ font, matchNib: true, size: nibTextSize(nib.width, font) });
+            if (!nib.on) setView({ nib: { ...nib, on: true } });
+          }}
         >
-          {HERSHEY_FONTS.map((f) => (
+          {TEXT_FONTS.map((f) => (
             <option key={f.id} value={f.id}>
               {f.name}
             </option>
           ))}
         </select>
       </Row>
+      {blackletter && (
+        <>
+          <Row label="Nib">
+            <span className={styles.nib}>
+              <NibWidth />
+            </span>
+          </Row>
+          <Row label="Angle">
+            <span className={styles.nib}>
+              <NibAngle />
+            </span>
+          </Row>
+        </>
+      )}
       <Row label="Size">
         <NumberField
           value={item.size}
@@ -701,10 +736,36 @@ function TextSection({ item }: { item: TextItem }) {
           max={1000}
           step={0.5}
           suffix="mm"
-          title="Height of capital letters"
+          title={
+            fromNib
+              ? `Capitals ${caps?.capNibs} nib widths tall. Clear From nib to choose your own size.`
+              : 'Height of capital letters'
+          }
+          disabled={fromNib}
           onChange={(size) => set({ size })}
         />
+        {blackletter && (
+          <label
+            className={styles.check}
+            title={`Capitals ${caps?.capNibs} nib widths tall and the x-height ${caps?.xNibs}, the classic proportion for this hand; follows the nib width`}
+          >
+            <input
+              type="checkbox"
+              checked={fromNib}
+              onChange={(e) =>
+                set(
+                  e.target.checked
+                    ? { matchNib: true, size: nibTextSize(nib.width, nibFont!) }
+                    : { matchNib: false },
+                )
+              }
+            />
+            From nib
+          </label>
+        )}
       </Row>
+      {blackletter && <NibTextPreview item={item} nib={nib} color={color} />}
+      {nibFont && <NibNotes item={item} font={nibFont} />}
       <Row label="Line spacing">
         <NumberField
           value={item.lineSpacing * 100}
@@ -739,9 +800,52 @@ function TextSection({ item }: { item: TextItem }) {
         />
       </Row>
       <p className={styles.muted}>
-        Single-stroke Hershey lettering: each letter is drawn once with the pen. Move, resize or
-        turn it with ✥ Arrange.
+        {blackletter
+          ? 'Every stroke is one pass of a flat nib: the thick stems, diamonds and hairlines come from the pen, not from outlines. Move it with ✥ Arrange, but don’t turn it: the nib stays at its angle.'
+          : 'Single-stroke Hershey lettering: each letter is drawn once with the pen. Move, resize or turn it with ✥ Arrange.'}
       </p>
     </Section>
+  );
+}
+
+/** Parallel-pen fonts: how the size relates to the nib, and when the nib angle won't suit it. */
+function NibNotes({ item, font }: { item: TextItem; font: NibFont }) {
+  const { capNibs, xNibs } = nibProportions(font);
+  const nib = useStore((s) => s.view.nib);
+  const setView = useStore((s) => s.setView);
+  const nibs = item.size / nib.width;
+  // The angle as the letters see it: a flat nib is the same turned by 180°.
+  const angle = ((nib.angle % 180) + 180) % 180;
+  const offAngle = Math.abs(angle - BLACKLETTER_NIB_ANGLE) > 15;
+  return (
+    <>
+      <p className={styles.muted}>
+        {nib.width} mm nib: capitals {nibs.toFixed(1)} nib widths tall, x-height{' '}
+        {((item.size * xNibs) / capNibs).toFixed(1)} mm.
+        {!item.matchNib && Math.abs(nibs - capNibs) > 1.5 && (
+          <>
+            {' '}
+            {nibs < capNibs ? 'Heavy and crowded' : 'Light and open'}: {capNibs} nib widths is the
+            classic.
+          </>
+        )}
+      </p>
+      {offAngle && (
+        <Notice kind="warn">
+          The letters are drawn for a nib at about {BLACKLETTER_NIB_ANGLE}°; at {nib.angle}° the
+          stems and hairlines come out wrong.{' '}
+          <button onClick={() => setView({ nib: { ...nib, angle: BLACKLETTER_NIB_ANGLE } })}>
+            Use {BLACKLETTER_NIB_ANGLE}°
+          </button>
+        </Notice>
+      )}
+      {!nib.on && (
+        <p className={styles.muted}>
+          <button onClick={() => setView({ nib: { ...nib, on: true } })}>
+            Show the parallel pen in the preview
+          </button>
+        </p>
+      )}
+    </>
   );
 }

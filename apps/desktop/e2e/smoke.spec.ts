@@ -1460,6 +1460,45 @@ test('text: type it in a single-stroke font, style it, delete and undo (LATER-6)
   await app.close();
 });
 
+test('blackletter for a parallel pen: sized from the nib, with a nib preview', async () => {
+  const app = await launch();
+  const page = await app.firstWindow();
+  await page.setViewportSize({ width: 1400, height: 860 });
+  await page.getByRole('button', { name: '+ Add text' }).click();
+  await page.getByLabel('Text', { exact: true }).fill('Anno Domini\nminimum');
+  await page.getByLabel('Text style').selectOption({ label: 'Blackletter (parallel pen)' });
+
+  // Capitals 7 nib widths tall: 26.6 mm with the 3.8 mm nib, and the preview turns the pen on.
+  const size = page.getByRole('spinbutton', { name: 'Size', exact: true });
+  await expect(size).toHaveValue('26.6');
+  await expect(size).toBeDisabled();
+  await expect(page.getByRole('checkbox', { name: 'Parallel pen' })).toBeChecked();
+  await expect(page.getByRole('img', { name: 'Text drawn with the parallel pen' })).toBeVisible();
+
+  // A narrower nib: the size follows.
+  await page.getByLabel('Nib width').first().selectOption('2.4');
+  await expect(size).toHaveValue('16.8');
+  await expect(page.getByText('Updating…')).toHaveCount(0);
+  if (shots) await page.screenshot({ path: join(shots, 'blackletter.png') });
+
+  // The ornate one keeps the nib sizing.
+  await page.getByLabel('Text style').selectOption({ label: 'Blackletter ornate (parallel pen)' });
+  await expect(size).toHaveValue('16.8');
+  await expect(page.getByText('Updating…')).toHaveCount(0);
+  if (shots) await page.screenshot({ path: join(shots, 'blackletter-ornate.png') });
+
+  // The Gothic has capitals 6 nib widths tall: 14.4 mm with the 2.4 mm nib.
+  await page.getByLabel('Text style').selectOption({ label: 'Gothic (parallel pen)' });
+  await expect(size).toHaveValue('14.4');
+  await expect(page.getByText('Updating…')).toHaveCount(0);
+  if (shots) await page.screenshot({ path: join(shots, 'pen-gothic.png') });
+
+  // Off "From nib", the size is your own again.
+  await page.getByRole('checkbox', { name: 'From nib' }).uncheck();
+  await expect(size).toBeEnabled();
+  await app.close();
+});
+
 test('View > Appearance: light, dark and colour themes, kept after a restart', async () => {
   const dataDir = mkdtempSync(join(tmpdir(), 'plotka-e2e-'));
   const env = { PLOTKA_USER_DATA: dataDir };

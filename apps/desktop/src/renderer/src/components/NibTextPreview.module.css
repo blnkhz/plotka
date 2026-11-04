@@ -1,0 +1,11 @@
+.paper {
+  background: var(--paper);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px;
+  margin-bottom: 6px;
+  overflow: hidden;
+}
+.paper canvas {
+  display: block;
+}

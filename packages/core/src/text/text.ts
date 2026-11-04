@@ -1,10 +1,14 @@
 import type { Vec2 } from '../geometry/vec2';
 import { createLayer, type Layer, type Polyline, type TextItem } from '../model';
+import { BLACKLETTER_CAP_NIBS, blackletterGlyph, type StrokeGlyph } from './blackletter';
+import { ornateGlyph } from './blackletter-ornate';
+import { PEN_GOTHIC_CAP_NIBS, PEN_GOTHIC_X_NIBS, penGothicGlyph } from './pen-gothic';
 import { HERSHEY_DATA } from './hershey-data';
 
 /**
- * LATER-6: single-stroke text in the Hershey fonts. Text becomes plain lines in mm, so it plots
- * cleanly (one pen pass per stroke, no outlines to fill).
+ * LATER-6: single-stroke text in the Hershey fonts, and gothic hands drawn for a parallel pen.
+ * Text becomes plain lines in mm, so it plots cleanly (one pen pass per stroke, no outlines to
+ * fill).
  */
 
 export type HersheyFont = keyof typeof HERSHEY_DATA;
@@ -12,10 +16,75 @@ export const HERSHEY_FONTS: { id: HersheyFont; name: string }[] = (
   Object.keys(HERSHEY_DATA) as HersheyFont[]
 ).map((id) => ({ id, name: HERSHEY_DATA[id].name }));
 
+/**
+ * Fonts drawn for a broad-edge (parallel) pen, with their glyphs, in nib widths: capital
+ * height, x-height and line height.
+ */
+const NIB_FONTS = {
+  blackletter: {
+    name: 'Blackletter (parallel pen)',
+    glyph: blackletterGlyph,
+    capNibs: BLACKLETTER_CAP_NIBS,
+    xNibs: 5,
+    lineHeight: 11,
+  },
+  blackletterOrnate: {
+    name: 'Blackletter ornate (parallel pen)',
+    glyph: ornateGlyph,
+    capNibs: BLACKLETTER_CAP_NIBS,
+    xNibs: 5,
+    // Swashes reach about a nib above the capitals and below the descenders.
+    lineHeight: 12.5,
+  },
+  penGothic: {
+    name: 'Gothic (parallel pen)',
+    glyph: penGothicGlyph,
+    capNibs: PEN_GOTHIC_CAP_NIBS,
+    xNibs: PEN_GOTHIC_X_NIBS,
+    lineHeight: 10,
+  },
+} satisfies Record<
+  string,
+  {
+    name: string;
+    glyph: (ch: string) => StrokeGlyph | undefined;
+    capNibs: number;
+    xNibs: number;
+    lineHeight: number;
+  }
+>;
+export type NibFont = keyof typeof NIB_FONTS;
+export const isNibFont = (f: string): f is NibFont => Object.hasOwn(NIB_FONTS, f);
+
+/** Every text style: the Hershey fonts, then the ones for a parallel pen. */
+export type TextFont = HersheyFont | NibFont;
+export const TEXT_FONTS: { id: TextFont; name: string; nib?: true }[] = [
+  ...HERSHEY_FONTS,
+  ...(Object.keys(NIB_FONTS) as NibFont[]).map((id) => ({
+    id,
+    name: NIB_FONTS[id].name,
+    nib: true as const,
+  })),
+];
+export const isTextFont = (f: string): f is TextFont => f in HERSHEY_DATA || isNibFont(f);
+
+/** A nib font's capital height and x-height, in nib widths (7 and 5 for the blackletters). */
+export const nibProportions = (font: NibFont) => ({
+  capNibs: NIB_FONTS[font].capNibs,
+  xNibs: NIB_FONTS[font].xNibs,
+});
+
+/**
+ * The size (capital height, mm) at which a nib font's strokes match a nib `width` mm wide: for
+ * the blackletters capitals 7 nib widths tall, for the Gothic 6.
+ */
+export const nibTextSize = (width: number, font: NibFont = 'blackletter') =>
+  width * NIB_FONTS[font].capNibs;
+
 export type TextAlign = 'left' | 'center' | 'right';
 
 export type TextOptions = {
-  font: HersheyFont;
+  font: TextFont;
   /** Height of capital letters, mm. */
   size: number;
   /** Distance between lines, as a multiple of the font's normal line height. */
@@ -25,16 +94,28 @@ export type TextOptions = {
   align?: TextAlign;
 };
 
-/** Hershey units: capitals run from −12 to the baseline at 9. */
-const CAP_HEIGHT = 21;
-const BASELINE = 9;
-/** Normal line height (the fonts span about −16 to 16). */
-const LINE_HEIGHT = 32;
+/** A font's units: where capitals start above the baseline, their height and line height. */
+type Metrics = { capTop: number; capHeight: number; lineHeight: number };
+/** Hershey: capitals run from −12 to the baseline at 9; the fonts span about −16 to 16. */
+const HERSHEY_METRICS: Metrics = { capTop: -12, capHeight: 21, lineHeight: 32 };
+/** Nib fonts, in nib widths: capitals from −capNibs to the baseline at 0. */
+const metricsOf = (font: TextFont): Metrics =>
+  isNibFont(font)
+    ? {
+        capTop: -NIB_FONTS[font].capNibs,
+        capHeight: NIB_FONTS[font].capNibs,
+        lineHeight: NIB_FONTS[font].lineHeight,
+      }
+    : HERSHEY_METRICS;
 
 type Glyph = { advance: number; strokes: Vec2[][] };
 const cache = new Map<string, Glyph>();
 
-function glyph(font: HersheyFont, code: number): Glyph {
+function glyph(font: TextFont, code: number): Glyph {
+  if (isNibFont(font)) {
+    const g = NIB_FONTS[font].glyph;
+    return g(String.fromCharCode(code)) ?? g('?')!;
+  }
   const key = `${font}:${code}`;
   const hit = cache.get(key);
   if (hit) return hit;
@@ -100,9 +181,10 @@ export type TextLayout = {
  * the text block (each line is aligned within the widest one).
  */
 export function layoutText(text: string, o: TextOptions): TextLayout {
-  const s = Math.max(o.size, 0.01) / CAP_HEIGHT;
+  const m = metricsOf(o.font);
+  const s = Math.max(o.size, 0.01) / m.capHeight;
   const gap = o.letterSpacing ?? 0;
-  const lineH = LINE_HEIGHT * s * (o.lineSpacing ?? 1);
+  const lineH = m.lineHeight * s * (o.lineSpacing ?? 1);
   const rows = text.replace(/\r\n?/g, '\n').split('\n');
   const measured = rows.map((row) => {
     const chars = [...row].map((ch) => glyph(o.font, codeOf(ch)));
@@ -114,8 +196,8 @@ export function layoutText(text: string, o: TextOptions): TextLayout {
   const lines: Polyline[] = [];
   measured.forEach(({ chars, width: w }, r) => {
     let x = o.align === 'center' ? (width - w) / 2 : o.align === 'right' ? width - w : 0;
-    // Capitals' top at the row's top: Hershey y −12 → 0.
-    const top = r * lineH + (CAP_HEIGHT - BASELINE) * s;
+    // Capitals' top at the row's top (Hershey y −12 → 0).
+    const top = r * lineH - m.capTop * s;
     for (const g of chars) {
       for (const st of g.strokes)
         lines.push({
@@ -129,12 +211,10 @@ export function layoutText(text: string, o: TextOptions): TextLayout {
   return { lines, width, height };
 }
 
-const isFont = (f: string): f is HersheyFont => f in HERSHEY_DATA;
-
 /** The layer for a text item: its strokes on the paper. Layer id: `text-<item id>`. */
 export function textLayer(item: TextItem): Layer {
   const { lines } = layoutText(item.text, {
-    font: isFont(item.font) ? item.font : 'sans',
+    font: isTextFont(item.font) ? item.font : 'sans',
     size: item.size,
     lineSpacing: item.lineSpacing,
     letterSpacing: item.letterSpacing,

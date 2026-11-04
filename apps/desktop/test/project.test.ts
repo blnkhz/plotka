@@ -271,6 +271,16 @@ describe('project files (PROJ-1)', () => {
     ]);
   });
 
+  it('keeps blackletter text sized from the nib', () => {
+    const raw = JSON.parse(serializeProject(sample()));
+    raw.texts = [{ id: 'b', text: 'Hodie', font: 'blackletter', size: 26.6, matchNib: true }];
+    expect(parseProject(JSON.stringify(raw)).texts[0]).toMatchObject({
+      font: 'blackletter',
+      size: 26.6,
+      matchNib: true,
+    });
+  });
+
   it('reads the old Zigzag fill as Lines with the pen kept down', () => {
     const f = parseFill({ type: 'zigzag', spacing: 0.8, angle: 30, inset: 0, connect: false });
     expect(f).toMatchObject({ type: 'lines', connect: true, spacing: 0.8, angle: 30 });

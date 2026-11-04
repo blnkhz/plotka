@@ -3,8 +3,12 @@ import {
   createLayer,
   createStep,
   defaultPageSetup,
+  BLACKLETTER_CAP_NIBS,
   HERSHEY_FONTS,
   layoutText,
+  nibProportions,
+  nibTextSize,
+  TEXT_FONTS,
   processDocument,
   textLayer,
   withTexts,
@@ -70,6 +74,100 @@ describe('single-stroke text (LATER-6)', () => {
       expect(t.lines.length).toBeGreaterThan(90);
       expect(t.width).toBeGreaterThan(0);
     }
+  });
+});
+
+describe('blackletter for a parallel pen', () => {
+  it('is offered after the Hershey styles', () => {
+    expect(TEXT_FONTS.map((f) => f.id)).toEqual([
+      ...HERSHEY_FONTS.map((f) => f.id),
+      'blackletter',
+      'blackletterOrnate',
+      'penGothic',
+    ]);
+  });
+
+  it('capitals are 7 nib widths tall: the given size, from y = 0 to the baseline', () => {
+    expect(BLACKLETTER_CAP_NIBS).toBe(7);
+    expect(nibTextSize(3.8)).toBeCloseTo(26.6);
+    const b = bounds(layoutText('HNE', { font: 'blackletter', size: 14 }).lines);
+    expect(b.minY).toBeCloseTo(0);
+    expect(b.maxY).toBeCloseTo(14);
+    // x-height: 5 nib widths of the 7.
+    const x = bounds(layoutText('nmu', { font: 'blackletter', size: 14 }).lines);
+    expect(x.minY).toBeCloseTo(4);
+  });
+
+  it('has every letter and figure; anything else is "?"', () => {
+    const alnum = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    const q = layoutText('?', { font: 'blackletter', size: 7 }).lines;
+    for (const ch of alnum) {
+      const t = layoutText(ch, { font: 'blackletter', size: 7 });
+      expect(t.lines.length, ch).toBeGreaterThan(0);
+      expect(t.lines, ch).not.toEqual(q);
+    }
+    expect(layoutText('§', { font: 'blackletter', size: 7 }).lines).toEqual(q);
+  });
+
+  it('the ornate one is the plain one with ornaments added, for the same nib', () => {
+    const alnum = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    const plain = (t: string) => layoutText(t, { font: 'blackletter', size: 7 });
+    const ornate = (t: string) => layoutText(t, { font: 'blackletterOrnate', size: 7 });
+    let decorated = 0;
+    for (const ch of alnum) {
+      const p = plain(ch).lines;
+      const o = ornate(ch).lines;
+      expect(o.length, ch).toBeGreaterThanOrEqual(p.length);
+      if (o.length > p.length) decorated++;
+    }
+    expect(decorated).toBeGreaterThan(40);
+    // Same x-height and minims: n is unchanged but for the hairline joining it onward.
+    expect(ornate('n').lines.slice(0, 2)).toEqual(plain('n').lines);
+    // Capitals keep their height (swashes reach about a nib above them).
+    const b = bounds(ornate('ABC').lines);
+    expect(b.maxY).toBeLessThan(7.5);
+    expect(b.minY).toBeGreaterThan(-1.5);
+    // Lines sit further apart, to leave room for the swashes.
+    expect(ornate('A\nA').height).toBeGreaterThan(plain('A\nA').height);
+    expect(layoutText('§', { font: 'blackletterOrnate', size: 7 }).lines).toEqual(
+      ornate('?').lines,
+    );
+  });
+
+  it('the Gothic: x-height 4 nib widths, capitals 6, sized from the nib by its own proportion', () => {
+    expect(nibProportions('penGothic')).toEqual({ capNibs: 6, xNibs: 4 });
+    expect(nibProportions('blackletter')).toEqual({ capNibs: 7, xNibs: 5 });
+    expect(nibTextSize(3.8, 'penGothic')).toBeCloseTo(22.8);
+    const caps = bounds(layoutText('HNE', { font: 'penGothic', size: 12 }).lines);
+    expect(caps.minY).toBeCloseTo(0);
+    expect(caps.maxY).toBeCloseTo(12);
+    // x-height: 4 of the 6 nib widths, so n starts a third of the way down.
+    expect(bounds(layoutText('nmu', { font: 'penGothic', size: 12 }).lines).minY).toBeCloseTo(4);
+    const q = layoutText('?', { font: 'penGothic', size: 6 }).lines;
+    for (const ch of 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.,!') {
+      const t = layoutText(ch, { font: 'penGothic', size: 6 });
+      expect(t.lines.length, ch).toBeGreaterThan(0);
+      expect(t.lines, ch).not.toEqual(q);
+    }
+    // Its own letters, not the blackletter's.
+    expect(layoutText('a', { font: 'penGothic', size: 6 }).lines).not.toEqual(
+      layoutText('a', { font: 'blackletter', size: 6 }).lines,
+    );
+  });
+
+  it('a text item in blackletter becomes a layer', () => {
+    const l = textLayer({
+      id: 'b',
+      text: 'Anno',
+      font: 'blackletter',
+      size: 21,
+      lineSpacing: 1,
+      letterSpacing: 0,
+      align: 'left',
+      x: 10,
+      y: 20,
+    });
+    expect(bounds(l.strokes).minY).toBeCloseTo(20);
   });
 });
 

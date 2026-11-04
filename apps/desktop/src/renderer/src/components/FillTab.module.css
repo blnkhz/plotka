@@ -38,3 +38,12 @@
   font: inherit;
   resize: vertical;
 }
+.nib {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.nib input[type='number'] {
+  width: 4.5em;
+}
