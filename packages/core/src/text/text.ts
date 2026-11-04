@@ -3,6 +3,7 @@ import { createLayer, type Layer, type Polyline, type TextItem } from '../model'
 import { BLACKLETTER_CAP_NIBS, blackletterGlyph, type StrokeGlyph } from './blackletter';
 import { ornateGlyph } from './blackletter-ornate';
 import { PEN_GOTHIC_CAP_NIBS, PEN_GOTHIC_X_NIBS, penGothicGlyph } from './pen-gothic';
+import { ROTUNDA_CAP_NIBS, ROTUNDA_X_NIBS, rotundaGlyph } from './rotunda';
 import { HERSHEY_DATA } from './hershey-data';
 
 /**
@@ -42,6 +43,14 @@ const NIB_FONTS = {
     capNibs: PEN_GOTHIC_CAP_NIBS,
     xNibs: PEN_GOTHIC_X_NIBS,
     lineHeight: 10,
+  },
+  rotunda: {
+    name: 'Rotunda (parallel pen)',
+    glyph: rotundaGlyph,
+    capNibs: ROTUNDA_CAP_NIBS,
+    xNibs: ROTUNDA_X_NIBS,
+    // Tails and the Q's swash reach a little below the descenders.
+    lineHeight: 10.5,
   },
 } satisfies Record<
   string,

@@ -387,7 +387,11 @@ function others(): Record<string, Def> {
   return out;
 }
 
-const glyphs = glyphMap({ ...others(), ...LETTERS });
+const DEFS: Readonly<Record<string, Def>> = { ...others(), ...LETTERS };
+const glyphs = glyphMap(DEFS);
+
+/** The glyph table (in nib widths), for the hands built on this one. */
+export const penGothicDefs = (): Readonly<Record<string, Def>> => DEFS;
 
 /** The glyph for a character, in nib widths (y down, baseline 0), if there is one. */
 export function penGothicGlyph(ch: string): StrokeGlyph | undefined {

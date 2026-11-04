@@ -30,8 +30,8 @@ extension needed.
 
 - Paper presets, margins, fit and alignment
 - Text in single-stroke Hershey fonts (six styles), typed in the app or from SVG text, and a
-  blackletter (plain or ornate) and a Gothic made of broad-nib strokes for a parallel pen, sized
-  from the nib
+  blackletter (plain or ornate) and a Gothic and a Rotunda made of broad-nib strokes for a
+  parallel pen, sized from the nib
 
   !["Hello plotter" in the Script Hershey font, with the text settings](docs/screenshots/text.png)
 

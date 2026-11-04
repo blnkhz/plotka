@@ -84,6 +84,7 @@ describe('blackletter for a parallel pen', () => {
       'blackletter',
       'blackletterOrnate',
       'penGothic',
+      'rotunda',
     ]);
   });
 
@@ -153,6 +154,32 @@ describe('blackletter for a parallel pen', () => {
     expect(layoutText('a', { font: 'penGothic', size: 6 }).lines).not.toEqual(
       layoutText('a', { font: 'blackletter', size: 6 }).lines,
     );
+  });
+
+  it('Rotunda: the Gothic proportions, with its own curved letters', () => {
+    expect(nibProportions('rotunda')).toEqual({ capNibs: 6, xNibs: 4 });
+    expect(nibTextSize(3.8, 'rotunda')).toBeCloseTo(22.8);
+    const round = (t: string, size = 12) => layoutText(t, { font: 'rotunda', size });
+    const caps = bounds(round('NE').lines);
+    // Curved tops overshoot the cap line a little, as round letters do.
+    expect(caps.minY).toBeGreaterThan(-0.5);
+    expect(caps.minY).toBeLessThan(0.1);
+    expect(caps.maxY).toBeGreaterThan(11.9);
+    expect(caps.maxY).toBeLessThan(12.4);
+    expect(bounds(round('nmu').lines).minY).toBeCloseTo(4, 0);
+    const q = round('?', 6).lines;
+    for (const ch of 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.,!') {
+      const t = round(ch, 6);
+      expect(t.lines.length, ch).toBeGreaterThan(0);
+      expect(t.lines, ch).not.toEqual(q);
+      if (/[a-z]/i.test(ch))
+        expect(t.lines, ch).not.toEqual(layoutText(ch, { font: 'penGothic', size: 6 }).lines);
+    }
+    // Curves: a bowl is sampled into many short segments, not a few corners.
+    const o = round('o', 6).lines;
+    expect(Math.max(...o.map((l) => l.points.length))).toBeGreaterThan(20);
+    // Figures are the Gothic's.
+    expect(round('7', 6).lines).toEqual(layoutText('7', { font: 'penGothic', size: 6 }).lines);
   });
 
   it('a text item in blackletter becomes a layer', () => {
