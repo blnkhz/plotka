@@ -14,7 +14,7 @@ one of your recent files. Press Esc or click outside it to go straight to the ap
 - **Toolbar** (top): Open, Save, Undo / Redo, Help, the file name, and a summary of the
   plot: number of paths, how far the pen draws, how far it travels with the pen up, and the
   estimated time.
-- **Left panel**: **Doodle…** to draw by hand, the layers of your artwork, and the transforms
+- **Left panel**: **Doodle…** to draw by hand (each doodle is a layer), the layers of your artwork, and the transforms
   (Tile, Tessellate).
 - **Preview** (middle): exactly what the pen will draw, on the paper.
 - **Right panel**: four tabs. **Page** (paper and placement), **Fill** (fills and passes for the

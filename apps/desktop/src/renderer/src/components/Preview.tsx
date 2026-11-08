@@ -597,7 +597,11 @@ function ArrangeButton() {
 function ArrangeBar() {
   const target = useStore((s) => s.arrange.target);
   const name = useStore((s) =>
-    target === null ? null : (s.doc?.layers.find((l) => l.id === target)?.name ?? null),
+    target === null
+      ? null
+      : (s.layerOverrides[target]?.name ??
+        s.doc?.layers.find((l) => l.id === target)?.name ??
+        null),
   );
   const setArrange = useStore((s) => s.setArrange);
   const several = useStore(

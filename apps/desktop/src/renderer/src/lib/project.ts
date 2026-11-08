@@ -1,5 +1,6 @@
 import {
   defaultSliceSettings,
+  doodleToSvg,
   type SliceSettings,
   defaultDitherSettings,
   DITHER_METHODS,
@@ -11,6 +12,7 @@ import {
   defaultPageSetup,
   defaultPassSettings,
   SUPPORTED_FILL_TYPES,
+  type DoodleLayerItem,
   type DoodleSettings,
   type BooleanOp,
   type DoodleItem,
@@ -25,7 +27,7 @@ import {
   TEXT_FONTS,
 } from '@plotka/core';
 import { DEFAULT_NIB } from './nib';
-import type { ViewOptions } from '../store';
+import type { LayerCopy, ViewOptions } from '../store';
 
 /** Project files (PROJ-1). See docs/plans/epic-10-projects.md for the format. */
 export const PROJECT_FORMAT = 'plotka-project';
@@ -35,6 +37,8 @@ export const PROJECT_VERSION = 1;
 export const PROJECT_EXTENSION = '.plot.json';
 
 export type ProjectLayerOverride = {
+  /** The name the user gave the layer. */
+  name?: string;
   visible?: boolean;
   plot?: boolean;
   color?: string;
@@ -51,6 +55,11 @@ export type ProjectData = {
   optimize: OptimizeSettings;
   profileId: string;
   pipeline: PipelineStep[];
+  /** Doodles, each a layer of the drawing. */
+  doodles: DoodleLayerItem[];
+  /** Duplicates of the artwork file's layers. */
+  layerCopies: LayerCopy[];
+  /** A new drawing left on the doodle pad, not used yet. */
   doodle: {
     strokes: DoodleItem[];
     settings: DoodleSettings;
@@ -121,6 +130,8 @@ export function serializeProject(d: ProjectData, now = new Date()): string {
       optimize: d.optimize,
       profileId: d.profileId,
       pipeline: d.pipeline,
+      doodles: d.doodles,
+      layerCopies: d.layerCopies,
       doodle: d.doodle,
       plotSkip: d.plotSkip,
       view: d.view,
@@ -247,6 +258,7 @@ function parseOverrides(v: unknown): Record<string, ProjectLayerOverride> {
     if (typeof o['visible'] === 'boolean') r.visible = o['visible'];
     if (typeof o['plot'] === 'boolean') r.plot = o['plot'];
     if (o['removed'] === true) r.removed = true;
+    if (typeof o['name'] === 'string' && o['name'].trim()) r.name = o['name'].slice(0, 80);
     if (typeof o['color'] === 'string' && /^#[0-9a-f]{6}$/i.test(o['color'])) r.color = o['color'];
     const s = parseLayerSettings(o['settings']);
     if (s && Object.keys(s).length) r.settings = s;
@@ -285,7 +297,8 @@ function parseStrokes(v: unknown, depth = 0): DoodleItem[] {
       const points = s['points']
         .filter((p): p is Obj => isObj(p) && isNum(p['x']) && isNum(p['y']))
         .map((p) => ({ x: p['x'] as number, y: p['y'] as number }));
-      return points.length ? { points } : null;
+      if (!points.length) return null;
+      return s['exact'] === true ? { points, exact: true } : { points };
     })
     .filter((s): s is DoodleItem => !!s);
 }
@@ -373,25 +386,88 @@ export function parseProject(text: string): ProjectData {
   if (isObj(raw['plotSkip']))
     for (const [k, v] of Object.entries(raw['plotSkip'])) if (v === true) plotSkip[k] = true;
 
+  const layerOverrides = parseOverrides(raw['layerOverrides']);
+  const art = { source, doodles: parseDoodles(raw['doodles']), doodle, layerOverrides, plotSkip };
+  if (!Array.isArray(raw['doodles'])) migrateUsedDoodle(art);
+
   const layerMode = LAYER_MODES.includes(raw['layerMode'] as LayerMode)
     ? (raw['layerMode'] as LayerMode)
     : 'auto';
   const page = mergeDefaults(defaultPageSetup(), raw['page']);
   return {
-    source,
+    ...art,
     layerMode,
-    layerOverrides: parseOverrides(raw['layerOverrides']),
+    layerCopies: parseLayerCopies(raw['layerCopies']),
     page,
     optimize: mergeDefaults(defaultOptimizeSettings(), raw['optimize']),
     profileId: typeof raw['profileId'] === 'string' ? raw['profileId'] : '',
     pipeline: parsePipeline(raw['pipeline']),
-    doodle,
-    plotSkip,
     view: mergeDefaults({ penWidth: 0.4, nib: { on: false, ...DEFAULT_NIB } }, raw['view']),
     texts: parseTexts(raw['texts']),
     image,
     model,
   };
+}
+
+/** Duplicated file layers; anything damaged is dropped. */
+function parseLayerCopies(v: unknown): LayerCopy[] {
+  if (!Array.isArray(v)) return [];
+  const out: LayerCopy[] = [];
+  for (const c of v) {
+    if (!isObj(c) || typeof c['id'] !== 'string' || typeof c['of'] !== 'string') continue;
+    if (!/^[\w-]{1,40}$/.test(c['id']) || out.some((o) => o.id === c['id'])) continue;
+    if (typeof c['name'] !== 'string' || !LAYER_MODES.includes(c['mode'] as LayerMode)) continue;
+    out.push({
+      id: c['id'],
+      of: c['of'],
+      name: c['name'].slice(0, 80),
+      mode: c['mode'] as LayerMode,
+    });
+  }
+  return out;
+}
+
+/** Doodle layers (an empty layer has no strokes yet); anything damaged is dropped. */
+function parseDoodles(v: unknown): DoodleLayerItem[] {
+  if (!Array.isArray(v)) return [];
+  const out: DoodleLayerItem[] = [];
+  for (const d of v) {
+    if (!isObj(d) || typeof d['id'] !== 'string' || typeof d['name'] !== 'string') continue;
+    if (!/^[\w-]{1,40}$/.test(d['id']) || out.some((o) => o.id === d['id'])) continue;
+    if (!Array.isArray(d['strokes'])) continue;
+    const strokes = parseStrokes(d['strokes']);
+    out.push({
+      id: d['id'],
+      name: d['name'].slice(0, 80),
+      strokes,
+      settings: mergeDefaults(defaultDoodleSettings(), d['settings']),
+      size: mergeDefaults({ width: 150, height: 150 }, d['size']),
+    });
+  }
+  return out;
+}
+
+/**
+ * Projects from before doodle layers had one doodle, and using it made it the artwork file
+ * ("Doodle.svg"). If that file is exactly the doodle, it becomes a doodle layer with the file
+ * layer's settings. Otherwise the strokes stay on the pad and the artwork isn't touched.
+ */
+function migrateUsedDoodle(
+  p: Pick<ProjectData, 'source' | 'doodles' | 'doodle' | 'layerOverrides' | 'plotSkip'>,
+) {
+  const { source, doodle } = p;
+  if (!source || source.name !== 'Doodle.svg' || source.path || !doodle?.strokes.length) return;
+  const svg = doodleToSvg(doodle.strokes, doodle.settings, doodle.size);
+  if (new TextDecoder().decode(source.bytes) !== svg) return;
+  p.source = null;
+  p.doodle = null;
+  p.doodles = [{ id: '1', name: 'Doodle 1', ...doodle }];
+  // A doodle's SVG makes one layer. Its pass layers are skipped as `layer-1~<pass>`.
+  const moved = (id: string) => id.replace(/^layer-1(?=~|$)/, 'doodle-1');
+  p.layerOverrides = Object.fromEntries(
+    Object.entries(p.layerOverrides).map(([id, o]) => [moved(id), o]),
+  );
+  p.plotSkip = Object.fromEntries(Object.entries(p.plotSkip).map(([id, v]) => [moved(id), v]));
 }
 
 const ALIGNS = ['left', 'center', 'right'] as const;

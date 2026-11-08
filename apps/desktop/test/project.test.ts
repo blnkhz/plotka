@@ -7,6 +7,7 @@ import {
   defaultOptimizeSettings,
   defaultPageSetup,
   defaultPassSettings,
+  doodleToSvg,
 } from '@plotka/core';
 import {
   fromBase64,
@@ -49,6 +50,16 @@ const sample = (): ProjectData => ({
   profileId: 'axidraw-v3-a3',
   pipeline: [
     { ...createStep('tessellate'), params: { ...createStep('tessellate').params, pattern: 'p4g' } },
+  ],
+  layerCopies: [{ id: 'c1', of: 'layer-1', name: 'Layer 1 copy', mode: 'auto' }],
+  doodles: [
+    {
+      id: 'd1',
+      name: 'Doodle 1',
+      strokes: [{ points: [{ x: 9, y: 9 }] }],
+      settings: { ...defaultDoodleSettings(), fillClosed: true },
+      size: { width: 200, height: 100 },
+    },
   ],
   doodle: {
     strokes: [
@@ -209,6 +220,99 @@ describe('project files (PROJ-1)', () => {
     expect(parseProject(text).doodle?.strokes).toEqual([
       { op: 'union', items: [{ points: [{ x: 2, y: 2 }] }] },
     ]);
+  });
+
+  it('turns the doodle that was the artwork of an older project into a doodle layer', () => {
+    const strokes = [
+      {
+        points: [
+          { x: 1, y: 1 },
+          { x: 20, y: 30 },
+        ],
+      },
+    ];
+    const settings = defaultDoodleSettings();
+    const size = { width: 120, height: 80 };
+    const old = (svg: string, name = 'Doodle.svg') =>
+      JSON.stringify({
+        format: PROJECT_FORMAT,
+        version: 1,
+        source: { name, base64: toBase64(new TextEncoder().encode(svg)) },
+        doodle: { strokes, settings, size },
+        layerOverrides: { 'layer-1': { color: '#ff0000' }, 'text-a': { plot: false } },
+        plotSkip: { 'layer-1~2': true },
+      });
+    const svg = doodleToSvg(strokes, settings, size);
+
+    const p = parseProject(old(svg));
+    expect(p.source).toBeNull();
+    expect(p.doodle).toBeNull();
+    expect(p.doodles).toEqual([{ id: '1', name: 'Doodle 1', strokes, settings, size }]);
+    expect(p.layerOverrides).toEqual({
+      'doodle-1': { color: '#ff0000' },
+      'text-a': { plot: false },
+    });
+    expect(p.plotSkip).toEqual({ 'doodle-1~2': true });
+
+    // The strokes changed after the drawing was used, or another file is open: the plot stays
+    // what it was, and the strokes stay on the pad.
+    for (const q of [parseProject(old('<svg/>')), parseProject(old(svg, 'art.svg'))]) {
+      expect(q.source).not.toBeNull();
+      expect(q.doodles).toEqual([]);
+      expect(q.doodle?.strokes).toEqual(strokes);
+      expect(q.layerOverrides['layer-1']).toEqual({ color: '#ff0000' });
+    }
+  });
+
+  it('keeps the names given to layers, ignoring empty ones', () => {
+    const raw = JSON.parse(serializeProject(sample())) as Record<string, unknown>;
+    raw['layerOverrides'] = { a: { name: 'Outlines' }, b: { name: '  ' }, c: { name: 7 } };
+    const { layerOverrides } = parseProject(JSON.stringify(raw));
+    expect(layerOverrides['a']?.name).toBe('Outlines');
+    expect(layerOverrides['b']?.name).toBeUndefined();
+    expect(layerOverrides['c']?.name).toBeUndefined();
+  });
+
+  it('keeps empty layers and placed shapes', () => {
+    const raw = JSON.parse(serializeProject(sample())) as { doodles: Record<string, unknown>[] };
+    const points = [
+      { x: 0, y: 0 },
+      { x: 9, y: 0 },
+      { x: 9, y: 9 },
+    ];
+    raw.doodles[0]!['strokes'] = [{ points, exact: true }];
+    raw.doodles.push({ ...raw.doodles[0], id: 'empty', name: 'Layer 1', strokes: [] });
+    const [shape, empty] = parseProject(JSON.stringify(raw)).doodles;
+    expect(shape!.strokes).toEqual([{ points, exact: true }]);
+    expect(empty).toMatchObject({ id: 'empty', name: 'Layer 1', strokes: [] });
+  });
+
+  it('leaves out damaged layer duplicates', () => {
+    const raw = JSON.parse(serializeProject(sample())) as { layerCopies: unknown[] };
+    const good = raw.layerCopies[0];
+    raw.layerCopies = [
+      7,
+      good,
+      good,
+      { id: 'x', of: 'layer-1', name: 'x', mode: 'nope' },
+      { id: 'y', name: 'y', mode: 'auto' },
+    ];
+    expect(parseProject(JSON.stringify(raw)).layerCopies).toEqual(sample().layerCopies);
+    delete (raw as { layerCopies?: unknown }).layerCopies;
+    expect(parseProject(JSON.stringify(raw)).layerCopies).toEqual([]);
+  });
+
+  it('leaves out damaged doodle layers', () => {
+    const raw = JSON.parse(serializeProject(sample())) as { doodles: unknown[] };
+    const good = raw.doodles[0];
+    raw.doodles = [
+      7,
+      good,
+      good, // the same id again
+      { id: 'no-strokes', name: 'x' },
+      { id: 'bad id!', name: 'x', strokes: [{ points: [{ x: 1, y: 1 }] }] },
+    ];
+    expect(parseProject(JSON.stringify(raw)).doodles).toEqual(sample().doodles);
   });
 
   it('refuses other files, damaged files and newer versions with plain messages', () => {

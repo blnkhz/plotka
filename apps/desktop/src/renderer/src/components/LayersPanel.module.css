@@ -12,7 +12,7 @@
 }
 .layer {
   display: grid;
-  grid-template-columns: 22px minmax(0, 1fr) auto auto auto auto;
+  grid-template-columns: 22px minmax(0, 1fr) auto auto auto auto auto;
   align-items: center;
   gap: 6px;
   padding: 3px 4px;
@@ -38,6 +38,10 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+.nameInput {
+  min-width: 0;
+  width: 100%;
 }
 .count {
   color: var(--muted);
@@ -72,7 +76,9 @@
   text-decoration: underline;
   cursor: pointer;
 }
-.addText {
+.adds {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
   margin-top: 8px;
-  width: 100%;
 }

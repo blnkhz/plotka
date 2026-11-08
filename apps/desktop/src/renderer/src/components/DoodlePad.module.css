@@ -61,6 +61,22 @@
   gap: 6px;
   margin-top: 8px;
 }
+.shapePicker {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.shapePicker button {
+  display: grid;
+  place-items: center;
+  padding: 4px 0;
+}
+.shapePicker .picked {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--on-accent);
+}
 .note {
   margin: 8px 0 0;
   color: var(--warn);

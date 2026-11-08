@@ -19,6 +19,8 @@ const projectParts = (s: State) =>
     s.pipeline,
     s.plotSkip,
     s.texts,
+    s.doodles,
+    s.layerCopies,
     s.doodle.strokes,
     s.doodle.settings,
     s.doodle.size,

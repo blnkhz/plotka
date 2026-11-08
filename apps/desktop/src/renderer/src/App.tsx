@@ -21,7 +21,7 @@ import { openFromOutside } from './lib/openFile';
 import { fmtDistance } from './lib/format';
 import { useProcessed, useProcessing } from './lib/useProcessed';
 import { fmtDuration } from './lib/format';
-import { useStore } from './store';
+import { useStore, selectedDoodle } from './store';
 import styles from './App.module.css';
 
 export function App() {
@@ -94,8 +94,8 @@ export function App() {
 
 /** Top of the left panel: drawing by hand is another way to get artwork, beside the layers. */
 function DoodleButton() {
-  const setDoodle = useStore((s) => s.setDoodle);
-  const hasDoodle = useStore((s) => s.doodle.strokes.length > 0);
+  const onLayer = useStore(selectedDoodle);
+  const hasDrawing = !!onLayer?.strokes.length;
   const hasImage = useStore((s) => s.image.bytes !== null);
   const setImage = useStore((s) => s.setImage);
   const hasModel = useStore((s) => s.model.bytes !== null);
@@ -103,11 +103,21 @@ function DoodleButton() {
   return (
     <div className={styles.doodle}>
       <button
-        onClick={() => setDoodle({ open: true })}
-        title="Draw something and turn it into vectors"
+        onClick={() => {
+          const s = useStore.getState();
+          if (onLayer) s.editDoodle(onLayer.id);
+          else s.openDoodle();
+        }}
+        title={
+          hasDrawing
+            ? 'Change the doodle on the selected layer'
+            : onLayer
+              ? 'Draw on the selected layer'
+              : 'Draw something, as a layer of its own'
+        }
       >
         <span aria-hidden="true">✎</span>
-        {hasDoodle ? 'Edit doodle…' : 'Doodle…'}
+        {hasDrawing ? 'Edit doodle…' : 'Add doodle…'}
       </button>
       {hasImage && (
         <button

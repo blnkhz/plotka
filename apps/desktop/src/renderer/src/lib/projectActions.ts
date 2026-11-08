@@ -1,5 +1,12 @@
 import { DEFAULT_PROFILE_ID } from '@plotka/plotter';
-import { docWithTexts, knownProfile, sameArtwork, useStore, type ViewOptions } from '../store';
+import {
+  composeDoc,
+  doodleDraft,
+  knownProfile,
+  sameArtwork,
+  useStore,
+  type ViewOptions,
+} from '../store';
 
 type State = ReturnType<typeof useStore.getState>;
 import {
@@ -41,8 +48,10 @@ export function currentProject(): ProjectData {
     optimize: s.optimize,
     profileId: s.profileId,
     pipeline: s.pipeline,
-    doodle: s.doodle.strokes.length
-      ? { strokes: s.doodle.strokes, settings: s.doodle.settings, size: s.doodle.size }
+    doodles: s.doodles,
+    layerCopies: s.layerCopies,
+    doodle: doodleDraft(s.doodle).length
+      ? { strokes: doodleDraft(s.doodle), settings: s.doodle.settings, size: s.doodle.size }
       : null,
     plotSkip: s.plotSkip,
     view: { penWidth: s.view.penWidth, nib: s.view.nib },
@@ -65,7 +74,7 @@ const baseName = (file: string) => file.replace(/^.*[\\/]/, '').replace(/\.[^.]+
 
 // --- PROJ-2: undo / redo of settings ---
 
-/** The settings undo covers. Doodle strokes have their own undo in the pad. */
+/** The settings undo covers. The strokes on the doodle pad have their own undo there. */
 type Snapshot = Pick<
   State,
   | 'layerMode'
@@ -76,6 +85,8 @@ type Snapshot = Pick<
   | 'plotSkip'
   | 'profileId'
   | 'texts'
+  | 'doodles'
+  | 'layerCopies'
 > &
   Pick<ViewOptions, 'penWidth' | 'nib'>;
 
@@ -98,6 +109,8 @@ const snapshot = (s: State): Snapshot => ({
   penWidth: s.view.penWidth,
   nib: s.view.nib,
   texts: s.texts,
+  doodles: s.doodles,
+  layerCopies: s.layerCopies,
 });
 
 /** Which settings changed, as a key (empty if none). */
@@ -111,6 +124,8 @@ function changedKey(s: State, p: State): string {
   if (s.plotSkip !== p.plotSkip) keys.push('plotSkip');
   // Adding or deleting text is a step of its own, never merged with typing in it.
   if (s.texts !== p.texts) keys.push(s.texts.length !== p.texts.length ? 'textList' : 'texts');
+  if (s.doodles !== p.doodles) keys.push('doodles');
+  if (s.layerCopies !== p.layerCopies) keys.push('layerCopies');
   if (s.profileId !== p.profileId) keys.push('profile');
   if (s.view.penWidth !== p.view.penWidth) keys.push('penWidth');
   if (s.view.nib !== p.view.nib) keys.push('nib');
@@ -175,9 +190,17 @@ async function restore(target: Snapshot) {
       profileId: target.profileId,
       view: { ...cur.view, penWidth: target.penWidth, nib: target.nib },
       texts: target.texts,
-      doc: docWithTexts(cur.doc, target.texts, target.page),
+      doodles: target.doodles,
+      layerCopies: target.layerCopies,
+      doc: composeDoc({ ...cur, ...target }),
       dirty: true,
     }));
+    // The selected layer may be one this took away.
+    useStore.setState((cur) =>
+      cur.doc?.layers.some((l) => l.id === cur.selectedLayerId)
+        ? {}
+        : { selectedLayerId: cur.doc?.layers[0]?.id ?? null },
+    );
   });
   lastRecord = -Infinity;
   syncFlags();
@@ -201,8 +224,12 @@ export async function redo() {
 export async function openArtwork(source: Source, { forget }: { forget: boolean }) {
   if (forget) await window.api.invoke('project:forget');
   await quietly(async () => {
-    // New artwork is a new project: no text from the last one.
-    useStore.setState({ texts: [] });
+    // New artwork is a new project: no text or doodles from the last one.
+    useStore.setState((s) => ({
+      texts: [],
+      doodles: [],
+      doodle: { ...s.doodle, editing: null, draft: [], strokes: [], past: [], future: [] },
+    }));
     await useStore.getState().openFile(source);
   });
   if (!useStore.getState().error) {
@@ -236,10 +263,14 @@ export async function openProject(
       doodle: {
         ...s.doodle,
         open: false,
+        editing: null,
+        draft: [],
         past: [],
         future: [],
         ...(d.doodle ?? { strokes: [] }),
       },
+      doodles: d.doodles,
+      layerCopies: [],
       view: { ...s.view, penWidth: d.view.penWidth, nib: d.view.nib },
       image: d.image
         ? { open: false, ...d.image }
@@ -252,12 +283,17 @@ export async function openProject(
     });
     if (d.source) await useStore.getState().openFile(d.source);
     else {
-      // Text only (or nothing): an empty paper with the text layers.
-      const doc = docWithTexts(null, d.texts, d.page);
+      // Only doodles and text (or nothing).
+      const doc = composeDoc({ ...useStore.getState(), source: null });
       useStore.setState({ source: null, doc, selectedLayerId: doc?.layers[0]?.id ?? null });
     }
     // openFile resets these, so they go last.
-    useStore.setState({ layerOverrides: d.layerOverrides, plotSkip: d.plotSkip });
+    useStore.setState((s) => ({
+      layerOverrides: d.layerOverrides,
+      plotSkip: d.plotSkip,
+      layerCopies: d.layerCopies,
+      doc: composeDoc({ ...s, layerCopies: d.layerCopies }),
+    }));
   });
   useStore.setState({ projectName: projectNameFromFile(fileName), dirty: false });
   resetHistory();
@@ -292,8 +328,14 @@ export function trackProject(): () => void {
       // Undo history. New artwork (a doodle, a dropped file) starts over; the layer changes
       // that come with any import (e.g. after a layer mode change) aren't steps of their own.
       if (!sameArtwork(s.source, p.source)) resetHistory();
-      // Text edits change the drawing too (its text layers), but they're the user's own steps.
-      else if (s.doc === p.doc || s.texts !== p.texts) {
+      // Text and doodle edits change the drawing too (their layers), but they're the user's own
+      // steps.
+      else if (
+        s.doc === p.doc ||
+        s.texts !== p.texts ||
+        s.doodles !== p.doodles ||
+        s.layerCopies !== p.layerCopies
+      ) {
         const key = changedKey(s, p);
         if (key && gesture) {
           if (!gesture.recorded) record(gesture.before, 'gesture');
@@ -310,9 +352,13 @@ export function trackProject(): () => void {
         s.optimize !== p.optimize ||
         s.profileId !== p.profileId ||
         s.pipeline !== p.pipeline ||
-        s.doodle.strokes !== p.doodle.strokes ||
-        s.doodle.settings !== p.doodle.settings ||
-        s.doodle.size !== p.doodle.size ||
+        s.doodles !== p.doodles ||
+        s.layerCopies !== p.layerCopies ||
+        doodleDraft(s.doodle) !== doodleDraft(p.doodle) ||
+        // While a layer is on the pad, these are its; they're saved when it's updated.
+        (!s.doodle.editing &&
+          !p.doodle.editing &&
+          (s.doodle.settings !== p.doodle.settings || s.doodle.size !== p.doodle.size)) ||
         s.plotSkip !== p.plotSkip ||
         s.texts !== p.texts ||
         s.view.penWidth !== p.view.penWidth ||

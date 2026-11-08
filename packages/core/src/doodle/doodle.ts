@@ -10,7 +10,11 @@ import {
 import { bezierPoint, fitCubics, simplifyLines, type Cubic } from './fit';
 
 /** A freehand stroke as drawn, in mm on the doodle artboard. */
-export type DoodleStroke = { points: Vec2[] };
+export type DoodleStroke = {
+  points: Vec2[];
+  /** A placed shape, not a hand-drawn line: a closed polygon, never smoothed or fitted. */
+  exact?: boolean;
+};
 
 /**
  * How a combined shape is made from its items (bottom first): `union` merges them,
@@ -154,6 +158,10 @@ const tolerance = (s: number, style: DoodleSettings['style']) =>
 
 /** Turns one raw stroke into a clean vector path. */
 export function processStroke(stroke: DoodleStroke, s: DoodleSettings): DoodlePath | null {
+  if (stroke.exact)
+    return stroke.points.length >= 3
+      ? { kind: 'lines', points: stroke.points, closed: true }
+      : null;
   let pts = resample(stroke.points);
   if (pts.length < 2) return null;
   let closed = false;
@@ -261,6 +269,12 @@ export function processItem(item: DoodleItem, s: DoodleSettings): DoodlePath | n
 /** All the strokes an item is made of, as drawn. */
 export function itemStrokes(item: DoodleItem): DoodleStroke[] {
   return isDoodleShape(item) ? item.items.flatMap(itemStrokes) : [item];
+}
+
+/** The same item, moved. */
+export function moveItem(item: DoodleItem, dx: number, dy: number): DoodleItem {
+  if (isDoodleShape(item)) return { ...item, items: item.items.map((i) => moveItem(i, dx, dy)) };
+  return { ...item, points: item.points.map((p) => ({ x: p.x + dx, y: p.y + dy })) };
 }
 
 const f = (n: number) => String(Math.round(n * 1000) / 1000);

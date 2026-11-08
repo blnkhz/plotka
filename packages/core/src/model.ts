@@ -141,6 +141,10 @@ export type Layer = {
    * page fit and transforms leave it alone, and it doesn't count toward the artwork's size.
    */
   text?: TextItem;
+  /** A doodle's layer: the id of its `DoodleLayerItem`, so it can be edited again. */
+  doodle?: string;
+  /** A duplicate of a layer from the file: the id of that layer. */
+  copyOf?: string;
 };
 
 /** A block of single-stroke text on the paper. */

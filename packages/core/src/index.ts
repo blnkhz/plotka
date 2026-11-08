@@ -24,6 +24,8 @@ export * from './fills/organic';
 export * from './pipeline/passes';
 export * from './transforms';
 export * from './doodle/doodle';
+export * from './doodle/layer';
+export * from './doodle/primitives';
 export * from './doodle/fit';
 export * from './optimize/clean';
 export * from './pipeline/resume';

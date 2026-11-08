@@ -11,7 +11,7 @@ A project keeps:
 - a copy of the artwork, so it still opens if the original SVG is moved or changed,
 - the layer settings (fills, passes, outlines, colors, which layers to show and plot),
 - the page setup, optimization settings and the transforms,
-- your doodle strokes.
+- your doodles, with their strokes.
 
 Pen heights and the plotter connection belong to the machine, not the drawing, so they're not in
 the project. Pen heights are remembered by the app.

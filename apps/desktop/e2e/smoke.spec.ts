@@ -204,7 +204,6 @@ test('doodle, turn it into vectors, then tile it', async () => {
   await page.getByRole('button', { name: 'Curves' }).click();
 
   await page.getByRole('button', { name: 'Use drawing' }).click();
-  await expect(page.getByText('Doodle.svg')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Edit doodle…' })).toBeVisible();
 
   // Tile it 3 × 3 as a brick pattern with alternate columns mirrored.
@@ -1660,9 +1659,218 @@ test('doodle: combine overlapping shapes (merge, cut out, separate, undo)', asyn
   await expect(page.getByText('A combined shape is selected.')).toBeVisible();
   if (shots) await page.screenshot({ path: join(shots, 'doodle-cut.png') });
   await page.getByRole('button', { name: 'Use drawing' }).click();
-  await expect(page.getByText('Doodle.svg')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Edit doodle…' })).toBeVisible();
   // One filled shape (not two).
   await expect(page.getByTitle('Strokes / filled shapes')).toHaveText('0/1');
+  await app.close();
+});
+
+test('doodles are separate layers with their own fills, and can be edited again', async () => {
+  const app = await launch();
+  const page = await app.firstWindow();
+  await page.setViewportSize({ width: 1400, height: 900 });
+  await page.locator('#root > div').waitFor();
+
+  const loop = async (dx: number) => {
+    const box = (await page.getByTestId('doodle-canvas').boundingBox())!;
+    const cx = box.x + box.width / 2 + dx;
+    const cy = box.y + box.height / 2;
+    await page.mouse.move(cx + 80, cy);
+    await page.mouse.down();
+    for (let i = 1; i <= 40; i++) {
+      const a = (i / 40) * Math.PI * 2 * 0.98;
+      await page.mouse.move(cx + 80 * Math.cos(a), cy + 80 * Math.sin(a));
+    }
+    await page.mouse.up();
+  };
+  const layers = page.getByRole('listitem').filter({ hasText: /^(Doodle|Layer) \d/ });
+  const edit = page.getByRole('button', { name: 'Edit doodle…' });
+  const add = page.getByRole('button', { name: 'Add doodle…' });
+
+  await add.click();
+  await loop(-120);
+  await page.getByLabel('Fill closed shapes').check();
+  await page.getByRole('button', { name: 'Use drawing' }).click();
+  await expect(layers).toHaveCount(1);
+  await expect(edit).toBeVisible();
+
+  // A new layer has no doodle yet, so it offers to add one, starting blank.
+  await page.getByRole('button', { name: '+ Add layer' }).click();
+  await expect(layers).toHaveCount(2);
+  await expect(add).toBeVisible();
+  await add.click();
+  await expect(page.getByText(/^0 strokes →/)).toBeVisible();
+  await expect(page.getByLabel('Show other doodles')).toBeChecked();
+  await loop(120);
+  await page.getByRole('button', { name: 'Use drawing' }).click();
+  await expect(layers).toHaveCount(2);
+  if (shots) await page.screenshot({ path: join(shots, 'doodle-layers.png') });
+
+  // Each has its own settings: the fill of the first doesn't change with the second.
+  await page.getByRole('tab', { name: 'Fill' }).click();
+  await layers.filter({ hasText: 'Doodle 1' }).click();
+  await expect(page.getByLabel('Fill type')).toHaveValue('lines');
+  await page.getByLabel('Fill type').selectOption('hexagons');
+  await layers.filter({ hasText: 'Layer 1' }).click();
+  await expect(page.getByLabel('Fill type')).not.toHaveValue('hexagons');
+
+  // Editing opens that doodle's own strokes; Cancel leaves it alone, Update layer changes it.
+  await layers.filter({ hasText: 'Doodle 1' }).click();
+  await edit.click();
+  await expect(page.getByText(/^1 stroke →/)).toBeVisible();
+  await expect(page.getByLabel('Fill closed shapes')).toBeChecked();
+  await page.getByRole('button', { name: 'Clear' }).click();
+  await page.getByRole('button', { name: 'Cancel' }).click();
+  await edit.click();
+  await expect(page.getByText(/^1 stroke →/)).toBeVisible();
+  await loop(0);
+  await page.getByRole('button', { name: 'Update layer' }).click();
+  await expect(layers).toHaveCount(2);
+  await layers.filter({ hasText: 'Doodle 1' }).click();
+  await expect(page.getByLabel('Fill type')).toHaveValue('hexagons');
+
+  // Deleting a doodle can be undone.
+  await page.getByRole('button', { name: 'Remove Layer 1' }).click();
+  await expect(layers).toHaveCount(1);
+  await page.getByRole('button', { name: 'Undo' }).click();
+  await expect(layers).toHaveCount(2);
+  await app.close();
+});
+
+test('doodle: place basic shapes, move them and combine them', async () => {
+  const app = await launch();
+  const page = await app.firstWindow();
+  await page.setViewportSize({ width: 1400, height: 900 });
+  await page.locator('#root > div').waitFor();
+  await page.getByRole('button', { name: 'Doodle…' }).click();
+  const pad = page.getByRole('dialog', { name: 'Doodle' });
+  const box = (await page.getByTestId('doodle-canvas').boundingBox())!;
+  const cx = box.x + box.width / 2;
+  const cy = box.y + box.height / 2;
+  const drag = async (x0: number, y0: number, x1: number, y1: number) => {
+    await page.mouse.move(cx + x0, cy + y0);
+    await page.mouse.down();
+    await page.mouse.move(cx + x1, cy + y1, { steps: 8 });
+    await page.mouse.up();
+  };
+
+  // Dragged out, and placed with a click. Apart for now.
+  await expect(pad.getByRole('button', { name: 'Rectangle' })).toHaveAttribute(
+    'title',
+    'Rectangle',
+  );
+  await pad.getByRole('button', { name: 'Rectangle' }).click();
+  await drag(-250, -100, -50, 100);
+  await expect(pad.getByText(/^1 shape$/)).toBeVisible();
+  await pad.getByRole('button', { name: 'Ellipse' }).click();
+  await page.mouse.click(cx + 150, cy);
+  await expect(pad.getByText(/^2 shapes$/)).toBeVisible();
+  if (shots) await page.screenshot({ path: join(shots, 'doodle-shapes.png') });
+
+  // They don't overlap yet...
+  await page.keyboard.down('Shift');
+  await page.mouse.click(cx - 150, cy);
+  await page.keyboard.up('Shift');
+  await pad.getByRole('button', { name: 'Keep overlap' }).click();
+  await expect(pad.getByText("These shapes don't overlap.")).toBeVisible();
+
+  // ...until the ellipse is dragged onto the rectangle. Moving is one undo step.
+  await page.mouse.click(cx + 150, cy);
+  await drag(150, 0, -30, 0);
+  await page.keyboard.down('Shift');
+  await page.mouse.click(cx - 200, cy);
+  await page.keyboard.up('Shift');
+  await pad.getByRole('button', { name: 'Keep overlap' }).click();
+  await expect(pad.getByText('A combined shape is selected.')).toBeVisible();
+  await expect(pad.getByText(/^2 shapes$/)).toBeVisible();
+  if (shots) await page.screenshot({ path: join(shots, 'doodle-shapes-combined.png') });
+  await pad.getByRole('button', { name: 'Separate' }).click();
+  await pad.getByRole('button', { name: 'Cut out' }).click();
+
+  await page.getByLabel('Fill closed shapes').check();
+  await page.getByRole('button', { name: 'Use drawing' }).click();
+  await expect(page.getByTitle('Strokes / filled shapes')).toHaveText('0/1');
+  await expect(page.getByText(/\d+ paths · draw/)).toBeVisible();
+
+  // Delete removes the selection.
+  await page.getByRole('button', { name: 'Edit doodle…' }).click();
+  await pad.getByRole('button', { name: 'Select' }).click();
+  await page.mouse.click(cx - 200, cy);
+  await page.keyboard.press('Backspace');
+  await expect(pad.getByText(/^0 strokes →/)).toBeVisible();
+  await app.close();
+});
+
+test('double-click a layer name to rename it', async () => {
+  const app = await launch();
+  const page = await app.firstWindow();
+  await page.setViewportSize({ width: 1400, height: 900 });
+  await page.locator('#root > div').waitFor();
+  await page.getByRole('button', { name: '+ Add layer' }).click();
+  const row = page.getByRole('listitem').filter({ has: page.getByLabel('Remove') });
+  const name = page.getByLabel(/^Name of /);
+
+  // Enter keeps it, and it shows wherever the layer is named.
+  await row.getByText('Layer 1').dblclick();
+  await name.fill('Background');
+  await name.press('Enter');
+  await expect(row.getByText('Background')).toBeVisible();
+  await page.getByRole('tab', { name: 'Fill' }).click();
+  await expect(page.getByText('Fill · Background')).toBeVisible();
+
+  // Esc leaves it, an empty name is ignored, and clicking away keeps the new one.
+  await row.getByText('Background').dblclick();
+  await name.fill('Nope');
+  await name.press('Escape');
+  await expect(row.getByText('Background')).toBeVisible();
+  await row.getByText('Background').dblclick();
+  await name.fill('   ');
+  await name.press('Enter');
+  await expect(row.getByText('Background')).toBeVisible();
+  // Quick changes to the same setting are one undo step; pause like a person would.
+  await page.waitForTimeout(500);
+  await row.getByText('Background').dblclick();
+  await name.fill('Sky');
+  await page.getByRole('tab', { name: 'Page' }).click();
+  await expect(row.getByText('Sky')).toBeVisible();
+
+  // The doodle pad shows it, and Undo takes it back.
+  await page.getByRole('button', { name: 'Add doodle…' }).click();
+  await expect(page.getByRole('dialog', { name: 'Doodle' }).getByText('Sky')).toBeVisible();
+  await page.getByRole('button', { name: 'Cancel' }).click();
+  await page.getByRole('button', { name: 'Undo' }).click();
+  await expect(row.getByText('Background')).toBeVisible();
+  await app.close();
+});
+
+test('duplicate layers: a file layer, a doodle and text', async () => {
+  const app = await launch();
+  const page = await app.firstWindow();
+  await page.setViewportSize({ width: 1400, height: 900 });
+  await dropFile(page, 'motif.svg');
+  await expect(page.getByText(/\d+ paths · draw/)).toBeVisible();
+  const rows = page.getByRole('listitem').filter({ has: page.getByLabel('Remove') });
+
+  // The copy comes with the fill, and then has its own.
+  await page.getByRole('tab', { name: 'Fill' }).click();
+  await page.getByLabel('Fill type').selectOption('hexagons');
+  await page.getByRole('button', { name: 'Duplicate Layer 1' }).click();
+  await expect(rows).toHaveCount(2);
+  await expect(page.getByText('Fill · Layer 1 copy')).toBeVisible();
+  await expect(page.getByLabel('Fill type')).toHaveValue('hexagons');
+  await page.getByLabel('Fill type').selectOption('lines');
+  await rows.filter({ hasText: /^Layer 1\s*\d/ }).click();
+  await expect(page.getByLabel('Fill type')).toHaveValue('hexagons');
+
+  await page.getByRole('button', { name: '+ Add text' }).click();
+  await page.getByRole('button', { name: 'Duplicate “Text”' }).click();
+  await expect(page.getByTitle('“Text” copy')).toBeVisible();
+  await expect(rows).toHaveCount(4);
+  if (shots) await page.screenshot({ path: join(shots, 'layer-duplicates.png') });
+
+  // Undo takes it back.
+  await page.getByRole('button', { name: 'Undo' }).click();
+  await expect(rows).toHaveCount(3);
   await app.close();
 });
 

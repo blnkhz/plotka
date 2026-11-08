@@ -1,15 +1,26 @@
 # Doodle
 
-Draw something by hand and turn it into clean vectors. Click **Doodle…** at the top of the left panel.
+Draw something by hand and turn it into clean vectors. Click **Add doodle…** at the top of the left
+panel. Each doodle is a layer of its own.
 
 ## Drawing
 
 - **Draw**: drag on the white artboard. A mouse, trackpad or drawing tablet all work.
-- **Erase**: drag over strokes to remove them.
-- **Select**: click closed shapes to combine them (see below).
+- **Erase**: drag over strokes and shapes to remove them.
+- **Select**: click closed shapes to move or combine them (see below). Drag to move what's
+  selected; Delete removes it.
 - **Undo** / **Redo** (⌘Z / ⇧⌘Z) and **Clear**. Every change can be undone: strokes, erasing,
   clearing and combining.
 - **Artboard**: the size of the drawing area in mm.
+
+## Basic shapes
+
+Under **Shapes**, pick an icon (**Rectangle**, **Ellipse**, **Triangle**, **Hexagon** or **Star**), then
+drag on the artboard to place it (hold ⇧ to keep it even), or click for a 30 mm one. The new shape
+is selected, so you can drag it where you want it or ⇧-click another shape to combine them.
+
+Placed shapes stay exact: **Style**, **Smoothing** and **Keep sharp corners** only change what you
+drew by hand.
 
 ## Combining shapes
 
@@ -50,7 +61,28 @@ The header shows how many strokes became how many curves or lines.
 
 ## Using the drawing
 
-- **Use drawing** opens it like an imported file ("Doodle.svg"): fills, passes, transforms and
-  the page setup all work on it.
+- **Use drawing** adds it to the **Layers** panel as "Doodle 1", beside any artwork that's open.
+  Fills, passes, transforms and the page setup all work on it, like on a layer from a file.
 - **Save SVG…** saves it as an SVG file to use elsewhere.
-- **Edit doodle…** (same button) reopens your strokes. Doodles are saved in projects.
+- **Cancel** closes the pad. A new drawing stays there for the next time you open it.
+
+Doodles are saved in projects. Opening another drawing or SVG as a new project starts without them.
+
+## More than one doodle
+
+Click **+ Add layer** in the **Layers** panel for an empty layer, then **Add doodle…** to draw on
+it. Each doodle's layer can have its own fill, passes, color and pen speed, can be moved with
+**Arrange**, and can be hidden or left out of the plot.
+
+**Add doodle…** with a layer from a file or a text layer selected makes a new layer for the doodle.
+
+All artboards share their top-left corner, so doodles line up the way you draw them. Your other
+doodles show faintly on the artboard to draw against (untick **Show other doodles** to hide them).
+
+## Editing a doodle
+
+Select a doodle's layer and click **Edit doodle…** to reopen its strokes and settings. **Update
+layer** changes it and
+keeps its fill and other layer settings; **Cancel** leaves it as it was (on an empty layer too, so
+it drops what you drew). **✕** deletes the layer,
+and Undo (⌘Z) brings it back.

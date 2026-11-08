@@ -15,7 +15,9 @@ import {
   marginBox,
   nibTextSize,
   paperSize,
+  withDoodles,
   withTexts,
+  type DoodleLayerItem,
   type DoodleSettings,
   type TextItem,
   type FillSettings,
@@ -41,11 +43,14 @@ import type { Processed } from './lib/pipeline';
 import { mergeDefaults, parseFill } from './lib/project';
 import { DEFAULT_NIB, type Nib } from './lib/nib';
 
-export type LayerOverride = Partial<Pick<Layer, 'visible' | 'plot' | 'color'>> & {
+export type LayerOverride = Partial<Pick<Layer, 'visible' | 'plot' | 'color' | 'name'>> & {
   settings?: Partial<LayerSettings>;
   /** Removed from the drawing (not shown, not plotted, not listed). Restorable. */
   removed?: boolean;
 };
+
+/** A duplicate of a layer from the artwork file, in the layer mode it was made in. */
+export type LayerCopy = { id: string; of: string; name: string; mode: LayerMode };
 
 export type ViewOptions = {
   travel: boolean;
@@ -67,8 +72,13 @@ type Source = { name: string; path?: string; bytes: Uint8Array };
 export const sameArtwork = (a: Source | null, b: Source | null) =>
   (!a && !b) || (!!a && !!b && a.name === b.name && a.path === b.path);
 
+/** The doodle pad: the drawing on it, which becomes a layer when used. */
 export type DoodleState = {
   open: boolean;
+  /** The doodle layer being edited (its id), or null when drawing a new one. */
+  editing: string | null;
+  /** While editing a layer: the unused new drawing, to get back to afterwards. */
+  draft: DoodleItem[];
   /** What the doodle is made of, in drawing order: strokes and combined shapes. */
   strokes: DoodleItem[];
   /** Earlier and undone versions of `strokes`, for undo / redo in the pad. */
@@ -115,6 +125,12 @@ type State = {
   adjustStepId: string | null;
   /** LATER-6: text typed in the app, each shown as a layer of `doc` (id `text-<id>`). */
   texts: TextItem[];
+  /** Doodles, each shown as a layer of `doc` (id `doodle-<id>`). */
+  doodles: DoodleLayerItem[];
+  /** Duplicates of the artwork file's layers. Doodles and text are simply copied instead. */
+  layerCopies: LayerCopy[];
+  /** Duplicates a layer with its settings, right after it, and selects the new one. */
+  duplicateLayer(id: string): void;
   /** Adds a text block (on the paper's top-left margin) and selects it. Returns its id. */
   addText(): string;
   updateText(id: string, patch: Partial<TextItem>): void;
@@ -207,6 +223,15 @@ type State = {
   setDoodle(patch: Partial<DoodleState>): void;
   /** Changes some doodle settings, keeping the rest as they are now (not as last rendered). */
   setDoodleSettings(patch: Partial<DoodleSettings>): void;
+  /** Opens the pad on a new drawing (or the one left unused there). */
+  openDoodle(): void;
+  /** Opens the pad on a doodle layer. */
+  editDoodle(id: string): void;
+  /** Closes the pad. An edited layer stays as it was; a new drawing waits there for later. */
+  closeDoodle(): void;
+  removeDoodle(id: string): void;
+  /** Adds an empty layer to draw on, and selects it. */
+  addLayer(): void;
   /** Opens help, at a topic (and section) if given. */
   openHelp(topic?: string, anchor?: string): void;
   closeHelp(): void;
@@ -217,8 +242,8 @@ type State = {
   doodleRedo(): void;
   setPenHeights(h: { up: number; down: number }): void;
   togglePlotLayer(id: string): void;
-  /** Turns the doodle into vectors and opens it as the artwork. */
-  applyDoodle(): Promise<void>;
+  /** Turns the pad's drawing into vectors: a new layer, or the one being edited. */
+  applyDoodle(): void;
   setImage(patch: Partial<ImageState>): void;
   setImageSettings(patch: Partial<DitherSettings>): void;
   /** Opens the image pad's result (an SVG of pen marks) as the artwork. */
@@ -334,16 +359,73 @@ function loadPenHeights(): { up: number; down: number } {
 /** The doodle as an SVG, with the current settings. */
 export const doodleSvg = (d: DoodleState) => doodleToSvg(d.strokes, d.settings, d.size);
 
-/** The drawing with its text layers; with no file open, an empty paper-sized one. */
-export function docWithTexts(
-  doc: PlotDocument | null,
-  texts: TextItem[],
-  page: PageSetup,
-): PlotDocument | null {
-  if (doc) return withTexts(doc, texts);
-  if (!texts.length) return null;
-  const { width, height } = paperSize(page);
-  return withTexts({ width, height, layers: [], warnings: [] }, texts);
+/** A new drawing left on the pad, as opposed to a layer opened for editing. */
+export const doodleDraft = (d: DoodleState) => (d.editing ? d.draft : d.strokes);
+
+/**
+ * The document: the artwork file's layers, then the doodles, then the text. With no file open
+ * it's as big as the doodles' artboards (the paper, for text alone), or nothing if it's empty.
+ */
+export function composeDoc(s: {
+  source: Source | null;
+  doc: PlotDocument | null;
+  doodles: DoodleLayerItem[];
+  texts: TextItem[];
+  page: PageSetup;
+  layerCopies: LayerCopy[];
+  layerMode: LayerMode;
+}): PlotDocument | null {
+  const { source, doc, doodles, texts } = s;
+  if (source && doc) {
+    // Each duplicate comes right after its layer; one whose layer is gone goes with it.
+    const layers = doc.layers
+      .filter((l) => !l.copyOf)
+      .flatMap((l) => [
+        l,
+        ...s.layerCopies
+          .filter((c) => c.of === l.id && c.mode === s.layerMode)
+          .map((c) => ({ ...l, id: `copy-${c.id}`, name: c.name, copyOf: l.id })),
+      ]);
+    return withTexts(withDoodles({ ...doc, layers }, doodles), texts);
+  }
+  if (!doodles.length && !texts.length) return null;
+  const { width, height } = doodles.length
+    ? {
+        width: Math.max(...doodles.map((d) => d.size.width)),
+        height: Math.max(...doodles.map((d) => d.size.height)),
+      }
+    : paperSize(s.page);
+  return withTexts(withDoodles({ width, height, layers: [], warnings: [] }, doodles), texts);
+}
+
+/** The next free "<prefix> N". */
+function nextName(prefix: string, names: string[]): string {
+  const used = names.map((n) =>
+    n.startsWith(`${prefix} `) ? Number(n.slice(prefix.length + 1)) || 0 : 0,
+  );
+  return `${prefix} ${Math.max(0, ...used) + 1}`;
+}
+
+/** The doodle layer that's selected, if it is one (it may be an empty one). */
+export const selectedDoodle = (s: {
+  doodles: DoodleLayerItem[];
+  selectedLayerId: string | null;
+}): DoodleLayerItem | undefined => s.doodles.find((d) => `doodle-${d.id}` === s.selectedLayerId);
+
+/** "Sky copy", or the next free "Sky copy 2". */
+function copyName(name: string, names: string[]): string {
+  const base = `${name.replace(/ copy( \d+)?$/, '')} copy`;
+  if (!names.includes(base)) return base;
+  let n = 2;
+  while (names.includes(`${base} ${n}`)) n++;
+  return `${base} ${n}`;
+}
+
+const newId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+
+/** The pad back on its new drawing (`strokes` if given), with a fresh undo history. */
+function padOnDraft(d: DoodleState, strokes: DoodleItem[] = doodleDraft(d)): DoodleState {
+  return { ...d, editing: null, draft: [], strokes, past: [], future: [] };
 }
 
 export const useStore = create<State>()((set, get) => ({
@@ -358,10 +440,53 @@ export const useStore = create<State>()((set, get) => ({
   adjustStepId: null,
   adjustSpiralId: null,
   texts: [],
+  doodles: [],
+  layerCopies: [],
+  duplicateLayer(id) {
+    set((s) => {
+      const layer = s.doc?.layers.find((l) => l.id === id);
+      if (!layer) return {};
+      const names = (s.doc?.layers ?? []).map((l) => s.layerOverrides[l.id]?.name ?? l.name);
+      const name = copyName(s.layerOverrides[id]?.name ?? layer.name, names);
+      const copy = newId();
+      const after = <T>(list: T[], at: (item: T) => boolean, item: T) => {
+        const i = list.findIndex(at);
+        return [...list.slice(0, i + 1), item, ...list.slice(i + 1)];
+      };
+      const next: Partial<State> = {};
+      let newLayer: string;
+      if (layer.text) {
+        const of = layer.text.id;
+        next.texts = after(s.texts, (t) => t.id === of, { ...layer.text, id: copy });
+        newLayer = `text-${copy}`;
+      } else if (layer.doodle) {
+        const item = s.doodles.find((d) => d.id === layer.doodle)!;
+        next.doodles = after(s.doodles, (d) => d === item, { ...item, id: copy, name });
+        newLayer = `doodle-${copy}`;
+      } else {
+        const of = layer.copyOf ?? id;
+        next.layerCopies = [...s.layerCopies, { id: copy, of, name, mode: s.layerMode }];
+        newLayer = `copy-${copy}`;
+      }
+      const old = s.layerOverrides[id];
+      // A copy of its settings, under its own name (text layers are otherwise named by the text).
+      const override: LayerOverride = {
+        ...(old && structuredClone(old)),
+        ...(layer.text ? { name } : {}),
+      };
+      if (!layer.text) delete override.name;
+      return {
+        ...next,
+        doc: composeDoc({ ...s, ...next }),
+        layerOverrides: { ...s.layerOverrides, [newLayer]: override },
+        selectedLayerId: newLayer,
+      };
+    });
+  },
   addText() {
     const s = get();
     const m = marginBox(s.page);
-    const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+    const id = newId();
     const item: TextItem = {
       id,
       text: 'Text',
@@ -374,23 +499,23 @@ export const useStore = create<State>()((set, get) => ({
       y: m.y,
     };
     const texts = [...s.texts, item];
-    set({ texts, doc: docWithTexts(s.doc, texts, s.page), selectedLayerId: `text-${id}` });
+    set({ texts, doc: composeDoc({ ...s, texts }), selectedLayerId: `text-${id}` });
     return id;
   },
   updateText(id, patch) {
     set((s) => {
       const texts = s.texts.map((t) => (t.id === id ? { ...t, ...patch } : t));
-      return { texts, doc: docWithTexts(s.doc, texts, s.page) };
+      return { texts, doc: composeDoc({ ...s, texts }) };
     });
   },
   removeText(id) {
     set((s) => {
       const texts = s.texts.filter((t) => t.id !== id);
-      const doc = docWithTexts(s.doc, texts, s.page);
+      const doc = composeDoc({ ...s, texts });
       const gone = s.selectedLayerId === `text-${id}`;
       return {
         texts,
-        doc: doc && (doc.layers.length || s.source) ? doc : null,
+        doc,
         selectedLayerId: gone ? (doc?.layers[0]?.id ?? null) : s.selectedLayerId,
       };
     });
@@ -482,6 +607,8 @@ export const useStore = create<State>()((set, get) => ({
   model: { open: false, name: '', bytes: null, settings: defaultSliceSettings(), camera: null },
   doodle: {
     open: false,
+    editing: null,
+    draft: [],
     strokes: [],
     past: [],
     future: [],
@@ -497,20 +624,22 @@ export const useStore = create<State>()((set, get) => ({
         defaultFill: get().defaultFill,
       });
       set((s) => {
-        const doc = withTexts(imported, s.texts);
         // Re-importing the same file (a layer mode switch) brings back that mode's edits. Text
-        // layers are the same in every mode, so their edits stay.
+        // and doodle layers are the same in every mode, so their edits stay.
         const same = s.source === source;
-        const textEdits = Object.fromEntries(
-          Object.entries(s.layerOverrides).filter(([id]) => id.startsWith('text-')),
+        const layerCopies = same ? s.layerCopies : [];
+        const doc = composeDoc({ ...s, source, doc: imported, layerCopies })!;
+        const ownEdits = Object.fromEntries(
+          Object.entries(s.layerOverrides).filter(([id]) => /^(text|doodle)-/.test(id)),
         );
         const layerOverrides = {
           ...((same && s.overridesByMode[s.layerMode]) || {}),
-          ...textEdits,
+          ...ownEdits,
         };
         return {
           source,
           doc,
+          layerCopies,
           loading: false,
           layerOverrides,
           overridesByMode: same ? s.overridesByMode : {},
@@ -532,7 +661,7 @@ export const useStore = create<State>()((set, get) => ({
         layerMode,
         defaultFill: get().defaultFill,
       });
-      const doc = withTexts(imported, get().texts);
+      const doc = composeDoc({ ...get(), doc: imported })!;
       set((s) => ({
         source: { ...source, bytes },
         doc,
@@ -614,7 +743,7 @@ export const useStore = create<State>()((set, get) => ({
         changed = true;
         return { ...t, size };
       });
-      return changed ? { view, texts, doc: docWithTexts(s.doc, texts, s.page) } : { view };
+      return changed ? { view, texts, doc: composeDoc({ ...s, texts }) } : { view };
     }),
   setTab: (tab) => set({ tab }),
   requestFit: () => set((s) => ({ fitRequest: s.fitRequest + 1 })),
@@ -650,6 +779,63 @@ export const useStore = create<State>()((set, get) => ({
   setDoodle: (patch) => set((s) => ({ doodle: { ...s.doodle, ...patch } })),
   setDoodleSettings: (patch) =>
     set((s) => ({ doodle: { ...s.doodle, settings: { ...s.doodle.settings, ...patch } } })),
+  openDoodle: () =>
+    set((s) => ({
+      doodle: s.doodle.editing
+        ? { ...padOnDraft(s.doodle), open: true }
+        : { ...s.doodle, open: true },
+    })),
+  editDoodle: (id) =>
+    set((s) => {
+      const item = s.doodles.find((d) => d.id === id);
+      if (!item) return {};
+      return {
+        doodle: {
+          open: true,
+          editing: id,
+          draft: doodleDraft(s.doodle),
+          strokes: item.strokes,
+          settings: item.settings,
+          size: item.size,
+          past: [],
+          future: [],
+        },
+      };
+    }),
+  closeDoodle: () =>
+    set((s) => ({
+      doodle: { ...(s.doodle.editing ? padOnDraft(s.doodle) : s.doodle), open: false },
+    })),
+  addLayer: () =>
+    set((s) => {
+      const item: DoodleLayerItem = {
+        id: newId(),
+        name: nextName(
+          'Layer',
+          (s.doc?.layers ?? []).map((l) => l.name),
+        ),
+        strokes: [],
+        settings: s.doodle.settings,
+        size: s.doodle.size,
+      };
+      const doodles = [...s.doodles, item];
+      return {
+        doodles,
+        doc: composeDoc({ ...s, doodles }),
+        selectedLayerId: `doodle-${item.id}`,
+      };
+    }),
+  removeDoodle: (id) =>
+    set((s) => {
+      const doodles = s.doodles.filter((d) => d.id !== id);
+      const doc = composeDoc({ ...s, doodles });
+      const gone = s.selectedLayerId === `doodle-${id}`;
+      return {
+        doodles,
+        doc,
+        selectedLayerId: gone ? (doc?.layers[0]?.id ?? null) : s.selectedLayerId,
+      };
+    }),
   openHelp: (topic, anchor) =>
     set((s) => ({
       help: {
@@ -731,18 +917,49 @@ export const useStore = create<State>()((set, get) => ({
     const base = name.replace(/\.[^.]+$/, '') || 'Image';
     await get().openFile({ name: `${base} (dithered).svg`, bytes: new TextEncoder().encode(svg) });
   },
-  async applyDoodle() {
-    const doodle = get().doodle;
-    const svg = doodleSvg(doodle);
-    set((s) => ({ doodle: { ...s.doodle, open: false } }));
-    await get().openFile({ name: 'Doodle.svg', bytes: new TextEncoder().encode(svg) });
-    // Shapes were filled on purpose: hatch them (unless the import already chose a fill),
-    // so a fill-only shape next to open lines doesn't end up undrawn.
-    const doc = get().doc;
-    if (doodle.settings.fillClosed && doc)
-      for (const l of doc.layers)
-        if (!l.settings.fill && l.fills.length > 0)
-          get().setLayer(l.id, { settings: { fill: { ...get().defaultFill } } });
+  applyDoodle() {
+    set((s) => {
+      const { editing, strokes, settings, size } = s.doodle;
+      const old = s.doodles.find((d) => d.id === editing);
+      const item: DoodleLayerItem = old
+        ? { ...old, strokes, settings, size }
+        : {
+            id: newId(),
+            name: nextName(
+              'Doodle',
+              s.doodles.map((d) => d.name),
+            ),
+            strokes,
+            settings,
+            size,
+          };
+      const doodles = old ? s.doodles.map((d) => (d === old ? item : d)) : [...s.doodles, item];
+      const id = `doodle-${item.id}`;
+      const doc = composeDoc({ ...s, doodles })!;
+      const prev = s.layerOverrides[id];
+      // Shapes were filled on purpose: hatch them, so a fill-only shape next to open lines
+      // doesn't end up undrawn. A fill chosen for this layer earlier stays.
+      const hatch =
+        settings.fillClosed &&
+        !(prev?.settings && 'fill' in prev.settings) &&
+        doc.layers.some((l) => l.id === id && l.fills.length > 0);
+      return {
+        doodles,
+        doc,
+        selectedLayerId: id,
+        doodle: { ...padOnDraft(s.doodle, old ? undefined : []), open: false },
+        ...(hatch
+          ? {
+              layerOverrides: {
+                ...s.layerOverrides,
+                [id]: { ...prev, settings: { ...prev?.settings, fill: { ...s.defaultFill } } },
+              },
+            }
+          : {}),
+        // There's something new to see, unless a drawing just changed.
+        ...(old?.strokes.length ? {} : { fitRequest: s.fitRequest + 1 }),
+      };
+    });
   },
 }));
 

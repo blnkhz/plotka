@@ -98,7 +98,7 @@ export function Splash({ onClose }: { onClose: () => void }) {
             </button>
             <button
               className={styles.doodle}
-              onClick={then(() => useStore.getState().setDoodle({ open: true }))}
+              onClick={then(() => useStore.getState().openDoodle())}
             >
               Doodle…
             </button>

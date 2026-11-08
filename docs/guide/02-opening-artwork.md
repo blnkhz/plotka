@@ -143,7 +143,11 @@ fill and passes, and can be turned off for plotting.
 Each layer row has:
 
 - a color swatch (the color it's shown in),
-- its name and a count of strokes / filled shapes,
+- its name and a count of strokes / filled shapes. Double-click the name to rename the layer
+  (Enter keeps it, Esc cancels),
+- a **duplicate** button: adds a copy right after it, with the same settings, which you can then
+  change on their own. The copy sits exactly on top of the original until you move it with
+  **Arrange**,
 - an **eye**: show or hide it in the preview. Hiding doesn't stop it plotting: a hidden layer
   that's still ticked gets an orange outline on its checkbox and a warning.
 - a **checkbox**: plot it or not. Unticked layers show faintly in the preview.
