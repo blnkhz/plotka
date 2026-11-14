@@ -14,9 +14,15 @@ extension needed.
 ## Features
 
 - Open SVGs from Illustrator, Inkscape, Figma, Affinity Designer and code, or draw a doodle and
-  turn it into clean curves or straight lines (and merge, cut or intersect its shapes)
+  turn it into clean curves or straight lines. Place rectangles, ellipses, triangles, hexagons
+  and stars, and merge, cut or intersect shapes
 
-  ![Doodle pad: a hand-drawn circle and zigzag turned into curves, with shape and vector settings](docs/screenshots/doodle.png)
+  ![Doodle pad: a circle with a star cut out of it, a house merged from a square and a triangle, and two hand-drawn lines, with the shape buttons and vector settings](docs/screenshots/doodle.png)
+
+- Layers: each doodle, text or file is a layer with its own fill, pen color, speed and place
+  on the page; rename or duplicate them
+
+  ![Three doodle layers on one page: a blue circle in lines, a pink star in ripples and a green hexagon in crosshatch, next to the Layers panel](docs/screenshots/layers.png)
 
 - Pictures (PNG, JPEG, WebP...) become pen marks: ordered or diffusion dithering, or halftone,
   with circles, squares, dots, lines, × or +
@@ -88,12 +94,16 @@ Download the `.dmg` from the [latest release](../../releases/latest). It runs on
 Apple Silicon and Intel. Windows and Linux aren't planned for now, but pull requests that add
 them are welcome.
 
-The app is not signed with an Apple Developer certificate yet, so macOS blocks it the first
-time. To open it:
+~~The app is not signed with an Apple Developer certificate yet, so macOS blocks it the first
+time. To open it:~~
 
-1. Right click the app in Finder and choose **Open**, then **Open** again. Or:
-2. Try to open it once, then go to **System Settings > Privacy & Security** and click
-   **Open Anyway**.
+1. ~~Right click the app in Finder and choose **Open**, then **Open** again. Or:~~
+2. ~~Try to open it once, then go to **System Settings > Privacy & Security** and click
+   **Open Anyway**.~~
+
+nvm, I got the dev subscription. From v0.5.0 the app is signed and notarized, so open the
+`.dmg`, drag Plotka to Applications and open it like any other app. (The steps above are still
+there for v0.4.0 and older.)
 
 ## Development
 
