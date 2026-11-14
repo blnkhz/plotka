@@ -21,11 +21,10 @@ mac:
   target:
     - target: dmg
       arch: [universal]
-  # Signing and notarization are off until there is an Apple Developer account.
-  # To enable: set CSC_LINK / CSC_KEY_PASSWORD and APPLE_ID / APPLE_APP_SPECIFIC_PASSWORD /
-  # APPLE_TEAM_ID in CI, remove `identity: null`, and set `notarize: true`.
+  # Everyday builds (`pnpm build:mac`, CI) are unsigned. Releases are signed and notarized by
+  # `pnpm release:publish`, which sets the identity on the command line and notarizes with a
+  # notarytool keychain profile (APPLE_KEYCHAIN_PROFILE). See docs/releasing.md.
   identity: null
-  notarize: false
 # serialport ships a universal (x64 + arm64) N-API prebuild, which Electron loads as is, so
 # nothing needs compiling. Everything else is bundled into out/ by electron-vite; only
 # `dependencies` (just serialport) are packaged.

@@ -20,7 +20,8 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test:e2e": "pnpm --filter @plotka/desktop test:e2e",
-    "release": "sh scripts/release.sh"
+    "release": "sh scripts/release.sh",
+    "release:publish": "sh scripts/publish.sh"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

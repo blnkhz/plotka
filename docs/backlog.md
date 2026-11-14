@@ -16,16 +16,13 @@ Doodle…, and their output goes through the usual fills, transforms, optimisati
 
 - PROJ-3 pen library (name, color, tip width, preferred speed, pen heights)
 - LATER-1 to LATER-8 (LATER-6 single-stroke text is done): multi-pen plotting with pen-swap
-  prompts, split by color, registration marks, more import formats, a browser version, signed
-  builds
+  prompts, split by color, registration marks, more import formats, a browser version
+- LATER-5 signed builds: the release script signs and notarizes (`docs/releasing.md`); needs
+  the Developer ID certificate set up, then the README's "Open Anyway" steps can go
 
 ## Needs a decision
 
 - Code of conduct contact method (`CODE_OF_CONDUCT.md`)
-
-## Needs a test on hardware
-
-- Dry run, continue after Stop, and the installed app (`pnpm build:mac`) on the AxiDraw
 
 ## Not planned for now (decided 2026-11-02)
 

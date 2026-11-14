@@ -1,9 +1,8 @@
 # Releasing
 
-Downloadable builds are made by GitHub, not on a laptop: pushing a version tag runs the
-**Release** workflow (`.github/workflows/release.yml`) on a GitHub-hosted Mac. It checks the code,
-builds the universal `.dmg`, and attaches it to a **draft** release. Nothing is public until you
-publish the draft.
+Releases are built on your Mac: `pnpm release:publish` checks the code, builds the universal
+`.dmg`, signs and notarizes it with the Apple Developer account, and attaches it to a **draft**
+GitHub release. Nothing is public until you publish the draft.
 
 ## Steps
 
@@ -11,31 +10,74 @@ publish the draft.
 2. Bump the version, commit and tag (this doesn't push anything):
 
    ```sh
-   pnpm release 0.2.0
+   pnpm release 0.5.0
    ```
 
-3. Push the commit and the tag. This starts the Release workflow:
+3. Push the commit, then build, sign, notarize and upload (about 10 minutes, most of it waiting
+   for Apple's notary service):
 
    ```sh
-   git push origin HEAD v0.2.0
+   git push origin HEAD
+   pnpm release:publish
    ```
 
-4. Watch it under the repo's **Actions** tab (about 10 minutes). When it's done, open
-   **Releases**: there's a draft "Plotka v0.2.0" with the `.dmg` attached and notes
-   generated from the commits since the last release.
-5. Download the `.dmg` from the draft and try it (connect, plot something small).
-6. Edit the notes if needed and click **Publish release**.
+   It stops with a message if the tag isn't the commit you're on, if the tree isn't clean, or if
+   any check, the signature or the notarization fails. It pushes the tag if GitHub doesn't have
+   it yet.
 
-To rebuild an existing tag (for example after a failed run), use **Actions → Release → Run
-workflow** and enter the tag. The files on the draft are replaced.
+4. Open the draft it links to. Download the `.dmg` from it and open it: macOS should open
+   Plotka without any warning. Connect and plot something small.
+5. Edit the notes if needed and click **Publish release**.
+
+Running `pnpm release:publish` again for the same version replaces the `.dmg` on the draft.
+
+## One-time setup for signing
+
+Signing needs a **Developer ID Application** certificate, which is a different certificate
+from the ones used for iOS apps or the App Store, and a notarytool profile in your keychain.
+
+1. **Certificate.** In Xcode, go to **Settings › Accounts**, pick the team, click
+   **Manage Certificates…**, then **+ › Developer ID Application**. Only the team's Account
+   Holder can create one. If you're not the holder, ask them to, or create it at
+   [developer.apple.com › Certificates](https://developer.apple.com/account/resources/certificates/list)
+   and double-click the downloaded file. Check that it's there:
+
+   ```sh
+   security find-identity -v -p codesigning | grep "Developer ID Application"
+   ```
+
+2. **Notarization credentials.** Create an app-specific password at
+   [account.apple.com](https://account.apple.com) (**Sign-In and Security › App-Specific
+   Passwords**), then store it in the keychain under a profile name:
+
+   ```sh
+   xcrun notarytool store-credentials plotka-notary \
+     --apple-id <your Apple ID email> --team-id <TEAMID>
+   ```
+
+   It asks for the password. (An App Store Connect API key works too: pass `--key`, `--key-id`
+   and `--issuer` instead.) The Team ID is in the certificate's name and on
+   [developer.apple.com › Membership](https://developer.apple.com/account#MembershipDetailsCard).
+
+3. **`.env.release`** at the repo root (git-ignored, no secrets in it):
+
+   ```sh
+   PLOTKA_SIGN_IDENTITY="Your Team Name (TEAMID)"
+   APPLE_KEYCHAIN_PROFILE=plotka-notary
+   ```
+
+   `PLOTKA_SIGN_IDENTITY` is the certificate's name from step 1 without the
+   `Developer ID Application: ` prefix.
 
 ## Things to know
 
-- The tag must match `apps/desktop/package.json`'s version (`pnpm release` takes care of it);
-  otherwise the workflow stops with a message.
-- Builds are **unsigned** until there's an Apple Developer account (LATER-5). People who download
-  the app will see macOS's "unidentified developer" warning the first time; the README explains
-  how to open it anyway. Signing and notarization plug into the same workflow (see the comment in
-  `apps/desktop/electron-builder.yml`).
+- The tag must match `apps/desktop/package.json`'s version (`pnpm release` takes care of it).
+- The name macOS shows as the developer is the certificate's team name.
+- `pnpm release:publish --unsigned` makes an unsigned release without any Apple setup. People
+  then see macOS's "unidentified developer" warning the first time they open the app.
+- `pnpm build:mac` builds an unsigned `.dmg` into `apps/desktop/release/` for your own use.
+- The **Release** workflow on GitHub (**Actions › Release › Run workflow**, with a tag) builds
+  an unsigned `.dmg` on a GitHub-hosted Mac. It's a fallback for when you're away from your
+  Mac. It only runs by hand, so pushing a tag never replaces a signed `.dmg`. GitHub's macOS
+  runners are sometimes busy and the job can time out waiting for one; run it again later.
 - While the repository is private, only people with access to it can download releases.
-- `pnpm build:mac` still builds a `.dmg` locally (into `apps/desktop/release/`) for your own use.

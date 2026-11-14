@@ -1,6 +1,6 @@
 #!/bin/sh
-# Prepares a release: sets the app version, commits, and tags it. It does NOT push; it prints the
-# command that does (pushing the tag starts the Release workflow, which builds a draft release).
+# Prepares a release: sets the app version, commits, and tags it. It does NOT push or build;
+# `pnpm release:publish` does that (see docs/releasing.md).
 # Usage: pnpm release 0.2.0
 set -eu
 version="${1:-}"
@@ -28,5 +28,5 @@ node -e '
 git add package.json apps/desktop/package.json
 git commit -q -m "release: v$version"
 git tag -a "v$version" -m "Plotka v$version"
-echo "Tagged v$version. To build the draft release on GitHub, push it:"
-echo "  git push origin HEAD v$version"
+echo "Tagged v$version. Push the commit, then build, sign and upload the draft release:"
+echo "  git push origin HEAD && pnpm release:publish"

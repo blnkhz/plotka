@@ -1,10 +1,10 @@
 name: Release
 
-# Builds the macOS app and attaches it to a DRAFT GitHub release. Nothing is published until
-# someone reviews the draft and clicks "Publish release". See docs/releasing.md.
+# Builds an UNSIGNED macOS app and attaches it to a DRAFT GitHub release. Releases are normally
+# built, signed and notarized on a Mac with `pnpm release:publish`; this is the fallback, so it
+# only runs by hand (a tag push must not replace a signed .dmg with an unsigned one).
+# See docs/releasing.md.
 on:
-  push:
-    tags: ['v*']
   workflow_dispatch:
     inputs:
       tag:
@@ -48,8 +48,10 @@ jobs:
           pnpm typecheck
           pnpm test
 
-      - name: Build the universal .dmg
+      - name: Build the universal .dmg (unsigned)
         run: pnpm build:mac
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
 
       - name: Create or update the draft release
         env:

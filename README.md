@@ -106,7 +106,8 @@ pnpm test         # unit tests (Vitest)
 pnpm lint         # ESLint
 pnpm typecheck    # TypeScript
 pnpm build:mac    # universal (Apple Silicon + Intel) .dmg in apps/desktop/release
-pnpm release 0.2.0  # bump, commit and tag a release; see docs/releasing.md
+pnpm release 0.5.0  # bump, commit and tag a release; see docs/releasing.md
+pnpm release:publish  # build, sign, notarize and upload it as a draft release
 ```
 
 ### Repo layout
