@@ -45,7 +45,7 @@ stays white (or nearly) in every theme, so the preview still looks like the plot
 7. **Plot**: in the **Plot** tab, click **Start plot**. Pause any time with **Pause**, the
    Space bar or the button on the plotter.
 
-Save your work with **Save** (⌘S). See [Projects and undo](11-projects.md).
+Save your work with **Save** (⌘S). See [Projects and undo](12-projects.md).
 
 ## No plotter? No problem
 

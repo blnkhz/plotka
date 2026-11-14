@@ -4,7 +4,7 @@ The **Plot** tab starts and controls plots.
 
 ## Before you start
 
-- Connect the plotter and set the pen heights (see [Connecting](08-machine.md)).
+- Connect the plotter and set the pen heights (see [Connecting](09-machine.md)).
 - Set home: the pen over the top-left corner of the paper.
 - Choose the layers to plot: the checkboxes under **Layers, in order**. They plot top to bottom,
   with the same pen.

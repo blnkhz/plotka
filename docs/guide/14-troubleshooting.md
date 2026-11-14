@@ -23,8 +23,19 @@
 
 ## The artwork
 
-- **Text didn't come through**: convert text to outlines (paths) in your design app.
+- **Text is in the wrong typeface**: text in a file is drawn in the closest single-stroke
+  style. To keep the file's own typeface, convert the text to outlines (paths) in your design
+  app first.
 - **Filled shapes are empty**: fills are only drawn with a fill type; pick one in the Fill tab.
 - **A white shape hides part of the drawing**: white fills hide what's under them, like in the
   file. Turn off **Hide parts covered by shapes on top** in the Fill tab to draw everything.
 - **Everything is one layer**: try **By color** in the Layers panel.
+
+## Reporting a problem
+
+Plotka keeps a log of what it did: the app and macOS versions, connecting to the plotter, each
+plot and how it ended, and any errors. Choose **Help › Show Log File** to find it in Finder
+(it's `~/Library/Logs/Plotka/plotka.log`). The log has no artwork in it.
+
+When you report a bug on [GitHub](https://github.com/blnkhz/plotka/issues), attach the log, and
+the SVG or project file if you can.
