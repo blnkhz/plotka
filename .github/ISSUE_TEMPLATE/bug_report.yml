@@ -44,6 +44,13 @@ body:
     validations:
       required: true
   - type: textarea
+    id: log
+    attributes:
+      label: Log
+      description: >-
+        In Plotka choose Help › Show Log File and drag plotka.log here (it's in
+        ~/Library/Logs/Plotka). It has the versions, connections, plots and errors, but no artwork.
+  - type: textarea
     id: files
     attributes:
       label: Files and screenshots

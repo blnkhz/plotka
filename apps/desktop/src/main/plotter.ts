@@ -24,6 +24,7 @@ import {
 } from '@shared/ipc';
 import { beginPlotLog, updatePlotLog } from './plotLog';
 import { openSerial } from './serial';
+import { log } from './log';
 
 /** Simulated plotter speed (1 = real time). Tests set PLOTTER_SIM_SPEED to run faster. */
 const SIM_SPEED = Number(process.env['PLOTTER_SIM_SPEED']) || 1;
@@ -56,6 +57,8 @@ export class PlotterService {
   private pushQueued = false;
   /** PLOT-7: the log entry of the running plot, and what it last recorded. */
   private log: { id: string; outcome: PlotLogEntry['outcome'] } | null = null;
+  /** The run state last written to the app log. */
+  private loggedState: string | null = null;
 
   status(): PlotterStatus {
     return {
@@ -88,11 +91,12 @@ export class PlotterService {
     });
   }
 
-  private async act(fn: () => Promise<unknown>): Promise<ActionResult> {
+  private async act(what: string, fn: () => Promise<unknown>): Promise<ActionResult> {
     try {
       await fn();
       return { ok: true };
     } catch (e) {
+      log.warn(`${what} failed`, { error: message(e) });
       return { ok: false, error: message(e) };
     } finally {
       this.push();
@@ -100,7 +104,7 @@ export class PlotterService {
   }
 
   connect(port: string, rawProfile: unknown): Promise<ActionResult> {
-    return this.act(async () => {
+    return this.act('Connect', async () => {
       if (this.runner && MOVING.has(this.runner.state))
         throw new Error('Pause or stop the plot before reconnecting.');
       const profile = validateProfile(rawProfile);
@@ -127,27 +131,35 @@ export class PlotterService {
       this.port = port;
       this.lost = false;
       this.machine!.connected();
+      log.info('Connected', {
+        port,
+        profile: profile.id,
+        firmware: this.info?.firmware,
+        resumed: !!reuse,
+      });
     });
   }
 
   disconnect(): Promise<ActionResult> {
-    return this.act(async () => {
+    return this.act('Disconnect', async () => {
       if (this.runner && MOVING.has(this.runner.state))
         throw new Error('Pause or stop the plot before disconnecting.');
       await this.driver?.disconnect();
       this.machine?.disconnected();
       this.lost = false;
+      log.info('Disconnected');
     });
   }
 
   private onLost() {
+    log.warn('Plotter connection lost', { runState: this.runner?.state });
     this.lost = true;
     this.machine?.disconnected();
     this.push();
   }
 
   command(cmd: ManualCommand): Promise<ActionResult> {
-    return this.act(async () => {
+    return this.act(`Manual command ${cmd.kind}`, async () => {
       const m = this.machine;
       if (!m || !this.driver?.connected) throw new Error('Connect the plotter first.');
       if (this.runner && MOVING.has(this.runner.state))
@@ -177,7 +189,7 @@ export class PlotterService {
   }
 
   start(req: PlotRequest): Promise<ActionResult> {
-    return this.act(async () => {
+    return this.act('Start plot', async () => {
       const m = this.machine;
       if (!m || !this.driver?.connected) throw new Error('Connect the plotter first.');
       if (this.isPlotting()) throw new Error('A plot is already in progress. Stop it first.');
@@ -197,6 +209,12 @@ export class PlotterService {
       if (plan.totalMs === 0) throw new Error('Nothing to plot.');
       this.runner = new PlotRunner(m, plan, { onProgress: () => this.onProgress() });
       this.plotKind = 'plot';
+      this.loggedState = null;
+      log.info('Plot started', {
+        layers: Object.keys(req.settings).length,
+        estimatedMin: Math.round(plan.totalMs / 600) / 100,
+        simulated: this.simulated,
+      });
       this.log = req.log ? { id: beginPlotLog(req.log), outcome: 'plotting' } : null;
       this.keepAwake(true);
       void this.runner.start().finally(() => this.onProgress());
@@ -204,7 +222,7 @@ export class PlotterService {
   }
 
   dryRun(rawProfile: unknown, bounds: Bounds): Promise<ActionResult> {
-    return this.act(async () => {
+    return this.act('Dry run', async () => {
       const m = this.machine;
       if (!m || !this.driver?.connected) throw new Error('Connect the plotter first.');
       if (this.isPlotting()) throw new Error('A plot is in progress. Stop it first.');
@@ -219,14 +237,17 @@ export class PlotterService {
       this.runner = new PlotRunner(m, plan, { onProgress: () => this.onProgress() });
       this.plotKind = 'dryRun';
       this.log = null;
+      this.loggedState = null;
+      log.info('Dry run started');
       void this.runner.start().finally(() => this.onProgress());
     });
   }
 
   control(action: 'pause' | 'resume' | 'stop' | 'toggle'): Promise<ActionResult> {
-    return this.act(async () => {
+    return this.act(`Plot ${action}`, async () => {
       const r = this.runner;
       if (!r) throw new Error('No plot to control.');
+      log.info(`Plot ${action}`, { from: r.state });
       if (action === 'pause') r.pause();
       else if (action === 'toggle') void r.toggle();
       else if (action === 'stop') await r.stop();
@@ -248,8 +269,24 @@ export class PlotterService {
     const s = this.runner?.state;
     // Keep the computer awake from start until the plot is done or stopped (also while paused).
     this.keepAwake(!!s && ACTIVE.has(s) && s !== 'error');
+    this.logState();
     this.updateLog();
     this.push();
+  }
+
+  /** Writes the run's state to the app log when it changes (paused, done, error…). */
+  private logState() {
+    const p = this.runner?.progress;
+    if (!p || p.state === this.loggedState) return;
+    this.loggedState = p.state;
+    const what = this.plotKind === 'dryRun' ? 'Dry run' : 'Plot';
+    const data = {
+      elapsedMin: Math.round(p.elapsedMs / 600) / 100,
+      done: p.totalMs > 0 ? `${Math.round((100 * p.doneMs) / p.totalMs)}%` : undefined,
+      message: p.state === 'error' ? p.message : undefined,
+    };
+    if (p.state === 'error') log.error(`${what} error`, data);
+    else if (p.state !== 'running') log.info(`${what} ${p.state}`, data);
   }
 
   /** PLOT-7: records how the plot is going when that changes (not on every progress tick). */

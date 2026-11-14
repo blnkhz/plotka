@@ -3,6 +3,7 @@ import type { EventChannels } from '@shared/ipc';
 import { THEMES, type Appearance } from '@shared/themes';
 import { appearance, setAppearance } from './appearance';
 import { openPath } from './openFile';
+import { revealLog } from './log';
 import { clearRecent, onRecentChange, recentItems } from './recent';
 
 type Action = EventChannels['app:menu']['action'];
@@ -96,7 +97,12 @@ function build() {
     { role: 'windowMenu' },
     {
       role: 'help',
-      submenu: [item('help', 'Plotka Help', 'CmdOrCtrl+Shift+/')],
+      submenu: [
+        item('help', 'Plotka Help', 'CmdOrCtrl+Shift+/'),
+        { type: 'separator' },
+        // For bug reports: the log has the versions, connections, plots and errors.
+        { label: 'Show Log File', click: () => revealLog() },
+      ],
     },
   ];
   Menu.setApplicationMenu(Menu.buildFromTemplate(template));

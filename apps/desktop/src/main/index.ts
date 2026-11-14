@@ -8,13 +8,19 @@ import { clearRecovery } from './autosave';
 import { appearance, applyAppearance } from './appearance';
 import { isOpenable, openPath } from './openFile';
 import { migrateUserData, OLD_APP_NAME } from './migrate';
+import { log, startLogging, watchWebContents } from './log';
 
 // Automated tests run with their own data folder, so they never touch the user's settings,
 // saved pen heights, recent files or recovery file.
-if (process.env['PLOTKA_USER_DATA']) app.setPath('userData', process.env['PLOTKA_USER_DATA']);
+if (process.env['PLOTKA_USER_DATA']) {
+  app.setPath('userData', process.env['PLOTKA_USER_DATA']);
+  app.setAppLogsPath(join(process.env['PLOTKA_USER_DATA'], 'logs'));
+}
 // The app used to be called Plotter Studio: bring its settings along (once, before Electron
 // creates the new folder).
 else migrateUserData(join(app.getPath('appData'), OLD_APP_NAME), app.getPath('userData'));
+
+startLogging();
 
 const plotter = new PlotterService();
 
@@ -35,6 +41,7 @@ function createWindow(): BrowserWindow {
   });
 
   win.once('ready-to-show', () => win.show());
+  watchWebContents(win.webContents);
 
   // PLOT-4: closing the window mid-plot asks first; if confirmed, the pen goes up and home.
   let closing = false;
@@ -66,6 +73,7 @@ function createWindow(): BrowserWindow {
       detail: 'Closing stops the plot, raises the pen and returns home.',
     });
     if (choice === 1) {
+      log.info('Window closed during a plot: stopping it');
       closing = true;
       void plotter.stopAndWait().finally(() => win.close());
     }

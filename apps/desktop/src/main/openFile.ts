@@ -1,10 +1,11 @@
 import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
-import { basename } from 'node:path';
+import { basename, extname } from 'node:path';
 import { BrowserWindow, dialog } from 'electron';
 import { isProjectPath, project } from './project';
 import { addRecent, removeRecent } from './recent';
 import { allowWatch, allowWatchFromProject } from './watch';
+import { log } from './log';
 
 /** Files the app can open from Open Recent, the Dock or Finder. */
 export const isOpenable = (path: string) =>
@@ -26,6 +27,7 @@ export async function openPath(path: string, win = BrowserWindow.getAllWindows()
     return;
   }
   const bytes = new Uint8Array(await readFile(path));
+  log.info('File opened', { kind: extname(path).toLowerCase(), bytes: bytes.length });
   project.path = isProjectPath(path) ? path : null;
   addRecent(path);
   if (isProjectPath(path)) allowWatchFromProject(new TextDecoder().decode(bytes));

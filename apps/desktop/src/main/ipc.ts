@@ -11,6 +11,8 @@ import { openPath } from './openFile';
 import { deletePlotLog, plotLogEntries, plotLogProject, setPlotLogNote } from './plotLog';
 import { allowWatch, allowWatchFromProject, startWatch, stopWatch } from './watch';
 import { existsSync } from 'node:fs';
+import { extname } from 'node:path';
+import { log } from './log';
 
 type Handler<C extends InvokeChannel> = (
   event: Electron.IpcMainInvokeEvent,
@@ -56,6 +58,7 @@ export function registerIpcHandlers(
     const path = result.filePaths[0];
     if (result.canceled || !path) return null;
     const bytes = new Uint8Array(await readFile(path));
+    log.info('File opened', { kind: extname(path).toLowerCase(), bytes: bytes.length });
     // Opening a project makes it the current project; opening artwork starts a new one.
     project.path = isProjectPath(path) ? path : null;
     addRecent(path);

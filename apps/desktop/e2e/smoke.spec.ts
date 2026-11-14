@@ -253,7 +253,8 @@ test('tessellate with wallpaper patterns', async () => {
 });
 
 test('connect the simulated plotter, jog, plot, pause, resume, finish', async () => {
-  const app = await launch({ PLOTTER_SIM_SPEED: '40' });
+  const data = mkdtempSync(join(tmpdir(), 'plotka-e2e-'));
+  const app = await launch({ PLOTTER_SIM_SPEED: '40', PLOTKA_USER_DATA: data });
   const page = await app.firstWindow();
   await page.setViewportSize({ width: 1400, height: 900 });
   await dropFile(page, 'motif.svg');
@@ -281,6 +282,14 @@ test('connect the simulated plotter, jog, plot, pause, resume, finish', async ()
   await expect(page.getByText('Done', { exact: true })).toBeVisible({ timeout: 60000 });
   if (shots) await page.screenshot({ path: join(shots, 'plot-done.png') });
   await app.close();
+
+  // The app log (Help › Show Log File) tells the story for bug reports.
+  const log = readFileSync(join(data, 'logs', 'plotka.log'), 'utf8');
+  expect(log).toMatch(/INFO {2}Plotka started version="[\d.]+"/);
+  expect(log).toContain('INFO  Connected port="simulated"');
+  expect(log).toContain('INFO  Plot started');
+  expect(log).toContain('INFO  Plot paused');
+  expect(log).toContain('INFO  Plot done');
 });
 
 test('save a project and open it again with all its settings (PROJ-1)', async () => {
