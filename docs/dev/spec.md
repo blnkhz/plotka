@@ -15,7 +15,7 @@ A desktop app that loads SVG artwork, lets me set up the paper and fills, previe
 ## 0. How to use this document (instructions for Claude Code)
 
 1. Read the whole file before writing code. Work epic by epic, in order. Each epic ends in a usable state.
-2. Before starting an epic, write a short plan in `docs/plans/<epic-id>.md`, then implement, then check every acceptance criterion in that epic.
+2. Before starting an epic, write a short plan in `docs/dev/plans/<epic-id>.md`, then implement, then check every acceptance criterion in that epic.
 3. The geometry core (`packages/core`) must be pure TypeScript with no Electron, DOM or Node APIs. Everything in it gets unit tests (Vitest). This is what makes future features like kaleidoscope and fractal transforms cheap to add.
 4. Never send motion commands to real hardware from tests. Use the simulated driver (Epic 5) for all automated tests.
 5. When a hardware detail is uncertain (firmware command syntax, steps per mm, bed size, servo ranges), do not guess. Read the reference sources in section 9, write down what you found in `docs/hardware-notes.md`, and make the value configurable.

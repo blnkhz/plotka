@@ -1,7 +1,7 @@
 # Backlog
 
 Work not done yet, newest requests first. Story IDs refer to the spec; "new" items came up while
-building. Each item gets a plan in `docs/plans/` when it's picked up.
+building. Each item gets a plan in `docs/dev/plans/` when it's picked up.
 
 ## New features (requested 2026-11-03)
 
@@ -9,8 +9,8 @@ These come from the earlier web tools at https://blnkhz.github.io/plotter-tools/
 `blnkhz/plotter-tools`). They're new ways to bring artwork in, so they'd sit next to Open… and
 Doodle…, and their output goes through the usual fills, transforms, optimisation and plotting.
 
-- **3D slicer**: done (see `docs/plans/3d-slicer.md`).
-- **Image dithering**: done (see `docs/plans/image-dithering.md`).
+- **3D slicer**: done (see `docs/dev/plans/3d-slicer.md`).
+- **Image dithering**: done (see `docs/dev/plans/image-dithering.md`).
 
 ## Remaining spec stories (P2 and later)
 
@@ -19,10 +19,6 @@ Doodle…, and their output goes through the usual fills, transforms, optimisati
   prompts, split by color, registration marks, more import formats, a browser version
 - LATER-5 signed builds: the release script signs and notarizes (`docs/releasing.md`); needs
   the Developer ID certificate set up, then the README's "Open Anyway" steps can go
-
-## Needs a decision
-
-- Code of conduct contact method (`CODE_OF_CONDUCT.md`)
 
 ## Not planned for now (decided 2026-11-02)
 

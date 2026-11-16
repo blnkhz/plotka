@@ -29,7 +29,7 @@ import {
 import { DEFAULT_NIB } from './nib';
 import type { LayerCopy, ViewOptions } from '../store';
 
-/** Project files (PROJ-1). See docs/plans/epic-10-projects.md for the format. */
+/** Project files (PROJ-1). See docs/dev/plans/epic-10-projects.md for the format. */
 export const PROJECT_FORMAT = 'plotka-project';
 /** What files saved before the app was named Plotka say in `format`: still opened. */
 export const LEGACY_PROJECT_FORMAT = 'plotter-studio-project';

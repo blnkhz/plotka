@@ -3,4 +3,4 @@ out
 dist
 release
 pnpm-lock.yaml
-docs/spec.md
+docs/dev/spec.md

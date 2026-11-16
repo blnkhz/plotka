@@ -1,8 +1,9 @@
 # Plotka
 
 [![Latest release](https://img.shields.io/github/v/release/blnkhz/plotka?label=release&color=6bb797)](https://github.com/blnkhz/plotka/releases/latest)
+[![CI](https://github.com/blnkhz/plotka/actions/workflows/ci.yml/badge.svg)](https://github.com/blnkhz/plotka/actions/workflows/ci.yml)
 
-A desktop app for pen plotters. Load SVG artwork, set up the paper and fills, preview exactly
+A desktop app for pen plotters. Doodle, load SVG artwork, set up the paper and fills, preview exactly
 what the pen will draw, and plot directly over USB, with no vendor software or Inkscape
 extension needed.
 
@@ -95,16 +96,49 @@ Download the `.dmg` from the [latest release](../../releases/latest). It runs on
 Apple Silicon and Intel. Windows and Linux aren't planned for now, but pull requests that add
 them are welcome.
 
-~~The app is not signed with an Apple Developer certificate yet, so macOS blocks it the first
-time. To open it:~~
+From v0.5.0 the app is signed and notarized: open the `.dmg`, drag Plotka to Applications and
+open it like any other app. (v0.4.0 and older aren't signed. Right-click the app and choose
+**Open** the first time.)
 
-1. ~~Right click the app in Finder and choose **Open**, then **Open** again. Or:~~
-2. ~~Try to open it once, then go to **System Settings > Privacy & Security** and click
-   **Open Anyway**.~~
+## How it works
 
-nvm, I got the dev subscription. From v0.5.0 the app is signed and notarized, so open the
-`.dmg`, drag Plotka to Applications and open it like any other app. (The steps above are still
-there for v0.4.0 and older.)
+```mermaid
+flowchart LR
+  A[SVG, doodle, picture,<br>text or 3D model] --> B[Document model<br>paths in mm]
+  B --> C[Fills, passes<br>and transforms]
+  C --> D[Optimize<br>order and joins]
+  D --> E[Motion plan]
+  E --> F[Preview and<br>time estimate]
+  E --> G[EBB commands<br>over USB]
+```
+
+- **`packages/core`** is pure TypeScript with no Electron, DOM or Node APIs: importers, fills,
+  transforms, path optimization and the document model. It's where most of the unit tests are.
+- **`packages/plotter`** speaks the EiBotBoard protocol and plans the motion: acceleration,
+  cornering speed and pen lifts, in short timed moves the board can queue.
+- **The preview and the plotter use the same motion plan**, so the time estimate is what the plot
+  actually takes, and playback shows the real drawing order.
+- **A simulated plotter** runs the same plan without hardware. The tests use it, so nothing in
+  CI ever moves a real pen.
+- **`apps/desktop`** is the Electron app. Heavy work (fills, slicing, planning) runs off the main
+  thread so the window stays responsive.
+
+The choices behind it are in [docs/decisions.md](docs/decisions.md), and every hardware value
+and where it came from is in [docs/hardware-notes.md](docs/hardware-notes.md).
+
+## How it's built
+
+<!-- Draft: rewrite this in your own words. -->
+
+I built Plotka with [Claude Code](https://claude.com/claude-code). I wrote the
+[spec](docs/dev/spec.md): what the app should do, the architecture rules and every feature as
+user stories with acceptance criteria. Claude wrote most of the code, story by story, with a
+short plan before each larger feature ([docs/dev](docs/dev/README.md)).
+
+My part was the product and the judgment calls: what to build and in what order, how a plot
+should look and feel, the decisions in [docs/decisions.md](docs/decisions.md), reviewing the
+changes, and testing everything on a real AxiDraw. CI runs the unit tests and end-to-end tests
+that drive the real app on every push.
 
 ## Development
 
@@ -127,7 +161,7 @@ pnpm release:publish  # build, sign, notarize and upload it as a draft release
 apps/desktop/       Electron main, preload and React renderer
 packages/core/      Pure TypeScript geometry: import, fills, optimize, transforms
 packages/plotter/   Driver interface, EBB protocol, motion planner, simulator
-docs/               Plans, hardware notes, decisions
+docs/               User guide, decisions, hardware notes; dev/ has the spec and plans
 ```
 
 ## License
