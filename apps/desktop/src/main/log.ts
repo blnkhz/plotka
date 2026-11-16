@@ -2,6 +2,7 @@ import { homedir, release } from 'node:os';
 import { join } from 'node:path';
 import { app, shell, type WebContents } from 'electron';
 import { createLogger, type Logger } from './logger';
+import { bugReportUrl, describeMac } from './report';
 
 /**
  * The app's log, at ~/Library/Logs/Plotka/plotka.log (Help › Show Log File). It records what's
@@ -62,4 +63,15 @@ export function watchWebContents(wc: WebContents) {
 export function revealLog() {
   log.info('Log file shown');
   shell.showItemInFolder(log.file);
+}
+
+/**
+ * Help › Report a Problem: opens the GitHub bug report form with the versions filled in, and
+ * shows the log in Finder so it can be dragged into the form.
+ */
+export function reportProblem() {
+  log.info('Report a problem');
+  shell.showItemInFolder(log.file);
+  const os = describeMac(process.getSystemVersion(), process.arch);
+  void shell.openExternal(bugReportUrl(app.getVersion(), os));
 }

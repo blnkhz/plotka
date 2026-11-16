@@ -293,6 +293,20 @@ test('connect the simulated plotter, jog, plot, pause, resume, finish', async ()
   await page.getByRole('button', { name: 'Resume' }).click();
   await expect(page.getByText('Done', { exact: true })).toBeVisible({ timeout: 60000 });
   if (shots) await page.screenshot({ path: join(shots, 'plot-done.png') });
+
+  // Help › Report a Problem opens the bug report form and shows the log.
+  const opened = await app.evaluate(async ({ Menu, shell }) => {
+    const calls: string[] = [];
+    shell.openExternal = (async (url: string) => void calls.push(url)) as never;
+    shell.showItemInFolder = ((path: string) => void calls.push(path)) as never;
+    const help = Menu.getApplicationMenu()!.items.find((i) => i.role === 'help')!;
+    help.submenu!.items.find((i) => i.label === 'Report a Problem…')!.click();
+    return calls;
+  });
+  expect(opened[0]).toMatch(/plotka\.log$/);
+  expect(opened[1]).toMatch(
+    /^https:\/\/github\.com\/blnkhz\/plotka\/issues\/new\?template=bug_report\.yml&app=[\d.]+&os=macOS/,
+  );
   await app.close();
 
   // The app log (Help › Show Log File) tells the story for bug reports.

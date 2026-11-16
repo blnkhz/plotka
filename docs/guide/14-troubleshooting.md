@@ -37,5 +37,6 @@ Plotka keeps a log of what it did: the app and macOS versions, connecting to the
 plot and how it ended, and any errors. Choose **Help › Show Log File** to find it in Finder
 (it's `~/Library/Logs/Plotka/plotka.log`). The log has no artwork in it.
 
-When you report a bug on [GitHub](https://github.com/blnkhz/plotka/issues), attach the log, and
-the SVG or project file if you can.
+To report a bug, choose **Help › Report a Problem…**. It opens the bug report form on
+[GitHub](https://github.com/blnkhz/plotka/issues) with the app and macOS versions filled in, and
+shows the log in Finder. Drag the log into the form, and the SVG or project file if you can.
