@@ -1,6 +1,6 @@
 <img src="apps/desktop/build/icon.svg" alt="Plotka logo" width="112">
 
-# Plotka
+# [Plotka](https://plotka.app)
 
 [![Latest release](https://img.shields.io/github/v/release/blnkhz/plotka?label=release&color=6bb797)](https://github.com/blnkhz/plotka/releases/latest)
 [![CI](https://github.com/blnkhz/plotka/actions/workflows/ci.yml/badge.svg)](https://github.com/blnkhz/plotka/actions/workflows/ci.yml)
