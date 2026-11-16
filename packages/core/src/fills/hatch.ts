@@ -15,6 +15,8 @@ import type { FillRegion, Polyline } from '../model';
  * - Connect: adjacent lines are joined pen-down only when the connector stays inside the inset
  *   region (no edge crossing, midpoint inside, at least `inset` from every edge) and is no longer
  *   than `MAX_CONNECT_SPACINGS` line spacings, so it never draws long diagonals across the fill.
+ * - Round turns: with connect, each turn from one line into the next is a curve instead of two
+ *   sharp corners. It only cuts the corners, so it stays where the sharp turn was.
  */
 
 export type HatchOptions = {
@@ -23,7 +25,12 @@ export type HatchOptions = {
   angle: number;
   inset: number;
   connect: boolean;
+  /** With connect: round the turns between lines. */
+  roundTurns?: boolean;
 };
+
+/** Most a rounded turn's flattened curve strays from the true curve, in mm. */
+const TURN_TOLERANCE = 0.02;
 
 export const MAX_CONNECT_SPACINGS = 4;
 
@@ -92,7 +99,9 @@ export function hatchRegion(region: FillRegion, opts: HatchOptions): Polyline[] 
   }
 
   const local = opts.connect
-    ? connectRows(rows, spacing, (a, b) => connectorInside(a, b, edges, inset, evenodd))
+    ? connectRows(rows, spacing, (a, b) => connectorInside(a, b, edges, inset, evenodd)).map(
+        (chain) => (opts.roundTurns ? roundChainTurns(chain, spacing) : chain),
+      )
     : rows.flatMap((r, i) =>
         r.intervals.map(([x0, x1]) =>
           // Alternate direction per row, so unconnected lines still serpentine.
@@ -278,6 +287,59 @@ function connectRows(
     }
   }
   return chains;
+}
+
+/**
+ * Rounds the turns of a connected chain (in the rotated frame, lines horizontal). The chain is
+ * line, connector, line, ...: points 2i and 2i+1 are line i. Each connector and the two corners
+ * at its ends become one cubic curve, which leaves line i `r` before its end and joins line i+1
+ * `r` after its start, bulging out to where the lines ended. With both ends level (a plain
+ * U-turn) and r = spacing / 2, it is very nearly a half circle.
+ */
+function roundChainTurns(chain: Vec2[], spacing: number): Vec2[] {
+  if (chain.length < 4) return chain;
+  const lines = chain.length / 2;
+  // Each line is trimmed at both ends at most, so a turn uses no more than half of either line.
+  const half = (i: number) => Math.abs(chain[2 * i + 1]!.x - chain[2 * i]!.x) / 2;
+  const out: Vec2[] = [chain[0]!];
+  for (let i = 0; i < lines - 1; i++) {
+    const end = chain[2 * i + 1]!;
+    const start = chain[2 * i + 2]!;
+    // The direction line i runs in; line i+1 runs the other way.
+    const d = end.x >= chain[2 * i]!.x ? 1 : -1;
+    const r = Math.min(spacing / 2, half(i), half(i + 1));
+    if (!(r > 1e-6)) {
+      out.push(end, start);
+      continue;
+    }
+    // Cubic from a to b, both handles pointing out along the lines: about a half circle when level.
+    const a = { x: end.x - d * r, y: end.y };
+    const b = { x: start.x - d * r, y: start.y };
+    const k = (4 / 3) * r;
+    const c1 = { x: a.x + d * k, y: a.y };
+    const c2 = { x: b.x + d * k, y: b.y };
+    const reach = Math.max(r, Math.abs(b.y - a.y) / 2);
+    const steps = Math.min(
+      48,
+      Math.max(4, Math.ceil(Math.PI / Math.acos(Math.max(-1, 1 - TURN_TOLERANCE / reach)))),
+    );
+    out.push(a);
+    for (let s = 1; s < steps; s++) {
+      const t = s / steps;
+      const u = 1 - t;
+      const w0 = u * u * u;
+      const w1 = 3 * u * u * t;
+      const w2 = 3 * u * t * t;
+      const w3 = t * t * t;
+      out.push({
+        x: w0 * a.x + w1 * c1.x + w2 * c2.x + w3 * b.x,
+        y: w0 * a.y + w1 * c1.y + w2 * c2.y + w3 * b.y,
+      });
+    }
+    out.push(b);
+  }
+  out.push(chain[chain.length - 1]!);
+  return out;
 }
 
 /** True when the segment a-b lies inside the inset region. */

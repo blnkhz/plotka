@@ -106,6 +106,18 @@ test('crosshatch a layer (MVP fill setup)', async () => {
   await expect.poll(pathCount).toBe(zigzagPaths);
   if (shots) await page.screenshot({ path: join(shots, 'zigzag.png') });
 
+  // Round the turns: same paths, shorter draw (corners cut); only offered with the pen kept down.
+  const drawn = async () =>
+    Number((await page.getByText(/\d+ paths · draw/).textContent())!.match(/draw ([\d.]+)/)![1]);
+  const sharpDraw = await drawn();
+  await page.getByLabel('Round the turns').check();
+  await expect.poll(drawn).toBeLessThan(sharpDraw);
+  expect(await pathCount()).toBe(zigzagPaths);
+  await page.getByLabel('Keep pen down between lines').uncheck();
+  await expect(page.getByLabel('Round the turns')).toHaveCount(0);
+  await page.getByLabel('Keep pen down between lines').check();
+  await page.getByLabel('Round the turns').uncheck();
+
   // Optimization: travel drops versus file order, and turning it off restores file order.
   await page.getByRole('tab', { name: 'Plot' }).click();
   await page.getByRole('checkbox', { name: 'Travel', exact: true }).check();

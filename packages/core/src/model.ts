@@ -46,6 +46,8 @@ export type FillSettings = {
   inset: number;
   /** Join adjacent hatch lines (or concentric rings) without lifting the pen when safe. */
   connect: boolean;
+  /** Lines and crosshatch with connect: round the turns from one line into the next. */
+  roundTurns?: boolean;
   /** Dots: random offset as a fraction of spacing, 0..1. */
   jitter?: number;
   /** Darker source colors get tighter spacing (spacing ÷ darkness). */

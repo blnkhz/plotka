@@ -390,6 +390,13 @@ describe('project files (PROJ-1)', () => {
     expect(f).toMatchObject({ type: 'lines', connect: true, spacing: 0.8, angle: 30 });
   });
 
+  it('reads Round the turns, and older files without it as off', () => {
+    const base = { type: 'lines', spacing: 0.6, angle: 45, inset: 0, connect: true };
+    expect(parseFill({ ...base, roundTurns: true })?.roundTurns).toBe(true);
+    expect(parseFill(base)?.roundTurns).toBeUndefined();
+    expect(parseFill({ ...base, roundTurns: 'yes' })?.roundTurns).toBeUndefined();
+  });
+
   it('mergeDefaults keeps nested defaults and only same-type values', () => {
     expect(
       mergeDefaults({ a: 1, b: { c: true, d: 'x' } }, { a: 'no', b: { c: false }, z: 9 }),

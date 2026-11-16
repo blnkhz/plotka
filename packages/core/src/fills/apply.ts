@@ -91,11 +91,15 @@ export function fillRegion(region: FillRegion, f: FillSettings, center?: Vec2): 
   const base = { spacing, angle: f.angle, inset: f.inset, connect: f.connect };
   switch (f.type) {
     case 'lines':
-      return hatchRegion(region, base);
+      return hatchRegion(region, { ...base, roundTurns: f.roundTurns });
     case 'crosshatch':
       return [
-        ...hatchRegion(region, base),
-        ...hatchRegion(region, { ...base, angle: f.crossAngle ?? f.angle + 90 }),
+        ...hatchRegion(region, { ...base, roundTurns: f.roundTurns }),
+        ...hatchRegion(region, {
+          ...base,
+          roundTurns: f.roundTurns,
+          angle: f.crossAngle ?? f.angle + 90,
+        }),
       ];
     case 'waves':
     case 'noise':

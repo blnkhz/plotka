@@ -57,6 +57,8 @@ const USES_CONNECT = new Set<FillType>([
   'noise',
   'concentric',
 ]);
+/** Fills whose kept-down lines make sharp U-turns that can be rounded. */
+const USES_ROUND_TURNS = new Set<FillType>(['lines', 'crosshatch']);
 const SPACING_LABEL: Partial<Record<FillType, string>> = {
   concentric: 'Ring spacing',
   ripples: 'Ring spacing',
@@ -324,6 +326,21 @@ export function FillTab() {
                         onChange={(e) => setFill({ connect: e.target.checked })}
                       />
                       Keep pen down between lines
+                    </label>
+                  </Row>
+                )}
+                {USES_ROUND_TURNS.has(type) && fill.connect && (
+                  <Row label="">
+                    <label
+                      className={`${styles.check} ${styles.indent}`}
+                      title="Turn from one line into the next with a curve instead of two sharp corners. Smoother on the plotter, and the ends of the lines look softer."
+                    >
+                      <input
+                        type="checkbox"
+                        checked={!!fill.roundTurns}
+                        onChange={(e) => setFill({ roundTurns: e.target.checked })}
+                      />
+                      Round the turns
                     </label>
                   </Row>
                 )}

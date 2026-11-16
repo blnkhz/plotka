@@ -271,6 +271,78 @@ describe('connect / zigzag (HATCH-3)', () => {
   });
 });
 
+describe('round turns', () => {
+  const square: FillRegion = { outer: [rect(0, 0, 10, 10)], fillRule: 'nonzero' };
+  const length = (l: Polyline) =>
+    l.points
+      .slice(1)
+      .reduce((s, p, i) => s + Math.hypot(p.x - l.points[i]!.x, p.y - l.points[i]!.y), 0);
+
+  it('keeps one chain with the same ends, and only cuts corners (shorter)', () => {
+    const sharp = hatchRegion(square, opts({ connect: true }));
+    const round = hatchRegion(square, opts({ connect: true, roundTurns: true }));
+    expect(round).toHaveLength(1);
+    expect(round[0]!.points.length).toBeGreaterThan(sharp[0]!.points.length);
+    expect(round[0]!.points[0]).toEqual(sharp[0]!.points[0]);
+    expect(round[0]!.points.at(-1)).toEqual(sharp[0]!.points.at(-1));
+    expect(length(round[0]!)).toBeLessThan(length(sharp[0]!));
+  });
+
+  it('a level U-turn is about a half circle of half the spacing', () => {
+    const [chain] = hatchRegion(square, opts({ connect: true, roundTurns: true }));
+    // The first turn, at x = 10 between y = 0.5 and 1.5: centered at (9.5, 1), radius 0.5.
+    const turn = chain!.points.filter((p) => p.x > 9.5 + 1e-9 && p.y > 0.5 && p.y < 1.5);
+    expect(turn.length).toBeGreaterThan(2);
+    // A cubic is a close (not exact) half circle: within 0.02 mm, far below a pen line.
+    for (const p of turn) expect(Math.abs(Math.hypot(p.x - 9.5, p.y - 1) - 0.5)).toBeLessThan(0.02);
+  });
+
+  it('stays inside the shape and its inset, at any angle', () => {
+    for (const angle of [0, 30, 45, 80]) {
+      const lines = hatchRegion(square, opts({ connect: true, roundTurns: true, inset: 1, angle }));
+      for (const p of samples(lines)) {
+        expect(p.x).toBeGreaterThanOrEqual(1 - 1e-6);
+        expect(p.x).toBeLessThanOrEqual(9 + 1e-6);
+        expect(p.y).toBeGreaterThanOrEqual(1 - 1e-6);
+        expect(p.y).toBeLessThanOrEqual(9 + 1e-6);
+      }
+    }
+  });
+
+  it('does nothing without connect, and short lines are not overrun', () => {
+    expect(hatchRegion(square, opts({ roundTurns: true }))).toEqual(hatchRegion(square, opts()));
+    // A thin diamond: lines near the tips are shorter than the spacing.
+    const diamond: FillRegion = {
+      outer: [
+        [
+          { x: 5, y: 0 },
+          { x: 6, y: 5 },
+          { x: 5, y: 10 },
+          { x: 4, y: 5 },
+        ],
+      ],
+      fillRule: 'nonzero',
+    };
+    const lines = hatchRegion(diamond, opts({ connect: true, roundTurns: true, spacing: 0.8 }));
+    for (const p of samples(lines)) {
+      expect(p.x).toBeGreaterThanOrEqual(4 - 1e-6);
+      expect(p.x).toBeLessThanOrEqual(6 + 1e-6);
+    }
+  });
+
+  it('the layer setting reaches lines and crosshatch', () => {
+    const layer = createLayer('l', 'L');
+    layer.fills.push(square);
+    const count = () => layerHatches(layer).reduce((n, l) => n + l.points.length, 0);
+    for (const type of ['lines', 'crosshatch'] as const) {
+      layer.settings.fill = { type, spacing: 1, angle: 0, inset: 0, connect: true };
+      const sharp = count();
+      layer.settings.fill = { ...layer.settings.fill, roundTurns: true };
+      expect(count()).toBeGreaterThan(sharp);
+    }
+  });
+});
+
 describe('applyFills', () => {
   it('adds hatches to strokes only for layers with a fill', () => {
     const a = createLayer('a', 'A');

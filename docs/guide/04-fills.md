@@ -64,6 +64,10 @@ raises the spacing to a starting value (4, 3 and 1 mm) if it's smaller.
 - **Keep pen down between lines**: joins neighboring lines end to end (a zigzag), or rings,
   without lifting the pen, where the join stays inside the shape. Faster, and fewer pen lifts.
   Turn it off for separate strokes, with the pen lifted after each line.
+- **Round the turns** (lines and crosshatch, with the pen kept down): turns from one line into
+  the next with a curve instead of two sharp corners. The plotter doesn't have to slow down for
+  the corners, and the ends of the fill look softer. Each turn is about one line spacing across
+  and stays where the sharp turn was, so it never leaves the shape.
 - **Draw outlines of filled shapes**: also draws each shape's outline. When every filled shape
   in a layer has an outline in the file (or a doodle kept its outlines), those outlines are this
   setting, already on, so unticking it removes them. If only some shapes had outlines, they're

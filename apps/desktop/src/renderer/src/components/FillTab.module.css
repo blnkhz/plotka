@@ -7,6 +7,10 @@
   align-items: center;
   gap: 5px;
 }
+/* A setting that only applies when the one above is on. */
+.indent {
+  padding-left: 20px;
+}
 .swatches {
   display: inline-flex;
   flex-wrap: wrap;
