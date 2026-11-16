@@ -22,4 +22,7 @@ jobs:
       - run: pnpm lint
       - run: pnpm typecheck
       - run: pnpm test
+      # Download Electron once up front. Otherwise the parallel e2e workers race to download it
+      # on first launch and one of them fails.
+      - run: pnpm --filter @plotka/desktop exec node node_modules/electron/install.js
       - run: pnpm test:e2e
