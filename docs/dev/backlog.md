@@ -3,7 +3,7 @@
 Work not done yet, newest requests first. Story IDs refer to the spec; "new" items came up while
 building. Each item gets a plan in `docs/dev/plans/` when it's picked up.
 
-## New features (requested 2026-11-03)
+## New features
 
 These come from the earlier web tools at https://blnkhz.github.io/plotter-tools/ (source:
 `blnkhz/plotter-tools`). They're new ways to bring artwork in, so they'd sit next to Open… and

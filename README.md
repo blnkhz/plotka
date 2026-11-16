@@ -128,17 +128,11 @@ and where it came from is in [docs/hardware-notes.md](docs/hardware-notes.md).
 
 ## How it's built
 
-<!-- Draft: rewrite this in your own words. -->
+I built Plotka using Claude Code, working from a detailed spec I wrote (docs/dev/spec.md). The spec defines the product, architecture, and features as user stories with clear acceptance criteria. Development followed that spec, one story at a time, with a short implementation plan before each larger feature (docs/dev).
 
-I built Plotka with [Claude Code](https://claude.com/claude-code). I wrote the
-[spec](docs/dev/spec.md): what the app should do, the architecture rules and every feature as
-user stories with acceptance criteria. Claude wrote most of the code, story by story, with a
-short plan before each larger feature ([docs/dev](docs/dev/README.md)).
+I led the product and engineering decisions throughout: defining what to build and in what order, shaping how plots look and feel, documenting architectural decisions (docs/decisions.md), reviewing implementations, and testing on a real AxiDraw. Claude Code handled most of the implementation, while I directed the process and validated the results.
 
-My part was the product and the judgment calls: what to build and in what order, how a plot
-should look and feel, the decisions in [docs/decisions.md](docs/decisions.md), reviewing the
-changes, and testing everything on a real AxiDraw. CI runs the unit tests and end-to-end tests
-that drive the real app on every push.
+CI runs unit and end-to-end tests on every push, including tests that drive the actual app.
 
 ## Development
 
