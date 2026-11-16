@@ -45,7 +45,8 @@ extension needed.
 
 - Fills: lines (or a zigzag), crosshatch, triangles, hexagons, waves (smooth, zigzag, square),
   noise, flow, concentric, spiral, ripples, dots and stipple, with spacing from the fill color;
-  shapes on top hide the ones underneath, like in the file
+  keep the pen down between lines, with rounded turns; shapes on top hide the ones underneath,
+  like in the file
 
   ![A circle and a triangle filled with ripples, with the fill settings](docs/screenshots/fill.png)
 
@@ -69,7 +70,7 @@ extension needed.
 
   ![Machine tab: connection, jog buttons, pen height sliders and the machine profile](docs/screenshots/machine.png)
 
-- Projects with undo and redo, and a searchable help guide built in
+- Projects with undo and redo, a searchable help guide built in, and a log file for bug reports
 
 ## User guide
 
