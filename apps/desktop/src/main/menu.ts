@@ -14,8 +14,8 @@ function send(action: Action, win?: BrowserWindow | null) {
 }
 
 /**
- * The app menu. Its shortcuts are the only handlers for ⌘O, ⌘S, ⇧⌘S, ⌘Z and ⇧⌘Z; the page
- * decides what each means (e.g. Undo in a text field undoes typing).
+ * The app menu. Its shortcuts are the only handlers for ⌘O, ⌘S, ⇧⌘S, ⌘Z and ⇧⌘Z (Ctrl+Y on
+ * Windows and Linux, where the page handles Ctrl+Shift+Z); the page decides what each means (e.g. Undo in a text field undoes typing).
  */
 export function installMenu() {
   build();
@@ -64,7 +64,8 @@ function build() {
       label: 'Edit',
       submenu: [
         item('undo', 'Undo', 'CmdOrCtrl+Z'),
-        item('redo', 'Redo', 'Shift+CmdOrCtrl+Z'),
+        // Windows' usual Redo is Ctrl+Y; the page also takes Ctrl+Shift+Z there (App.tsx).
+        item('redo', 'Redo', isMac ? 'Shift+Cmd+Z' : 'Ctrl+Y'),
         { type: 'separator' },
         { role: 'cut' },
         { role: 'copy' },
@@ -103,6 +104,8 @@ function build() {
         // For bug reports: the log has the versions, connections, plots and errors.
         { label: 'Show Log File', click: () => revealLog() },
         { label: 'Report a Problem…', click: () => reportProblem() },
+        // On macOS, About is in the app menu.
+        ...(isMac ? [] : [{ type: 'separator' as const }, { role: 'about' as const }]),
       ],
     },
   ];

@@ -26,3 +26,21 @@ jobs:
       # on first launch and one of them fails.
       - run: pnpm --filter @plotka/desktop exec node node_modules/electron/install.js
       - run: pnpm test:e2e
+
+  # The same tests on Windows. Formatting and lint don't depend on the platform, so they only
+  # run above.
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      - run: corepack enable pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+      - run: pnpm test
+      - run: pnpm --filter @plotka/desktop exec node node_modules/electron/install.js
+      - run: pnpm test:e2e
+      # Check the installer still builds.
+      - run: pnpm build:win

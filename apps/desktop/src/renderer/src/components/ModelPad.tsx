@@ -27,6 +27,7 @@ import {
 } from '@plotka/core';
 import { loadMesh, ModelError } from '../lib/modelFiles';
 import { useThemeKey } from '../lib/useThemeKey';
+import { fileName } from '../lib/keys';
 import { useStore } from '../store';
 import { NumberField, Row, Section, Segmented } from './controls';
 // Same layout as the doodle pad: header, stage, settings on the right.
@@ -510,7 +511,7 @@ function SaveSvg({ name, svg, disabled }: { name: string; svg: () => string; dis
           const path = await window.api.invoke('file:saveText', `${base} (sliced).svg`, svg(), [
             '.svg',
           ]);
-          if (path) setSaved(path.split('/').pop() ?? path);
+          if (path) setSaved(fileName(path));
         }}
       >
         Save SVG…

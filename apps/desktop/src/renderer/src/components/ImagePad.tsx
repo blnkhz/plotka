@@ -7,6 +7,7 @@ import {
   type MarkShape,
 } from '@plotka/core';
 import { useThemeKey } from '../lib/useThemeKey';
+import { fileName } from '../lib/keys';
 import { useStore } from '../store';
 import { NumberField, Row, Section } from './controls';
 // Same layout as the doodle pad: header, stage, settings on the right.
@@ -236,7 +237,7 @@ export function ImagePad() {
             const path = await window.api.invoke('file:saveText', `${base} (dithered).svg`, svg(), [
               '.svg',
             ]);
-            if (path) setSaved(path.split('/').pop() ?? path);
+            if (path) setSaved(fileName(path));
           }}
         >
           Save SVG…

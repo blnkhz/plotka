@@ -1,8 +1,9 @@
 # Releasing
 
 Releases are built on your Mac: `pnpm release:publish` checks the code, builds the universal
-`.dmg`, signs and notarizes it with the Apple Developer account, and attaches it to a **draft**
-GitHub release. Nothing is public until you publish the draft.
+`.dmg`, signs and notarizes it with the Apple Developer account, builds the Windows installer
+(unsigned), and attaches both to a **draft** GitHub release. Nothing is public until you publish
+the draft.
 
 ## Steps
 
@@ -26,10 +27,12 @@ GitHub release. Nothing is public until you publish the draft.
    it yet.
 
 4. Open the draft it links to. Download the `.dmg` from it and open it: macOS should open
-   Plotka without any warning. Connect and plot something small.
+   Plotka without any warning. Connect and plot something small. If you can, do the same with
+   the Windows installer on a Windows PC.
 5. Edit the notes if needed and click **Publish release**.
 
-Running `pnpm release:publish` again for the same version replaces the `.dmg` on the draft.
+Running `pnpm release:publish` again for the same version replaces the `.dmg` and the
+installer on the draft.
 
 ## One-time setup for signing
 
@@ -75,9 +78,27 @@ from the ones used for iOS apps or the App Store, and a notarytool profile in yo
 - The name macOS shows as the developer is the certificate's team name.
 - `pnpm release:publish --unsigned` makes an unsigned release without any Apple setup. People
   then see macOS's "unidentified developer" warning the first time they open the app.
-- `pnpm build:mac` builds an unsigned `.dmg` into `apps/desktop/release/` for your own use.
+- `pnpm build:mac` builds an unsigned `.dmg` into `apps/desktop/release/` for your own use,
+  and `pnpm build:win` the Windows installer. The Windows build works on a Mac without Wine.
 - The **Release** workflow on GitHub (**Actions › Release › Run workflow**, with a tag) builds
-  an unsigned `.dmg` on a GitHub-hosted Mac. It's a fallback for when you're away from your
-  Mac. It only runs by hand, so pushing a tag never replaces a signed `.dmg`. GitHub's macOS
-  runners are sometimes busy and the job can time out waiting for one; run it again later.
+  unsigned apps on GitHub-hosted runners: pick **windows**, **mac** or **both**. It's a
+  fallback for when you're away from your Mac. It only runs by hand, so pushing a tag never
+  replaces a signed `.dmg`; picking **mac** or **both** does, so only do that when there isn't
+  a signed one. GitHub's macOS runners are sometimes busy and the job can time out waiting for
+  one; run it again later.
+
+## Windows signing
+
+The Windows installer isn't signed, so Windows SmartScreen shows "Windows protected your PC"
+the first time someone runs it (they click **More info › Run anyway**). The warning goes away
+with a code signing certificate. Two ways, both supported by electron-builder:
+
+- **Azure Trusted Signing**: a monthly subscription, signs in the cloud, no hardware token.
+  It needs identity verification for the publisher name, which can take a few days.
+- **An OV or EV certificate** from a certificate authority: paid yearly, and the key has to
+  live on a hardware token or a cloud HSM.
+
+Either way, signing happens when the installer is built, with the settings under `win:` in
+`apps/desktop/electron-builder.yml`.
+
 - While the repository is private, only people with access to it can download releases.

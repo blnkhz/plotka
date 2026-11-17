@@ -1,6 +1,7 @@
 #!/bin/sh
-# Builds the release for the version tag at HEAD on this Mac, signs and notarizes it, and
-# attaches it to a DRAFT GitHub release. Nothing is public until you publish the draft.
+# Builds the release for the version tag at HEAD on this Mac: the macOS app, signed and
+# notarized, and the Windows installer (unsigned). Attaches both to a DRAFT GitHub release.
+# Nothing is public until you publish the draft.
 #
 # Usage: pnpm release:publish            (signed and notarized; needs .env.release, see below)
 #        pnpm release:publish --unsigned (no Apple Developer account needed)
@@ -64,8 +65,13 @@ else
   pnpm exec electron-builder --mac --universal --publish never \
     "-c.mac.identity=$PLOTKA_SIGN_IDENTITY"
 fi
+
+step "Building the Windows installer"
+pnpm exec electron-builder --win --x64 --publish never
 cd "$root"
 
+exe="apps/desktop/release/Plotka-$version-x64-setup.exe"
+[ -f "$exe" ] || fail "No $exe was built."
 dmg="apps/desktop/release/Plotka-$version-universal.dmg"
 app="apps/desktop/release/mac-universal/Plotka.app"
 [ -f "$dmg" ] || fail "No $dmg was built."
@@ -88,12 +94,13 @@ step "Uploading to the draft release"
 git ls-remote --exit-code --tags origin "refs/tags/$tag" >/dev/null 2>&1 ||
   git push origin "$tag"
 if gh release view "$tag" >/dev/null 2>&1; then
-  gh release upload "$tag" "$dmg" --clobber
+  gh release upload "$tag" "$dmg" "$exe" --clobber
 else
-  gh release create "$tag" "$dmg" --draft --verify-tag --title "Plotka $tag" --generate-notes
+  gh release create "$tag" "$dmg" "$exe" --draft --verify-tag --title "Plotka $tag" --generate-notes
 fi
 
 step "Done"
 $unsigned && echo "This build is NOT signed: macOS will warn people the first time they open it."
-echo "Review the draft, try the .dmg, then publish it:"
+echo "The Windows installer isn't signed: Windows SmartScreen warns people the first time."
+echo "Review the draft, try the .dmg and the installer, then publish it:"
 gh release view "$tag" --json url -q .url

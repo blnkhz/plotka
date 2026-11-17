@@ -8,7 +8,7 @@
 | ⌘E           | Export what will be plotted as SVG                                                                 |
 | ⇧⌘E          | Export the toolpath as JSON                                                                        |
 | ⌘Z           | Undo                                                                                               |
-| ⇧⌘Z          | Redo                                                                                               |
+| ⇧⌘Z          | Redo (on Windows, Ctrl+Y too)                                                                      |
 | F            | Fit the page in the preview                                                                        |
 | Space + drag | Move the view in the preview                                                                       |
 | Space        | Pause or resume a plot                                                                             |

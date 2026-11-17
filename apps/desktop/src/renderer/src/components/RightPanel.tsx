@@ -10,6 +10,7 @@ import { exportPlot } from '../lib/exportPlot';
 import { OptimizeSection } from './OptimizeSection';
 import { PageTab } from './PageTab';
 import { StatsTable } from './StatsTable';
+import { keyText } from '../lib/keys';
 import styles from './RightPanel.module.css';
 
 const TABS: { id: Tab; label: string }[] = [
@@ -130,13 +131,13 @@ function PlotTab() {
           <div className={styles.exportRow}>
             <button
               onClick={() => void exportPlot('svg')}
-              title="Save what will be plotted as an SVG (⌘E)"
+              title={keyText('Save what will be plotted as an SVG (⌘E)')}
             >
               Export SVG…
             </button>
             <button
               onClick={() => void exportPlot('json')}
-              title="Save the planned paths as JSON, in mm (⇧⌘E)"
+              title={keyText('Save the planned paths as JSON, in mm (⇧⌘E)')}
             >
               Export JSON…
             </button>

@@ -6,8 +6,6 @@ directories:
 files:
   - out/**
   - package.json
-  # Only the macOS serialport binary is needed in a Mac build.
-  - '!**/node_modules/@serialport/bindings-cpp/prebuilds/{android,linux,win32}-*/**'
 # The licence and third-party notices (fonts included) ship inside the app, in Resources.
 extraResources:
   - from: ../../LICENSE
@@ -18,6 +16,9 @@ asarUnpack:
   - '**/node_modules/@serialport/bindings-cpp/**'
 mac:
   category: public.app-category.graphics-design
+  # Only the macOS serialport binary is needed in a Mac build.
+  files:
+    - '!**/node_modules/@serialport/bindings-cpp/prebuilds/{android,linux,win32}-*/**'
   target:
     - target: dmg
       arch: [universal]
@@ -25,7 +26,25 @@ mac:
   # `pnpm release:publish`, which sets the identity on the command line and notarizes with a
   # notarytool keychain profile (APPLE_KEYCHAIN_PROFILE). See docs/releasing.md.
   identity: null
-# serialport ships a universal (x64 + arm64) N-API prebuild, which Electron loads as is, so
-# nothing needs compiling. Everything else is bundled into out/ by electron-vite; only
-# `dependencies` (just serialport) are packaged.
+win:
+  icon: build/icon.ico
+  target:
+    - target: nsis
+      arch: [x64]
+  # Only the 64-bit Windows serialport binary is needed. Windows 11 on Arm runs the x64 build.
+  files:
+    - '!**/node_modules/@serialport/bindings-cpp/prebuilds/{android,darwin,linux}-*/**'
+    - '!**/node_modules/@serialport/bindings-cpp/prebuilds/win32-{arm64,ia32}/**'
+  # Builds are unsigned for now, so Windows SmartScreen warns the first time. See
+  # docs/releasing.md.
+nsis:
+  # A per-user install with no admin prompt; it opens Plotka when it finishes.
+  oneClick: true
+  perMachine: false
+  artifactName: ${productName}-${version}-x64-setup.${ext}
+  # Settings, pen heights and the plot log stay if Plotka is uninstalled.
+  deleteAppDataOnUninstall: false
+# serialport ships N-API prebuilds for every platform (a universal one for macOS), which
+# Electron loads as they are, so nothing needs compiling. Everything else is bundled into out/
+# by electron-vite; only `dependencies` (just serialport) are packaged.
 npmRebuild: false

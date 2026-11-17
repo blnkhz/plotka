@@ -2,10 +2,11 @@ import { homedir, release } from 'node:os';
 import { join } from 'node:path';
 import { app, shell, type WebContents } from 'electron';
 import { createLogger, type Logger } from './logger';
-import { bugReportUrl, describeMac } from './report';
+import { bugReportUrl, describeSystem } from './report';
 
 /**
- * The app's log, at ~/Library/Logs/Plotka/plotka.log (Help › Show Log File). It records what's
+ * The app's log, at ~/Library/Logs/Plotka/plotka.log on macOS and
+ * %APPDATA%\Plotka\logs\plotka.log on Windows (Help › Show Log File). It records what's
  * useful in a bug report: the app and OS versions, connections, plots and how they ended, and
  * errors from the main process and the window. No artwork and no full paths outside ~.
  */
@@ -33,7 +34,7 @@ export function startLogging() {
   log.info('Plotka started', {
     version: app.getVersion(),
     packaged: app.isPackaged,
-    macOS: process.platform === 'darwin' ? process.getSystemVersion() : undefined,
+    os: describeSystem(process.platform, process.getSystemVersion(), process.arch),
     platform: process.platform,
     kernel: release(),
     arch: process.arch,
@@ -67,11 +68,11 @@ export function revealLog() {
 
 /**
  * Help › Report a Problem: opens the GitHub bug report form with the versions filled in, and
- * shows the log in Finder so it can be dragged into the form.
+ * shows the log in Finder or File Explorer so it can be dragged into the form.
  */
 export function reportProblem() {
   log.info('Report a problem');
   shell.showItemInFolder(log.file);
-  const os = describeMac(process.getSystemVersion(), process.arch);
+  const os = describeSystem(process.platform, process.getSystemVersion(), process.arch);
   void shell.openExternal(bugReportUrl(app.getVersion(), os));
 }

@@ -35,6 +35,7 @@ import {
 import { arrangeData, commitArrange, type ArrangeData } from '../lib/arrangeActions';
 import { useProcessed, useProfile, type Processed } from '../lib/useProcessed';
 import { completedCount, partialRoute, penAt } from '../lib/playback';
+import { commandKey, keyText } from '../lib/keys';
 import { PlaybackBar } from './PlaybackBar';
 import { currentLayerSettings, useStore, type ViewOptions } from '../store';
 import styles from './Preview.module.css';
@@ -342,8 +343,11 @@ export function Preview() {
         let frame = dragFrame(start, handle, p0, p, o);
         let guides: Guides = { xs: [], ys: [] };
         if (handle === 'rotate') {
-          frame = { ...frame, rot: snapAngle(frame.rot, { step15: e.shiftKey, off: e.metaKey }) };
-        } else if (!e.metaKey && a && (handle === 'move' || Math.abs(frame.rot) < 1e-9)) {
+          frame = {
+            ...frame,
+            rot: snapAngle(frame.rot, { step15: e.shiftKey, off: commandKey(e) }),
+          };
+        } else if (!commandKey(e) && a && (handle === 'move' || Math.abs(frame.rot) < 1e-9)) {
           // Snap the box it takes up on the paper (resizing only when it isn't turned).
           const others = Object.entries(a.data.boxes)
             .filter(([id]) => target !== null && id !== target)
@@ -610,10 +614,10 @@ function ArrangeBar() {
   return (
     <div className={`${styles.adjustBar} ${styles.arrangeBar}`} role="status">
       <span>
-        <strong>{name ?? 'All layers'}</strong> · drag to move · squares resize (⇧ free, ⌥ from
-        center) · circle turns (⇧ 15°) ·{' '}
+        <strong>{name ?? 'All layers'}</strong> ·{' '}
+        {keyText('drag to move · squares resize (⇧ free, ⌥ from center) · circle turns (⇧ 15°)')} ·{' '}
         {several ? (name ? 'paper: all layers · ' : 'click a layer for one · ') : ''}
-        arrows nudge · ⌘ no snapping
+        {keyText('arrows nudge · ⌘ no snapping')}
       </span>
       <button onClick={() => setArrange(false)}>Done</button>
     </div>

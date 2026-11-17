@@ -66,8 +66,8 @@ a seed. Full guide: `docs/adding-a-transform.md` (coming with the transforms epi
 
 ## Reporting bugs
 
-Use the bug report template and include your machine model, firmware version and macOS
-version.
+Use the bug report template and include your machine model, firmware version and operating
+system version.
 
 ## Keeping the user guide up to date
 
@@ -80,4 +80,5 @@ and every "?" button points to a page and section that exist.
 ## App icon
 
 The icon's source is `apps/desktop/build/icon.svg`. After editing it, run
-`apps/desktop/scripts/make-icon.sh` (macOS) to regenerate `build/icon.icns`.
+`apps/desktop/scripts/make-icon.sh` (macOS) to regenerate `build/icon.icns` and
+`build/icon.ico`.

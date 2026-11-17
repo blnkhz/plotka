@@ -11,6 +11,7 @@
     "build": "electron-vite build",
     "preview": "electron-vite preview",
     "build:mac": "electron-vite build && electron-builder --mac --universal --publish never",
+    "build:win": "electron-vite build && electron-builder --win --x64 --publish never",
     "typecheck": "tsc -p tsconfig.node.json && tsc -p tsconfig.web.json && tsc -p tsconfig.e2e.json",
     "test:e2e": "electron-vite build && playwright test"
   },

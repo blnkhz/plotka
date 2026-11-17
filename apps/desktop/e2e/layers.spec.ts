@@ -58,11 +58,11 @@ test('arrange: move and resize layers and the whole artwork by dragging', async 
   };
   const drag = async (from: { x: number; y: number }, dx: number, dy: number, noSnap = false) => {
     await page.mouse.move(from.x, from.y);
-    if (noSnap) await page.keyboard.down('Meta');
+    if (noSnap) await page.keyboard.down('ControlOrMeta');
     await page.mouse.down();
     await page.mouse.move(from.x + dx, from.y + dy, { steps: 8 });
     await page.mouse.up();
-    if (noSnap) await page.keyboard.up('Meta');
+    if (noSnap) await page.keyboard.up('ControlOrMeta');
     await expect(page.getByText('Updating…')).toHaveCount(0);
   };
   const fillTabValue = async (name: string, nth = 0) => {

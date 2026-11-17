@@ -22,9 +22,10 @@ so you can try the same pattern on other artwork.
 
 ## Recent files
 
-**File → Open Recent** lists the last 10 projects and SVGs you opened or saved (also in the Dock
-icon's menu). **Clear Menu** empties it. A file that has been moved or deleted is taken off the
-list when you pick it. You can also open SVGs and projects from Finder with **Open With**.
+**File → Open Recent** lists the last 10 projects and SVGs you opened or saved (on macOS, also
+in the Dock icon's menu). **Clear Menu** empties it. A file that has been moved or deleted is
+taken off the list when you pick it. You can also open SVGs and projects from Finder or File
+Explorer with **Open With**.
 
 ## Autosave and recovery
 

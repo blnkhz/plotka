@@ -19,6 +19,7 @@ import { startAutosave } from './lib/autosave';
 import { RecoveryBanner } from './components/RecoveryBanner';
 import { openFromOutside } from './lib/openFile';
 import { fmtDistance } from './lib/format';
+import { isMac, keyText } from './lib/keys';
 import { useProcessed, useProcessing } from './lib/useProcessed';
 import { fmtDuration } from './lib/format';
 import { useStore, selectedDoodle } from './store';
@@ -154,23 +155,33 @@ function Toolbar() {
 
   return (
     <header className={styles.toolbar}>
-      <button onClick={() => void openWithDialog()} title="Open (⌘O)">
+      <button onClick={() => void openWithDialog()} title={keyText('Open (⌘O)')}>
         Open…
       </button>
       <button
         onClick={() => void saveProject(false)}
         disabled={!doc && !hasDoodle}
-        title="Save project (⌘S). ⇧⌘S saves a copy under a new name."
+        title={keyText('Save project (⌘S). ⇧⌘S saves a copy under a new name.')}
       >
         Save
       </button>
-      <button onClick={() => void undo()} disabled={!canUndo} title="Undo (⌘Z)" aria-label="Undo">
+      <button
+        onClick={() => void undo()}
+        disabled={!canUndo}
+        title={keyText('Undo (⌘Z)')}
+        aria-label="Undo"
+      >
         ↶
       </button>
-      <button onClick={() => void redo()} disabled={!canRedo} title="Redo (⇧⌘Z)" aria-label="Redo">
+      <button
+        onClick={() => void redo()}
+        disabled={!canRedo}
+        title={keyText('Redo (⇧⌘Z)')}
+        aria-label="Redo"
+      >
         ↷
       </button>
-      <button onClick={() => useStore.getState().openHelp()} title="Help (⌘?)">
+      <button onClick={() => useStore.getState().openHelp()} title={keyText('Help (⌘?)')}>
         Help
       </button>
       <span className={styles.file}>{loading ? 'Loading…' : (source?.name ?? 'No file')}</span>
@@ -251,6 +262,10 @@ function useShortcuts() {
       if (e.key === 'F1') {
         e.preventDefault();
         useStore.getState().openHelp();
+      } else if (!isMac && e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'z') {
+        // Off macOS the menu's Redo is Ctrl+Y; Ctrl+Shift+Z redoes too.
+        e.preventDefault();
+        void menuAction('redo');
       } else if (useStore.getState().help.open) {
         // Typing in the help window shouldn't move the plotter.
       } else if (!mod && !typing && e.key.toLowerCase() === 'f') {
