@@ -64,7 +64,9 @@ test('heavy processing runs in the background; the window stays responsive (PREV
   await page.getByRole('tab', { name: 'Page' }).click();
   await expect(page.getByRole('tab', { name: 'Page' })).toHaveAttribute('aria-selected', 'true');
   const tabMs = Date.now() - t0;
-  expect(tabMs).toBeLessThan(500);
+  // Blocked by the processing, the switch would wait for the whole job (several seconds). CI's
+  // shared runners are slow and noisy (600–1000 ms seen there), so allow more on CI.
+  expect(tabMs).toBeLessThan(process.env['CI'] ? 2000 : 500);
   await expect(page.getByRole('status')).toHaveCount(0, { timeout: 60000 });
   await expect(page.getByText(/paths · draw/)).toBeVisible();
   console.log(`tab switch while processing: ${tabMs} ms`);
