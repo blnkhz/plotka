@@ -1,18 +1,23 @@
 name: Release
 
-# Builds an UNSIGNED macOS app and attaches it to a DRAFT GitHub release. Releases are normally
-# built, signed and notarized on a Mac with `pnpm release:publish`; this is the fallback, so it
-# only runs by hand (a tag push must not replace a signed .dmg with an unsigned one).
-# See docs/releasing.md.
+# Builds UNSIGNED apps and attaches them to a DRAFT GitHub release. Releases are normally built on
+# a Mac with `pnpm release:publish` (the .dmg signed and notarized, plus the Windows installer);
+# this is the fallback, so it only runs by hand (a tag push must not replace a signed .dmg with an
+# unsigned one). See docs/releasing.md.
 on:
   workflow_dispatch:
     inputs:
       tag:
         description: 'Existing tag to build, e.g. v0.2.0'
         required: true
+      platforms:
+        description: 'Which apps to build. "mac" replaces a signed .dmg with an unsigned one.'
+        type: choice
+        options: [windows, mac, both]
+        default: windows
 
 permissions:
-  contents: write # create the draft release and upload the .dmg
+  contents: write # create the draft release and upload the apps
 
 concurrency:
   group: release-${{ github.event.inputs.tag || github.ref_name }}
@@ -20,6 +25,7 @@ concurrency:
 
 jobs:
   mac:
+    if: inputs.platforms != 'windows'
     runs-on: macos-latest
     env:
       TAG: ${{ github.event.inputs.tag || github.ref_name }}
@@ -61,6 +67,62 @@ jobs:
           files=(apps/desktop/release/*.dmg apps/desktop/release/*.dmg.blockmap)
           if [ ${#files[@]} -eq 0 ]; then
             echo "::error::No .dmg was built."
+            exit 1
+          fi
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" "${files[@]}" --clobber
+          else
+            gh release create "$TAG" "${files[@]}" --draft --title "Plotka $TAG" --generate-notes
+          fi
+
+  windows:
+    # After the Mac job (if it runs), so the two don't both try to create the draft release.
+    needs: mac
+    if: ${{ !cancelled() && inputs.platforms != 'mac' && needs.mac.result != 'failure' }}
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: bash
+    env:
+      TAG: ${{ github.event.inputs.tag || github.ref_name }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      - run: corepack enable pnpm
+      - run: pnpm install --frozen-lockfile
+
+      - name: Check the tag matches the app version
+        run: |
+          version=$(node -p "require('./apps/desktop/package.json').version")
+          if [ "$TAG" != "v$version" ]; then
+            echo "::error::Tag $TAG doesn't match the app version $version (apps/desktop/package.json). Bump the version, then tag v$version."
+            exit 1
+          fi
+
+      - name: Checks
+        run: |
+          pnpm lint
+          pnpm typecheck
+          pnpm test
+
+      - name: Build the installer (unsigned)
+        run: pnpm build:win
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+
+      - name: Create or update the draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          shopt -s nullglob
+          files=(apps/desktop/release/*-setup.exe apps/desktop/release/*-setup.exe.blockmap)
+          if [ ${#files[@]} -eq 0 ]; then
+            echo "::error::No installer was built."
             exit 1
           fi
           if gh release view "$TAG" >/dev/null 2>&1; then

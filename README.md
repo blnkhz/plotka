@@ -11,7 +11,7 @@ extension needed.
 
 ![Plotka welcome screen: an example plot and Open…, Doodle… and + Text](docs/screenshots/welcome.png)
 
-**Status:** early releases for macOS, tested on an AxiDraw V3/A3. Download the app from
+**Status:** early releases for macOS and Windows, tested on an AxiDraw V3/A3 on macOS. Download the app from
 [GitHub releases](../../releases/latest).
 
 ## Features
@@ -94,13 +94,18 @@ Any EiBotBoard (EBB) based plotter should work with a machine profile. See
 
 ## Install
 
-Download the `.dmg` from the [latest release](../../releases/latest). It runs on macOS, on
-Apple Silicon and Intel. Windows and Linux aren't planned for now, but pull requests that add
-them are welcome.
+Download it from the [latest release](../../releases/latest).
 
-From v0.5.0 the app is signed and notarized: open the `.dmg`, drag Plotka to Applications and
-open it like any other app. (v0.4.0 and older aren't signed. Right-click the app and choose
-**Open** the first time.)
+**macOS** (Apple Silicon and Intel): download the `.dmg`. From v0.5.0 the app is signed and
+notarized: open the `.dmg`, drag Plotka to Applications and open it like any other app. (v0.4.0
+and older aren't signed. Right-click the app and choose **Open** the first time.)
+
+**Windows** (10 and 11, 64-bit): download `Plotka-…-x64-setup.exe` and
+run it. It installs for your user only, without asking for admin rights. The installer isn't
+signed yet, so Windows SmartScreen says it "protected your PC" the first time: click **More
+info**, then **Run anyway**. The plotter needs no driver; it shows up as a COM port.
+
+Linux isn't planned for now, but pull requests that add it are welcome.
 
 ## How it works
 
@@ -147,6 +152,7 @@ pnpm test         # unit tests (Vitest)
 pnpm lint         # ESLint
 pnpm typecheck    # TypeScript
 pnpm build:mac    # universal (Apple Silicon + Intel) .dmg in apps/desktop/release
+pnpm build:win    # Windows x64 installer in apps/desktop/release (builds on macOS too)
 pnpm release 0.5.0  # bump, commit and tag a release; see docs/releasing.md
 pnpm release:publish  # build, sign, notarize and upload it as a draft release
 ```

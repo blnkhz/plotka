@@ -23,10 +23,10 @@ one of your recent files. Press Esc or click outside it to go straight to the ap
 
 ## Light, dark and colour themes
 
-The app follows the light or dark setting of macOS. Under **View > Appearance** you can pick
+The app follows the system's light or dark setting. Under **View > Appearance** you can pick
 **Light** or **Dark** for the app only, or one of six colour themes: **Matcha Mauve**, **Cyber
 Lime**, **Butter Cobalt**, **Bubblegum Tomato**, **Ube Mint** and **Ice Tangerine**. **Use
-System Setting** follows macOS again. The choice is kept for next time. The paper in the preview
+System Setting** follows the system again. The choice is kept for next time. The paper in the preview
 stays white (or nearly) in every theme, so the preview still looks like the plot.
 
 ## Your first plot
