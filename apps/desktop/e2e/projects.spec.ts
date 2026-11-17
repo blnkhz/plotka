@@ -1,3 +1,4 @@
+import { execFileSync } from 'node:child_process';
 import { mkdtempSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -114,20 +115,37 @@ test('undo and redo settings from the Edit menu and the toolbar (PROJ-2)', async
 });
 
 /**
- * Kills the app with no clean shutdown, and waits until it's gone: on Windows a copy started
- * while the old one is still exiting sees it running (the single-instance lock) and quits.
+ * Kills the app with no clean shutdown, and waits until it's gone. On Windows, Electron's helper
+ * processes outlive a killed main process for a moment and keep the single-instance lock, so a
+ * copy started then quits at once: kill the whole process tree there.
  */
 async function crash(app: ElectronApplication) {
   const proc = app.process();
   const exited = new Promise((resolve) => proc.once('exit', resolve));
-  proc.kill('SIGKILL');
+  if (process.platform === 'win32') {
+    execFileSync('taskkill', ['/pid', String(proc.pid), '/T', '/F'], { stdio: 'ignore' });
+  } else {
+    proc.kill('SIGKILL');
+  }
   await exited;
+}
+
+/** Launches the app, trying again for a few seconds while a crashed copy still holds the lock. */
+async function relaunch(env: Record<string, string>) {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await launch(env);
+    } catch (e) {
+      if (attempt === 5) throw e;
+      await new Promise((r) => setTimeout(r, 1000));
+    }
+  }
 }
 
 test('autosave: unsaved work comes back after a crash (PROJ-4)', async () => {
   const data = mkdtempSync(join(tmpdir(), 'plotka-e2e-'));
   const open = async () => {
-    const app = await launch({ PLOTKA_USER_DATA: data });
+    const app = await relaunch({ PLOTKA_USER_DATA: data });
     const page = await app.firstWindow();
     await page.setViewportSize({ width: 1400, height: 900 });
     await page.locator('#root > div').waitFor();
