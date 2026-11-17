@@ -103,6 +103,8 @@ function build() {
         // For bug reports: the log has the versions, connections, plots and errors.
         { label: 'Show Log File', click: () => revealLog() },
         { label: 'Report a Problem…', click: () => reportProblem() },
+        // On macOS, About is in the app menu.
+        ...(isMac ? [] : [{ type: 'separator' as const }, { role: 'about' as const }]),
       ],
     },
   ];

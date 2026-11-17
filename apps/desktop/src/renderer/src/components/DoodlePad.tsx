@@ -15,6 +15,7 @@ import {
   type Primitive,
   type Vec2,
 } from '@plotka/core';
+import { fileName, keyText } from '../lib/keys';
 import { doodleSvg, useStore } from '../store';
 import { NumberField, Row, Section, Segmented } from './controls';
 import styles from './DoodlePad.module.css';
@@ -420,7 +421,7 @@ export function DoodlePad() {
               doodleSvg(useStore.getState().doodle),
               ['.svg'],
             );
-            if (path) setSaved(path.split('/').pop() ?? path);
+            if (path) setSaved(fileName(path));
           }}
         >
           Save SVG…
@@ -559,10 +560,10 @@ export function DoodlePad() {
               }}
             />
             <div className={styles.buttons}>
-              <button onClick={undo} disabled={!past.length} title="Undo (⌘Z)">
+              <button onClick={undo} disabled={!past.length} title={keyText('Undo (⌘Z)')}>
                 Undo
               </button>
-              <button onClick={redo} disabled={!future.length} title="Redo (⇧⌘Z)">
+              <button onClick={redo} disabled={!future.length} title={keyText('Redo (⇧⌘Z)')}>
                 Redo
               </button>
               <button onClick={() => setStrokes([])} disabled={!strokes.length}>

@@ -1,3 +1,4 @@
+import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { app, BrowserWindow, dialog, shell } from 'electron';
 import { registerIpcHandlers } from './ipc';
@@ -56,7 +57,7 @@ function createWindow(): BrowserWindow {
         defaultId: 0,
         cancelId: 0,
         message: `“${project.name}” has unsaved changes.`,
-        detail: 'Save with ⌘S to keep them.',
+        detail: `Save with ${process.platform === 'darwin' ? '⌘S' : 'Ctrl+S'} to keep them.`,
       });
       if (choice === 0) e.preventDefault();
       // Closing without saving was a deliberate choice: don't offer the work back next time.
@@ -101,12 +102,40 @@ function createWindow(): BrowserWindow {
 
 // Files opened from Finder or the Dock (also before the window exists).
 const pendingOpens: string[] = [];
-app.on('open-file', (e, path) => {
-  e.preventDefault();
+function requestOpen(path: string) {
   if (!isOpenable(path)) return;
   if (app.isReady() && BrowserWindow.getAllWindows().length) void openPath(path);
   else pendingOpens.push(path);
+}
+app.on('open-file', (e, path) => {
+  e.preventDefault();
+  requestOpen(path);
 });
+
+/** Files on the command line: how Windows and Linux open a file with the app. */
+function filesInArgs(argv: readonly string[]): string[] {
+  // A packaged app's arguments follow the executable; in development, `electron .` comes first.
+  return argv
+    .slice(app.isPackaged ? 1 : 2)
+    .filter((a) => !a.startsWith('-') && isOpenable(a) && existsSync(a));
+}
+
+// On Windows and Linux, opening a file while Plotka is running starts a second copy: hand the
+// file to the running one and quit. (macOS sends open-file to the running app instead.)
+if (process.platform !== 'darwin') {
+  if (!app.requestSingleInstanceLock()) app.exit(0);
+  else {
+    app.on('second-instance', (_e, argv) => {
+      const win = BrowserWindow.getAllWindows()[0];
+      if (win) {
+        if (win.isMinimized()) win.restore();
+        win.focus();
+      }
+      filesInArgs(argv).forEach(requestOpen);
+    });
+    filesInArgs(process.argv).forEach(requestOpen);
+  }
+}
 
 /** Opens files that arrived before the window was listening. */
 export function flushPendingOpens() {
