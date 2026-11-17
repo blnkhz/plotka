@@ -10,7 +10,18 @@ export function bugReportUrl(appVersion: string, os: string): string {
   return `${NEW_ISSUE}?${q}`;
 }
 
-/** "macOS 15.1 (Apple Silicon)", as the form's placeholder shows it. */
-export function describeMac(version: string, arch: string): string {
-  return `macOS ${version} (${arch === 'arm64' ? 'Apple Silicon' : 'Intel'})`;
+/**
+ * The OS the way the form's placeholder shows it: "macOS 15.1 (Apple Silicon)",
+ * "Windows 11 (build 26100)". `version` is process.getSystemVersion().
+ */
+export function describeSystem(platform: string, version: string, arch: string): string {
+  if (platform === 'darwin')
+    return `macOS ${version} (${arch === 'arm64' ? 'Apple Silicon' : 'Intel'})`;
+  if (platform === 'win32') {
+    // Windows 11 still reports 10.0; its builds start at 22000.
+    const build = Number(version.split('.')[2]);
+    const name = build >= 22000 ? 'Windows 11' : 'Windows 10';
+    return `${name} (build ${Number.isFinite(build) ? build : version}${arch === 'arm64' ? ', Arm' : ''})`;
+  }
+  return `${platform === 'linux' ? 'Linux' : platform} ${version} (${arch})`;
 }

@@ -19,7 +19,7 @@ import { startAutosave } from './lib/autosave';
 import { RecoveryBanner } from './components/RecoveryBanner';
 import { openFromOutside } from './lib/openFile';
 import { fmtDistance } from './lib/format';
-import { keyText } from './lib/keys';
+import { isMac, keyText } from './lib/keys';
 import { useProcessed, useProcessing } from './lib/useProcessed';
 import { fmtDuration } from './lib/format';
 import { useStore, selectedDoodle } from './store';
@@ -262,6 +262,10 @@ function useShortcuts() {
       if (e.key === 'F1') {
         e.preventDefault();
         useStore.getState().openHelp();
+      } else if (!isMac && e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'z') {
+        // Off macOS the menu's Redo is Ctrl+Y; Ctrl+Shift+Z redoes too.
+        e.preventDefault();
+        void menuAction('redo');
       } else if (useStore.getState().help.open) {
         // Typing in the help window shouldn't move the plotter.
       } else if (!mod && !typing && e.key.toLowerCase() === 'f') {
