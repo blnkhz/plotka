@@ -11,8 +11,9 @@ extension needed.
 
 ![Plotka welcome screen: an example plot and Open…, Doodle… and + Text](docs/screenshots/welcome.png)
 
-**Status:** early releases for macOS and Windows, tested on an AxiDraw V3/A3 on macOS. Download the app from
-[GitHub releases](../../releases/latest).
+**Status:** early releases for macOS, tested on an AxiDraw V3/A3. Download the app from
+[GitHub releases](../../releases/latest). Each release also has a Windows build that hasn't
+been tried on a real Windows PC yet: [testers wanted](#install).
 
 ## Features
 
@@ -100,10 +101,15 @@ Download it from the [latest release](../../releases/latest).
 notarized: open the `.dmg`, drag Plotka to Applications and open it like any other app. (v0.4.0
 and older aren't signed. Right-click the app and choose **Open** the first time.)
 
-**Windows** (10 and 11, 64-bit): download `Plotka-…-x64-setup.exe` and
-run it. It installs for your user only, without asking for admin rights. The installer isn't
-signed yet, so Windows SmartScreen says it "protected your PC" the first time: click **More
-info**, then **Run anyway**. The plotter needs no driver; it shows up as a COM port.
+**Windows** (10 and 11, 64-bit), testers wanted: each release also has a Windows installer,
+`Plotka-…-x64-setup.exe`, built from the same code. It passes the automated tests on Windows,
+but it hasn't met a real Windows PC or a plotter yet. Have one? Give it a go and share what
+works and what doesn't: **Help › Report a Problem** opens the bug report form and shows the log
+file to attach. Fixes for Windows depend on reports and pull requests from people who use it.
+
+The installer sets Plotka up for your user only, without asking for admin rights. It isn't
+signed, so Windows SmartScreen says it "protected your PC" the first time: click **More
+info**, then **Run anyway**. The plotter needs no driver; it should show up as a COM port.
 
 Linux isn't planned for now, but pull requests that add it are welcome.
 
