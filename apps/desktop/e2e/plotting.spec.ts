@@ -45,7 +45,10 @@ test('connect the simulated plotter, jog, plot, pause, resume, finish', async ()
   });
   expect(opened[0]).toMatch(/plotka\.log$/);
   expect(opened[1]).toMatch(
-    /^https:\/\/github\.com\/blnkhz\/plotka\/issues\/new\?template=bug_report\.yml&app=[\d.]+&os=macOS/,
+    new RegExp(
+      String.raw`^https://github\.com/blnkhz/plotka/issues/new\?template=bug_report\.yml&app=[\d.]+&os=` +
+        (process.platform === 'win32' ? 'Windows' : 'macOS'),
+    ),
   );
   await app.close();
 

@@ -1,7 +1,7 @@
 import { mkdtempSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { expect, test } from '@playwright/test';
+import { expect, test, type ElectronApplication } from '@playwright/test';
 import { shots, launch, dropFile } from './helpers';
 
 test('save a project and open it again with all its settings (PROJ-1)', async () => {
@@ -113,6 +113,17 @@ test('undo and redo settings from the Edit menu and the toolbar (PROJ-2)', async
   await app.close();
 });
 
+/**
+ * Kills the app with no clean shutdown, and waits until it's gone: on Windows a copy started
+ * while the old one is still exiting sees it running (the single-instance lock) and quits.
+ */
+async function crash(app: ElectronApplication) {
+  const proc = app.process();
+  const exited = new Promise((resolve) => proc.once('exit', resolve));
+  proc.kill('SIGKILL');
+  await exited;
+}
+
 test('autosave: unsaved work comes back after a crash (PROJ-4)', async () => {
   const data = mkdtempSync(join(tmpdir(), 'plotka-e2e-'));
   const open = async () => {
@@ -127,7 +138,7 @@ test('autosave: unsaved work comes back after a crash (PROJ-4)', async () => {
   await dropFile(page, 'motif.svg');
   await page.getByRole('button', { name: 'Landscape' }).click();
   await page.waitForTimeout(4000); // autosave writes 3 s after the last change
-  app.process().kill('SIGKILL'); // no clean shutdown
+  await crash(app); // no clean shutdown
 
   ({ app, page } = await open());
   const banner = page.getByRole('alert');
@@ -140,7 +151,7 @@ test('autosave: unsaved work comes back after a crash (PROJ-4)', async () => {
     .poll(() => app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]!.getTitle()))
     .toContain('(edited)');
   await page.waitForTimeout(4000);
-  app.process().kill('SIGKILL');
+  await crash(app);
 
   // Discard removes it for good.
   ({ app, page } = await open());
